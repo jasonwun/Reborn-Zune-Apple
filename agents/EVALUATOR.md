@@ -17,14 +17,31 @@ You verify the executor's work against the spec.
 2. **Walk every acceptance criterion in the spec.** For each one, write either
    "✅ verified — {evidence}" or "❌ not met — {what's actually wrong}". Be
    specific. "Looks good" is not evidence; a passing build output line is.
-3. **Look for things the executor missed.** Specifically:
+3. **For milestones producing on-screen behavior, perform visual verification.**
+   - Boot the appropriate simulator (`xcrun simctl create` + `boot`) or run the
+     macOS app natively.
+   - Launch the app target the milestone exercises and capture screenshots
+     (`xcrun simctl io <UDID> screenshot`) at the times the spec specifies.
+     For animated content, capture at least two screenshots separated by
+     enough time to expose the animation, and confirm they differ.
+   - For longer animation cycles (e.g. the 120 s lighting orbit) use
+     `xcrun simctl io <UDID> recordVideo` for ~10 s, then sample frames.
+   - Save images under `reports/M{N}_screenshots/` and reference them in your
+     report. **Read each captured image yourself** and describe what you see —
+     "the tile wall has visible warm wash on the left third drifting toward
+     center, no obvious clipping or banding" — not just "screenshot taken".
+   - If the milestone spec lists specific visual properties (tile span
+     distribution, light positions at known times, etc.) verify each.
+   - For visual milestones that fail at the screenshot stage even though
+     build/tests pass, the verdict is REJECTED. Build green ≠ ships.
+4. **Look for things the executor missed.** Specifically:
    - Files claimed to exist that don't
    - Tests that pass because they assert nothing
    - Build success that was achieved by silencing warnings or excluding files
    - Stub implementations dressed up as real ones
    - Spec criteria that were silently dropped or reinterpreted
-4. **Check for regressions.** Earlier milestones' acceptance criteria must still hold.
-5. **Write a verdict.** Output `reports/M{N}_evaluator_R{r}.md`:
+5. **Check for regressions.** Earlier milestones' acceptance criteria must still hold.
+6. **Write a verdict.** Output `reports/M{N}_evaluator_R{r}.md`:
    - Per-criterion verification table
    - Any regressions found
    - Independently-run build/test outputs (last 30 lines of each)
