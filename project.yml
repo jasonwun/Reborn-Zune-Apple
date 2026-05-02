@@ -1,0 +1,99 @@
+name: RebornZune
+options:
+  bundleIdPrefix: dev.yjd.rebornzune
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "14.0"
+    iOS: "17.0"
+    tvOS: "17.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: ""
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGNING_REQUIRED: NO
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+packages:
+  RebornZuneCore:
+    path: .
+
+targets:
+  RebornZune-macOS:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Apps/macOS
+    dependencies:
+      - package: RebornZuneCore
+        product: RebornZuneCore
+    info:
+      path: Apps/macOS/Info.plist
+      properties:
+        CFBundleDisplayName: Reborn Zune
+        CFBundleName: Reborn Zune
+        LSApplicationCategoryType: public.app-category.music
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.yjd.rebornzune.macos
+        PRODUCT_NAME: "Reborn Zune"
+        GENERATE_INFOPLIST_FILE: NO
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_ALLOWED: YES
+        CODE_SIGNING_REQUIRED: NO
+
+  RebornZune-iPadOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Apps/iPadOS
+    dependencies:
+      - package: RebornZuneCore
+        product: RebornZuneCore
+    info:
+      path: Apps/iPadOS/Info.plist
+      properties:
+        CFBundleDisplayName: Reborn Zune
+        CFBundleName: Reborn Zune
+        UILaunchScreen:
+          UIColorName: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.yjd.rebornzune.ipados
+        PRODUCT_NAME: "Reborn Zune"
+        TARGETED_DEVICE_FAMILY: "2"
+        GENERATE_INFOPLIST_FILE: NO
+        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+        SUPPORTS_MACCATALYST: NO
+
+  RebornZune-tvOS:
+    type: application
+    platform: tvOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Apps/tvOS
+    dependencies:
+      - package: RebornZuneCore
+        product: RebornZuneCore
+    info:
+      path: Apps/tvOS/Info.plist
+      properties:
+        CFBundleDisplayName: Reborn Zune
+        CFBundleName: Reborn Zune
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.yjd.rebornzune.tvos
+        PRODUCT_NAME: "Reborn Zune"
+        GENERATE_INFOPLIST_FILE: NO
