@@ -46,15 +46,26 @@ public struct TileView: View {
     @State private var flipTask: Task<Void, Never>? = nil
 
     public var body: some View {
-        ZStack {
-            Color.black
-            if let image = currentImage {
-                Image(decorative: image, scale: 1)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
+        // GeometryReader gives us the layout's resolved size for this tile;
+        // we explicitly .frame the Image to that size so it can't request
+        // a bigger area via .aspectRatio(.fill)'s "expand-the-other-dim"
+        // semantics. Without this, the Image would inflate the ZStack
+        // beyond its assigned cell, and adjacent tiles would visibly
+        // overlap (Bug 2 reported on macOS narrow window).
+        GeometryReader { geo in
+            ZStack {
+                Color.black
+                if let image = currentImage {
+                    Image(decorative: image, scale: 1)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .clipped()
         }
-        .clipped()
         .opacity(opacity)
         .rotation3DEffect(.degrees(rotationDegrees), axis: (x: 0, y: 1, z: 0))
         .overlay(

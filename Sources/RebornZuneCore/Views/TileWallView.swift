@@ -59,9 +59,21 @@ public struct TileWallView: View {
             // overlay — tiles are converted to grayscale BEFORE the lighting
             // shader tints them. Applied to the layout (parent) so the cost is
             // paid once for the whole wall, not per-tile.
-            tileLayout
-                .saturation(0)
-                .modifier(OptionalLightingModifier(animator: lightingAnimator))
+            //
+            // Bug-1 fix: read the panel size from GeometryReader and repeat
+            // the source `tiles` array until we have enough cells to cover
+            // it. Without this the wall ends after the source tiles run out
+            // and leaves visible empty area below.
+            GeometryReader { geo in
+                let renderTiles = Self.expanded(
+                    source: tiles,
+                    forPanelSize: geo.size,
+                    unitSize: unitSize
+                )
+                tileLayout(tiles: renderTiles)
+                    .saturation(0)
+                    .modifier(OptionalLightingModifier(animator: lightingAnimator))
+            }
         }
         .onAppear {
             flipCoordinator.start(tileCount: tiles.count)
@@ -71,15 +83,52 @@ public struct TileWallView: View {
         }
     }
 
+    /// Repeat the `source` tile list until we have enough tiles to cover
+    /// `panelSize` at `unitSize`. Caps the source list at a hard maximum to
+    /// avoid pathological cases (empty source, tiny unit size).
+    static func expanded(
+        source: [TileWallEntry],
+        forPanelSize panelSize: CGSize,
+        unitSize: CGFloat
+    ) -> [TileWallEntry] {
+        guard !source.isEmpty, unitSize > 0 else { return source }
+
+        // Worst-case cell count: panel covered entirely in 1×1 tiles.
+        let cellsW = max(1, Int((panelSize.width / unitSize).rounded(.up)))
+        let cellsH = max(1, Int((panelSize.height / unitSize).rounded(.up)))
+        let maxCells = cellsW * cellsH
+
+        // Average cells per tile under our M5.20 distribution
+        // (70/20/8/2 split → 1 + 4*0.20 + 9*0.08 + 16*0.02 = 2.54 cells/tile).
+        // Tiles needed to fill `maxCells` cells ≈ maxCells / 2.54. Add 30%
+        // slack so the wall always overshoots slightly rather than ending
+        // short of the panel edge.
+        let target = Int((Double(maxCells) / 2.54) * 1.3)
+
+        if source.count >= target { return source }
+
+        var out: [TileWallEntry] = []
+        out.reserveCapacity(target)
+        // Cycle the source list assigning fresh UUIDs so each tile is
+        // identifiable in the wall (matters for ForEach + flip coordinator).
+        var index = 0
+        while out.count < target {
+            let original = source[index % source.count]
+            out.append(TileWallEntry(images: original.images, span: original.span))
+            index += 1
+        }
+        return out
+    }
+
     @ViewBuilder
-    private var tileLayout: some View {
+    private func tileLayout(tiles renderTiles: [TileWallEntry]) -> some View {
         let waveAssignments = Self.waveAssignments(
-            count: tiles.count,
+            count: renderTiles.count,
             seed: entrySeed,
             waveCount: entryAnimation.waveCount
         )
         VariableSpanLayout(unitSize: unitSize) {
-            ForEach(Array(tiles.enumerated()), id: \.element.id) { index, entry in
+            ForEach(Array(renderTiles.enumerated()), id: \.element.id) { index, entry in
                 let waveParams = entryAnimation.parameters(
                     forWave: waveAssignments[index]
                 )
