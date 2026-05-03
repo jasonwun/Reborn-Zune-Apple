@@ -100,10 +100,12 @@ public struct TileWallView: View {
 
         // Average cells per tile under our M5.20 distribution
         // (70/20/8/2 split → 1 + 4*0.20 + 9*0.08 + 16*0.02 = 2.54 cells/tile).
-        // Tiles needed to fill `maxCells` cells ≈ maxCells / 2.54. Add 30%
-        // slack so the wall always overshoots slightly rather than ending
-        // short of the panel edge.
-        let target = Int((Double(maxCells) / 2.54) * 1.3)
+        // Theory: maxCells / 2.54 tiles should fill the panel.
+        // Reality: variable-span packing leaves irregular vertical edges —
+        // some columns reach the bottom, others end mid-wall. Bump the slack
+        // hard (×2.5) so even pessimistic packings overshoot the bottom edge,
+        // matching the user's "exceed the screen a little is fine" preference.
+        let target = Int((Double(maxCells) / 2.54) * 2.5)
 
         if source.count >= target { return source }
 
