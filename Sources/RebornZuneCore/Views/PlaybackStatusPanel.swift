@@ -26,7 +26,7 @@ public struct PlaybackStatusPanel: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.white.opacity(0.85))
             } else {
-                Text("No music loaded — folder picker coming in M7.")
+                Text("No track playing")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.85))
             }
