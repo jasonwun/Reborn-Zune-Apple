@@ -63,8 +63,7 @@ private struct DefaultContent: View {
                 tiles: tiles.isEmpty ? SyntheticTiles.sample(count: 250) : tiles,
                 lightingAnimator: lighting
             )
-            PlaybackStatusPanel(engine: engine)
-                .padding()
+            PlayerChrome(engine: engine)
         }
         .task {
             // Load music bundled at Resources/UserMusic/. If no music is

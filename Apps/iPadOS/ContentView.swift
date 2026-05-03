@@ -74,8 +74,9 @@ private struct DefaultContent: View {
                 )
             }
 
-            PlaybackStatusPanel(engine: engine)
-                .padding()
+            // Liquid-glass player chrome: bottom-strip with now-playing
+            // info, transport + progress, and a toggleable queue panel.
+            PlayerChrome(engine: engine)
         }
         .fileImporter(
             isPresented: $showPicker,
