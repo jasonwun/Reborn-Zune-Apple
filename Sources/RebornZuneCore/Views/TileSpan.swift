@@ -50,6 +50,11 @@ public extension TileSpan {
 public struct TileSpanSequence: Sendable {
     public let maxConsecutiveUnits: Int
     private var consecutiveUnits: Int = 0
+    /// True if the last span returned was `.medium` or `.large`. Used to
+    /// guarantee that two non-unit tiles never appear back-to-back in the
+    /// sequence: after every non-unit we force a unit so the wall always
+    /// has at least one 1×1 between any two large tiles.
+    private var lastWasNonUnit: Bool = false
 
     public init(maxConsecutiveUnits: Int = 5) {
         precondition(maxConsecutiveUnits > 0, "maxConsecutiveUnits must be > 0")
@@ -57,19 +62,31 @@ public struct TileSpanSequence: Sendable {
     }
 
     public mutating func next<G: RandomNumberGenerator>(using rng: inout G) -> TileSpan {
-        // Forced non-unit when the run cap is hit. 80% medium / 20% large
-        // approximates the existing 10/2.5 ratio normalized.
+        // After a non-unit (3×3 or 4×4) the next span is forced to .unit so
+        // two large tiles never abut. The forced unit counts toward the run.
+        if lastWasNonUnit {
+            lastWasNonUnit = false
+            consecutiveUnits = 1
+            return .unit
+        }
+
+        // Forced non-unit when the unit-run cap is hit. 80% medium / 20%
+        // large approximates the natural 10/2.5 ratio normalized.
         if consecutiveUnits >= maxConsecutiveUnits {
             consecutiveUnits = 0
+            lastWasNonUnit = true
             let pick = Int.random(in: 0..<5, using: &rng)
             return pick < 4 ? .medium : .large
         }
 
+        // Natural draw with the underlying UWP-faithful distribution.
         let span = TileSpan.random(using: &rng)
         if span == .unit {
             consecutiveUnits += 1
+            lastWasNonUnit = false
         } else {
             consecutiveUnits = 0
+            lastWasNonUnit = true
         }
         return span
     }

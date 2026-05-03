@@ -68,6 +68,18 @@ final class SyntheticTilesTests: XCTestCase {
         XCTAssertLessThanOrEqual(maxRun, 5)
     }
 
+    /// Verify two non-unit (3×3 / 4×4) tiles never appear back-to-back in
+    /// the sequence — there must be at least one .unit between them.
+    func testNoAdjacentNonUnits() {
+        let tiles = SyntheticTiles.sample(seed: 0, count: 2_000)
+        for (lhs, rhs) in zip(tiles, tiles.dropFirst()) {
+            if lhs.span != .unit && rhs.span != .unit {
+                XCTFail("Non-unit pair: \(lhs.span) followed by \(rhs.span)")
+                return
+            }
+        }
+    }
+
     /// M5.5: synthetic tiles must be dark/medium-toned so the multiplicative
     /// lighting wash has headroom to express, like real album art in the
     /// Zune references. We sample N tiles, decode the first pixel of each
