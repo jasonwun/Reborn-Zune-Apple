@@ -8,10 +8,9 @@ final class LightingAnimatorTests: XCTestCase {
     func testParametersAtTimeZero() {
         let animator = LightingAnimator()
         let params = animator.parameters(at: 0, panelSize: panel)
-        // Warm light is held at progress=0 because t=0 < warmDelay=0.6.
+        // Both lights are held at progress=0 because t=0 < startDelay=0.6.
         XCTAssertEqual(params.light1Position, LightingPalette.warm.positions.first!.position)
         XCTAssertEqual(params.light1Color, LightingPalette.warm.colors.first!.color)
-        // Cool light has no delay; at t=0 it's at progress=0.
         XCTAssertEqual(params.light2Position, LightingPalette.cool.positions.first!.position)
         XCTAssertEqual(params.light2Color, LightingPalette.cool.colors.first!.color)
     }
@@ -20,35 +19,51 @@ final class LightingAnimatorTests: XCTestCase {
         let animator = LightingAnimator()
         let a = animator.parameters(at: 0, panelSize: panel)
         let b = animator.parameters(at: animator.cycleDuration, panelSize: panel)
-        // At t=cycleDuration the cool light has wrapped back to progress=0.
-        XCTAssertEqual(a.light2Position, b.light2Position)
-        XCTAssertEqual(a.light2Color, b.light2Color)
-        // Warm wraps too: t-warmDelay = 119.4, mod 120 = 119.4, /120 ~= 0.995.
-        // Both should still be very close to the start since the keyframes
-        // loop (warm.position(at:1) == warm.position(at:0)).
+        // At t=cycleDuration, both lights are at (cycleDuration - startDelay)
+        // mod cycleDuration → 119.4s of a 120s cycle, near the wrap point.
+        let warmEnd = animator.warm.position(at: 119.4 / 120.0)
+        let coolEnd = animator.cool.position(at: 119.4 / 120.0)
+        XCTAssertEqual(b.light1Position, warmEnd)
+        XCTAssertEqual(b.light2Position, coolEnd)
+        // Sanity: both are close to their respective starts since the keyframes loop.
         let warmStart = LightingPalette.warm.positions.first!.position
-        let warmEndOfCycle = animator.warm.position(at: 119.4 / 120.0)
-        XCTAssertEqual(b.light1Position, warmEndOfCycle)
-        // Sanity: distance from start is small (still close to wrap point).
-        let delta = simd_length(b.light1Position - warmStart)
-        XCTAssertLessThan(delta, 50)
+        let coolStart = LightingPalette.cool.positions.first!.position
+        XCTAssertLessThan(simd_length(b.light1Position - warmStart), 50)
+        XCTAssertLessThan(simd_length(b.light2Position - coolStart), 50)
+        // a is at progress=0 for both lights.
+        XCTAssertEqual(a.light1Position, warmStart)
+        XCTAssertEqual(a.light2Position, coolStart)
     }
 
-    func testWarmDelayHoldsAtStart() {
+    /// M5 §1: the 600 ms delay applies to BOTH lights — at t = startDelay/2,
+    /// both warm AND cool are at progress=0 positions/colors.
+    func testStartDelayHoldsBothLights() {
         let animator = LightingAnimator()
-        let earlyT = animator.warmDelay / 2.0
+        let earlyT = animator.startDelay / 2.0
         let params = animator.parameters(at: earlyT, panelSize: panel)
-        // Warm: clamped to progress=0 because earlyT < warmDelay.
         XCTAssertEqual(params.light1Position, LightingPalette.warm.positions.first!.position)
         XCTAssertEqual(params.light1Color, LightingPalette.warm.colors.first!.color)
-        // Cool: should already be moving (earlyT > 0).
+        XCTAssertEqual(params.light2Position, LightingPalette.cool.positions.first!.position)
+        XCTAssertEqual(params.light2Color, LightingPalette.cool.colors.first!.color)
+    }
+
+    /// M5 §8: at t = startDelay both lights still read progress=0; at
+    /// t = startDelay + epsilon both have advanced.
+    func testParametersAtStartDelayBoundary() {
+        let animator = LightingAnimator()
+        let warmStart = LightingPalette.warm.positions.first!.position
         let coolStart = LightingPalette.cool.positions.first!.position
-        let coolNow = params.light2Position
-        // The cool light moves substantially in even 0.3s of a 120s cycle.
-        // First segment goes 2300,700 -> 1800,900 over 0.16 of cycle = 19.2s.
-        // Δ over 0.3s is small but non-zero.
-        let coolDelta = simd_length(coolNow - coolStart)
-        XCTAssertGreaterThan(coolDelta, 0)
+
+        let atBoundary = animator.parameters(at: animator.startDelay, panelSize: panel)
+        XCTAssertEqual(atBoundary.light1Position, warmStart)
+        XCTAssertEqual(atBoundary.light2Position, coolStart)
+
+        // 1 second past the boundary: both lights have advanced (cycle is 120s,
+        // 1/120 progress is enough to move position substantially given the
+        // first-segment deltas).
+        let pastBoundary = animator.parameters(at: animator.startDelay + 1.0, panelSize: panel)
+        XCTAssertNotEqual(pastBoundary.light1Position, warmStart)
+        XCTAssertNotEqual(pastBoundary.light2Position, coolStart)
     }
 
     func testPanelSizePropagates() {
@@ -56,17 +71,6 @@ final class LightingAnimatorTests: XCTestCase {
         let custom = CGSize(width: 1234, height: 567)
         let params = animator.parameters(at: 5, panelSize: custom)
         XCTAssertEqual(params.panelSize, custom)
-    }
-
-    func testWarmDelayBoundary() {
-        let animator = LightingAnimator(warmDelay: 0.6)
-        // Exactly at the delay boundary, warm should still read progress=0.
-        let atBoundary = animator.parameters(at: 0.6, panelSize: panel)
-        XCTAssertEqual(atBoundary.light1Position, LightingPalette.warm.positions.first!.position)
-        // Just past the boundary, warm is moving.
-        let pastBoundary = animator.parameters(at: 1.6, panelSize: panel)
-        let warmStart = LightingPalette.warm.positions.first!.position
-        XCTAssertNotEqual(pastBoundary.light1Position, warmStart)
     }
 
     func testProgressClampHelper() {

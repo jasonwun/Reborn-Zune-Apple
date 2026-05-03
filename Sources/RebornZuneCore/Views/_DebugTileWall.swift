@@ -6,8 +6,10 @@ import CoreGraphics
 ///
 /// Builds `tileCount` tiles with seeded random spans and gradient placeholder
 /// images, then hosts them in a `VariableSpanLayout`. Two runs with the same
-/// `seed` produce the same wall — useful for snapshot-style testing once a
-/// renderer is available.
+/// `seed` produce the same wall.
+///
+/// M5 update: TileView now takes `images: [CGImage?]`, so the debug wall
+/// supplies a one-element array (no flip animation in the fixture).
 struct _DebugTileWall: View {
     let tileCount: Int
     let unitSize: CGFloat
@@ -18,7 +20,7 @@ struct _DebugTileWall: View {
         return VariableSpanLayout(unitSize: unitSize) {
             ForEach(0..<tileCount, id: \.self) { index in
                 TileView(
-                    image: Self.gradientImage(index: index, span: spans[index]),
+                    images: [Self.gradientImage(index: index, span: spans[index])],
                     span: spans[index]
                 )
             }
