@@ -23,6 +23,7 @@ public enum MusicTileBuilder {
         guard !tracks.isEmpty else { return [] }
 
         var rng = ZuneSeededRNG(seed: seed)
+        var spanSeq = TileSpanSequence()
 
         // Decode artwork up front so each tile can reference cached images.
         // Nil is fine for tracks without embedded artwork — TileView renders
@@ -48,7 +49,7 @@ public enum MusicTileBuilder {
                 return primary
             }()
 
-            let span = TileSpan.random(using: &rng)
+            let span = spanSeq.next(using: &rng)
             return TileWallEntry(images: [primary, flipTarget], span: span)
         }
     }

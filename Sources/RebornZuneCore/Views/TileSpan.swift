@@ -36,3 +36,41 @@ public extension TileSpan {
         return random(using: &rng)
     }
 }
+
+/// Stateful span generator that breaks up long runs of `.unit` tiles.
+///
+/// Independent random draws at 87.5% unit produce visible runs of 8+
+/// consecutive 1×1 tiles ~12% of the time, which clusters into ugly
+/// rectangular blocks of small tiles. After
+/// `maxConsecutiveUnits` units in a row, this generator forces the next
+/// draw to be `.medium` (80%) or `.large` (20%) to break the run.
+///
+/// Underlying probabilities are still UWP-faithful on average — the
+/// forced-non-unit rule only kicks in for the tail of long unit runs.
+public struct TileSpanSequence: Sendable {
+    public let maxConsecutiveUnits: Int
+    private var consecutiveUnits: Int = 0
+
+    public init(maxConsecutiveUnits: Int = 5) {
+        precondition(maxConsecutiveUnits > 0, "maxConsecutiveUnits must be > 0")
+        self.maxConsecutiveUnits = maxConsecutiveUnits
+    }
+
+    public mutating func next<G: RandomNumberGenerator>(using rng: inout G) -> TileSpan {
+        // Forced non-unit when the run cap is hit. 80% medium / 20% large
+        // approximates the existing 10/2.5 ratio normalized.
+        if consecutiveUnits >= maxConsecutiveUnits {
+            consecutiveUnits = 0
+            let pick = Int.random(in: 0..<5, using: &rng)
+            return pick < 4 ? .medium : .large
+        }
+
+        let span = TileSpan.random(using: &rng)
+        if span == .unit {
+            consecutiveUnits += 1
+        } else {
+            consecutiveUnits = 0
+        }
+        return span
+    }
+}

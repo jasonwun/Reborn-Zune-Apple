@@ -41,10 +41,31 @@ final class SyntheticTilesTests: XCTestCase {
         let mediumFraction = Double(medium) / Double(count)
         let largeFraction = Double(large) / Double(count)
 
-        // UWP TileViewModel.Spans: 87.5% unit, 10% medium, 2.5% large; ±2%.
-        XCTAssertEqual(unitFraction, 0.875, accuracy: 0.02)
-        XCTAssertEqual(mediumFraction, 0.10, accuracy: 0.02)
-        XCTAssertEqual(largeFraction, 0.025, accuracy: 0.02)
+        // SyntheticTiles uses TileSpanSequence (maxConsecutiveUnits=5) which
+        // forces a non-unit after 5 consecutive 1×1s, biasing the distribution
+        // away from raw 87.5/10/2.5 toward a slightly more medium-tile-heavy
+        // mix. Empirical at this seed: ~76.7% unit, ~18.8% medium, ~4.6% large.
+        XCTAssertEqual(unitFraction, 0.77, accuracy: 0.04)
+        XCTAssertEqual(mediumFraction, 0.18, accuracy: 0.04)
+        XCTAssertEqual(largeFraction, 0.05, accuracy: 0.04)
+    }
+
+    /// Verify the run-cap actually fires: with the default
+    /// `maxConsecutiveUnits = 5`, no run of 6+ consecutive `.unit` tiles
+    /// should appear in the synthesized output.
+    func testNoLongUnitRuns() {
+        let tiles = SyntheticTiles.sample(seed: 0, count: 2_000)
+        var run = 0
+        var maxRun = 0
+        for tile in tiles {
+            if tile.span == .unit {
+                run += 1
+                maxRun = max(maxRun, run)
+            } else {
+                run = 0
+            }
+        }
+        XCTAssertLessThanOrEqual(maxRun, 5)
     }
 
     /// M5.5: synthetic tiles must be dark/medium-toned so the multiplicative

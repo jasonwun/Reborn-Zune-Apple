@@ -18,11 +18,12 @@ import Foundation
 public enum SyntheticTiles {
     public static func sample(seed: UInt64 = 0, count: Int = 250) -> [TileWallEntry] {
         var rng = ZuneSeededRNG(seed: seed)
+        var spanSeq = TileSpanSequence()
         var entries: [TileWallEntry] = []
         entries.reserveCapacity(count)
 
         for _ in 0..<count {
-            let span = TileSpan.random(using: &rng)
+            let span = spanSeq.next(using: &rng)
             // 2 or 3 frames — a flip target plus the original. Use the rng
             // so the per-tile frame count is deterministic given the seed.
             let frameCount = 2 + Int(rng.next() % 2) // 2 or 3
