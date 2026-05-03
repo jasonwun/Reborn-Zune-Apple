@@ -105,11 +105,14 @@ public struct VariableSpanLayout: Layout {
     }
 
     /// Public helper exposed for tests: how many cells fit in the given width
-    /// at the configured `unitSize`, using floor (so 175 / 70 → 2).
+    /// at the configured `unitSize`, using ceil so the trailing partial cell
+    /// gets a tile that slightly overflows the panel rather than leaving a
+    /// visible gap (175 / 70 → 3 cells, last one extends past the right edge).
+    /// User said overshoot-by-a-little is the desired behavior.
     public static func cellsPerRow(forWidth width: CGFloat, unitSize: CGFloat) -> Int {
         guard unitSize > 0 else { return 1 }
         guard width.isFinite, width > 0 else { return 1 }
-        return max(1, Int((width / unitSize).rounded(.down)))
+        return max(1, Int((width / unitSize).rounded(.up)))
     }
 
     /// Public helper exposed for tests: the proposal width to use for packing

@@ -9,9 +9,11 @@ import SwiftUI
 /// `resolvedWidth`) and the internal `pack` routine that does the actual
 /// packing math. The layout method bodies are thin wrappers around these.
 final class VariableSpanLayoutTests: XCTestCase {
-    func testCellsPerRowFloorBehavior() {
-        // 175 / 70 = 2.5 — must floor to 2.
-        XCTAssertEqual(VariableSpanLayout.cellsPerRow(forWidth: 175, unitSize: 70), 2)
+    func testCellsPerRowCeilBehavior() {
+        // 175 / 70 = 2.5 — must round UP to 3 so the trailing partial cell
+        // gets a tile (slight overshoot of the panel is desired behavior).
+        XCTAssertEqual(VariableSpanLayout.cellsPerRow(forWidth: 175, unitSize: 70), 3)
+        // Exact multiples don't change.
         XCTAssertEqual(VariableSpanLayout.cellsPerRow(forWidth: 700, unitSize: 70), 10)
         XCTAssertEqual(VariableSpanLayout.cellsPerRow(forWidth: 140, unitSize: 70), 2)
         // Width below one cell still resolves to a single column.
