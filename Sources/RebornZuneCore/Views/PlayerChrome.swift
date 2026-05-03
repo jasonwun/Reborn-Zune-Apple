@@ -33,7 +33,7 @@ public struct PlayerChrome: View {
                 Spacer()
                 HStack {
                     NowPlaying(item: engine.currentItem)
-                        .padding(.leading, 32)
+                        .padding(.leading, 120)
                     Spacer(minLength: 0)
                 }
                 .padding(.bottom, 120)
@@ -69,11 +69,11 @@ private struct NowPlaying: View {
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             ArtworkView(data: item?.artworkData)
-                .frame(width: 80, height: 80)
-                // Thin white border (matches Zune's framed artwork).
+                .frame(width: 120, height: 120)
+                // Solid 5px white frame.
                 .overlay(
                     Rectangle()
-                        .stroke(.white.opacity(0.85), lineWidth: 1)
+                        .stroke(.white, lineWidth: 5)
                 )
 
             VStack(alignment: .leading, spacing: 1) {
@@ -97,7 +97,7 @@ private struct NowPlaying: View {
                     .foregroundStyle(.white.opacity(0.55))
                     .padding(.top, 6)
             }
-            .frame(minHeight: 80, alignment: .top)
+            .frame(minHeight: 120, alignment: .top)
         }
     }
 }
