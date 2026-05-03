@@ -69,7 +69,7 @@ private struct NowPlaying: View {
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             ArtworkView(data: item?.artworkData)
-                .frame(width: 100, height: 100)
+                .frame(width: 120, height: 120)
                 // Solid 5px white frame.
                 .overlay(
                     Rectangle()
@@ -77,12 +77,12 @@ private struct NowPlaying: View {
                 )
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(item?.artist ?? "—")
-                    .font(.system(size: 17, weight: .semibold))
+                Text(item?.artist ?? "Unknown Artist")
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                Text(item?.albumTitle ?? "")
-                    .font(.system(size: 13))
+                Text(item?.albumTitle ?? "Unknown Album")
+                    .font(.system(size: 16))
                     .foregroundStyle(.white.opacity(0.65))
                     .lineLimit(1)
                 // Title uses the same bold treatment as the artist.
@@ -97,7 +97,9 @@ private struct NowPlaying: View {
                     .foregroundStyle(.white.opacity(0.55))
                     .padding(.top, 6)
             }
-            .frame(minHeight: 100, alignment: .top)
+            .padding(.top, 5)
+            .padding(.leading, 10)
+            .frame(minHeight: 120, alignment: .top)
         }
     }
 }
