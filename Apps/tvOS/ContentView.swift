@@ -50,37 +50,39 @@ private struct SnapshotView: View {
 
 private struct DefaultContent: View {
     @State private var engine = PlaybackEngine()
+    @State private var tiles: [TileWallEntry] = []
 
     var body: some View {
-        // M5.8: setting `REBORN_ZUNE_DEBUG_NO_LIGHTING=1` at launch
-        // disables the lighting shader entirely. Used to verify the
-        // pre-shader `.saturation(0)` overlay actually renders the tiles
-        // as grayscale — the lit captures should match this baseline
-        // tinted by warm/cool light pools, not introduce new color.
         let lighting: LightingAnimator? =
             ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_NO_LIGHTING"] == "1"
             ? nil
             : LightingAnimator()
+
         ZStack(alignment: .bottom) {
             TileWallView(
-                tiles: SyntheticTiles.sample(count: 250),
+                tiles: tiles.isEmpty ? SyntheticTiles.sample(count: 250) : tiles,
                 lightingAnimator: lighting
             )
             PlaybackStatusPanel(engine: engine)
                 .padding()
         }
         .task {
-            // Showcase mode: load bundled music + auto-play.
-            let source = BundleLibrarySource()
+            // Load music bundled at Resources/UserMusic/. If no music is
+            // bundled, fall back to the silence.m4a sample.
+            let userMusic = BundleLibrarySource(subdirectory: "UserMusic")
             do {
-                let tracks = try await source.load()
+                var tracks = try await userMusic.load()
+                if tracks.isEmpty {
+                    let fallback = BundleLibrarySource()
+                    tracks = (try? await fallback.load()) ?? []
+                }
                 if !tracks.isEmpty {
+                    tiles = MusicTileBuilder.tiles(from: tracks)
                     engine.setQueue(tracks)
                     engine.play()
                 }
             } catch {
-                // BundleLibrarySource is documented not to throw on empty
-                // bundles; if it does, we just leave the engine empty.
+                // Leave tiles empty → falls back to synthetic wall.
             }
         }
     }

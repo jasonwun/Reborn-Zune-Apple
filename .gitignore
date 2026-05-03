@@ -7,3 +7,4 @@ xcuserdata/
 *.xcscheme
 Package.resolved
 build/
+Apps/tvOS/Resources/UserMusic

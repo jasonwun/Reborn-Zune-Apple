@@ -90,6 +90,13 @@ targets:
           - "Resources/**"
       - path: Apps/tvOS/Resources/silence.m4a
         buildPhase: resources
+      # User-supplied music (symlink to ~/Music; gitignored so the
+      # 1.2 GB of audio is never committed). xcodegen treats this as a
+      # folder reference; adding/removing files in ~/Music auto-
+      # propagates into the next build without re-running xcodegen.
+      - path: Apps/tvOS/Resources/UserMusic
+        buildPhase: resources
+        type: folder
     dependencies:
       - package: RebornZuneCore
         product: RebornZuneCore
