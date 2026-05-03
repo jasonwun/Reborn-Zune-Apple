@@ -110,11 +110,12 @@ private struct CenterTimeline: View {
     @Bindable var engine: PlaybackEngine
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(engine.currentItem?.title ?? "")
                 .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(0.7))
                 .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             ZStack(alignment: .leading) {
                 Rectangle()
