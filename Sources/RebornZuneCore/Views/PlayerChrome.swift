@@ -23,24 +23,39 @@ public struct PlayerChrome: View {
     }
 
     public var body: some View {
-        VStack {
-            Spacer()
-            HStack(alignment: .bottom, spacing: 0) {
-                NowPlaying(item: engine.currentItem)
-                    .padding(.leading, 32)
-                    .padding(.bottom, 24)
+        ZStack {
+            // Bottom-LEFT now-playing block: anchored to the lower-left of
+            // the window and lifted ~120 pt off the bottom edge so it sits
+            // visibly OVER the lower portion of the tile wall, matching the
+            // Zune client where the now-playing block overlaps the wall
+            // itself rather than living in a separate footer below it.
+            VStack {
+                Spacer()
+                HStack {
+                    NowPlaying(item: engine.currentItem)
+                        .padding(.leading, 32)
+                    Spacer(minLength: 0)
+                }
+                .padding(.bottom, 120)
+            }
 
-                Spacer(minLength: 0)
-
+            // Bottom-CENTER timeline.
+            VStack {
+                Spacer()
                 CenterTimeline(engine: engine)
-                    .padding(.bottom, 28)
                     .frame(maxWidth: 360)
+                    .padding(.bottom, 28)
+            }
 
-                Spacer(minLength: 0)
-
-                RightTransport(engine: engine)
-                    .padding(.trailing, 32)
-                    .padding(.bottom, 24)
+            // Bottom-RIGHT transport.
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer(minLength: 0)
+                    RightTransport(engine: engine)
+                        .padding(.trailing, 32)
+                        .padding(.bottom, 24)
+                }
             }
         }
     }
@@ -55,6 +70,11 @@ private struct NowPlaying: View {
         HStack(alignment: .top, spacing: 14) {
             ArtworkView(data: item?.artworkData)
                 .frame(width: 80, height: 80)
+                // Thin white border (matches Zune's framed artwork).
+                .overlay(
+                    Rectangle()
+                        .stroke(.white.opacity(0.85), lineWidth: 1)
+                )
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(item?.artist ?? "—")
@@ -65,9 +85,10 @@ private struct NowPlaying: View {
                     .font(.system(size: 13))
                     .foregroundStyle(.white.opacity(0.65))
                     .lineLimit(1)
+                // Title uses the same bold treatment as the artist.
                 Text(item?.title ?? "")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.65))
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
                     .lineLimit(1)
                     .padding(.top, 6)
 
