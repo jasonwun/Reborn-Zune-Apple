@@ -4,94 +4,63 @@ import CoreGraphics
 import ImageIO
 #endif
 
-/// The full-window player chrome that overlays the tile wall:
-/// - Bottom-left: now-playing artwork + track info
-/// - Bottom-center: transport controls + progress slider
-/// - Bottom-right: queue toggle button
-/// - Right side (toggleable): "Up Next" queue panel
+/// The full-window player chrome that overlays the tile wall, modeled
+/// on the Zune layout adapted to Apple's Liquid Glass:
+/// - Bottom-left: standalone "Now Playing" card (artwork + metadata)
+/// - Bottom-center: standalone "Transport" card (prev/play/next + progress)
+/// - Right side: standalone "Up Next" queue panel
 ///
-/// All chrome uses Apple's Liquid Glass material (`.ultraThinMaterial`)
-/// so the tile wall remains visible behind it.
+/// Each panel is its own .ultraThinMaterial container with a hairline
+/// stroke. They float independently over the tile wall — no shared bar.
 @MainActor
 public struct PlayerChrome: View {
     @Bindable private var engine: PlaybackEngine
-    @State private var queueVisible: Bool = false
 
     public init(engine: PlaybackEngine) {
         self._engine = Bindable(wrappedValue: engine)
     }
 
     public var body: some View {
-        ZStack(alignment: .topTrailing) {
-            // Right-side queue panel (overlay).
-            if queueVisible {
-                QueuePanel(engine: engine)
+        ZStack(alignment: .topLeading) {
+            // Right-side queue panel — anchored top-trailing, fills most
+            // of the right column's height.
+            VStack {
+                QueueCard(engine: engine)
                     .frame(width: 320)
-                    .padding(.top, 16)
-                    .padding(.trailing, 16)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .padding(.top, 24)
+                    .padding(.trailing, 24)
+                Spacer()
             }
+            .frame(maxWidth: .infinity, alignment: .trailing)
 
-            // Bottom strip.
+            // Bottom row — two independent cards, left and center.
             VStack {
                 Spacer()
-                PlayerBar(engine: engine, queueVisible: $queueVisible)
-                    .padding(16)
-            }
-        }
-    }
-}
-
-// MARK: - Bottom strip
-
-private struct PlayerBar: View {
-    @Bindable var engine: PlaybackEngine
-    @Binding var queueVisible: Bool
-
-    var body: some View {
-        HStack(spacing: 18) {
-            NowPlayingInfo(item: engine.currentItem)
-                .frame(maxWidth: 320, alignment: .leading)
-
-            Spacer(minLength: 12)
-
-            TransportAndProgress(engine: engine)
-                .frame(maxWidth: 480)
-
-            Spacer(minLength: 12)
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.22)) {
-                    queueVisible.toggle()
+                HStack(alignment: .bottom, spacing: 24) {
+                    NowPlayingCard(item: engine.currentItem)
+                    Spacer(minLength: 0)
+                    TransportCard(engine: engine)
+                    Spacer(minLength: 0)
+                    // Reserve a sliver on the right so the bottom row
+                    // doesn't visually collide with the queue panel above.
+                    Color.clear.frame(width: 332, height: 1)
                 }
-            } label: {
-                Image(systemName: queueVisible ? "music.note.list" : "music.note.list")
-                    .font(.title3)
-                    .foregroundStyle(.white.opacity(queueVisible ? 1.0 : 0.75))
-                    .padding(8)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(queueVisible ? "Hide queue" : "Show queue")
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22)
-                .stroke(.white.opacity(0.18), lineWidth: 0.5)
-        )
     }
 }
 
-// MARK: - Now playing info (artwork + title/artist/album)
+// MARK: - Card 1 — now playing
 
-private struct NowPlayingInfo: View {
+private struct NowPlayingCard: View {
     let item: Music?
 
     var body: some View {
         HStack(spacing: 12) {
             ArtworkView(data: item?.artworkData)
-                .frame(width: 56, height: 56)
+                .frame(width: 64, height: 64)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item?.title ?? "Not playing")
@@ -108,16 +77,23 @@ private struct NowPlayingInfo: View {
                     .lineLimit(1)
             }
         }
+        .padding(12)
+        .frame(maxWidth: 360, alignment: .leading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(.white.opacity(0.18), lineWidth: 0.5)
+        )
     }
 }
 
-// MARK: - Transport buttons + progress bar
+// MARK: - Card 2 — transport + progress
 
-private struct TransportAndProgress: View {
+private struct TransportCard: View {
     @Bindable var engine: PlaybackEngine
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             HStack(spacing: 28) {
                 Button { engine.previous() } label: {
                     Image(systemName: "backward.fill").font(.title3)
@@ -139,7 +115,15 @@ private struct TransportAndProgress: View {
             .buttonStyle(.plain)
 
             ProgressBar(current: engine.currentTime, total: engine.duration)
+                .frame(width: 360)
         }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(.white.opacity(0.18), lineWidth: 0.5)
+        )
     }
 }
 
@@ -181,9 +165,9 @@ private struct ProgressBar: View {
     }
 }
 
-// MARK: - Queue side panel
+// MARK: - Card 3 — queue side panel (always-on right column)
 
-private struct QueuePanel: View {
+private struct QueueCard: View {
     @Bindable var engine: PlaybackEngine
 
     var body: some View {
@@ -217,7 +201,7 @@ private struct QueuePanel: View {
                 }
             }
         }
-        .frame(maxHeight: 520)
+        .frame(maxHeight: 560)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
         .overlay(
             RoundedRectangle(cornerRadius: 18)
