@@ -137,8 +137,8 @@ final class LightingAnimatorTests: XCTestCase {
         // than M5.8/M5.9.
         XCTAssertEqual(params.light1Intensity, 1.5, accuracy: 1e-6)
         XCTAssertEqual(params.light2Intensity, 1.5, accuracy: 1e-6)
-        XCTAssertEqual(params.ambientColor.x, 0.04, accuracy: 1e-3)
-        XCTAssertEqual(params.ambientColor.y, 0.04, accuracy: 1e-3)
-        XCTAssertEqual(params.ambientColor.z, 0.04, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.x, 0.02, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.y, 0.02, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.z, 0.02, accuracy: 1e-3)
     }
 }
