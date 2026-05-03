@@ -24,8 +24,8 @@ final class LightingShaderTests: XCTestCase {
         // broaden the visible wash; Lambertian dot-product falloff
         // produces a tighter pool than UWP composition lighting at the
         // source 1.3 value).
-        XCTAssertEqual(params.light1Intensity, 1.0, accuracy: 1e-6)
-        XCTAssertEqual(params.light2Intensity, 1.0, accuracy: 1e-6)
+        XCTAssertEqual(params.light1Intensity, 1.5, accuracy: 1e-6)
+        XCTAssertEqual(params.light2Intensity, 1.5, accuracy: 1e-6)
 
         // M5.10: ambient lowered to (0.03, 0.03, 0.03) so non-pool areas
         // are barely visible — user feedback on M5.9 wanted the dark-room

@@ -38,10 +38,10 @@ public struct LightingParameters: Equatable, Sendable {
         panelSize: CGSize,
         light1Position: SIMD3<Float>,
         light1Color: SIMD3<Float>,
-        light1Intensity: Float = 1.0,
+        light1Intensity: Float = 1.5,
         light2Position: SIMD3<Float>,
         light2Color: SIMD3<Float>,
-        light2Intensity: Float = 1.0,
+        light2Intensity: Float = 1.5,
         ambientColor: SIMD3<Float> = SIMD3<Float>(0.04, 0.04, 0.04)
     ) {
         self.panelSize = panelSize

@@ -135,8 +135,8 @@ final class LightingAnimatorTests: XCTestCase {
         // dropped to (0.03, 0.03, 0.03) so non-pool areas are barely
         // visible — user wanted the dark-room intuition pushed further
         // than M5.8/M5.9.
-        XCTAssertEqual(params.light1Intensity, 1.0, accuracy: 1e-6)
-        XCTAssertEqual(params.light2Intensity, 1.0, accuracy: 1e-6)
+        XCTAssertEqual(params.light1Intensity, 1.5, accuracy: 1e-6)
+        XCTAssertEqual(params.light2Intensity, 1.5, accuracy: 1e-6)
         XCTAssertEqual(params.ambientColor.x, 0.04, accuracy: 1e-3)
         XCTAssertEqual(params.ambientColor.y, 0.04, accuracy: 1e-3)
         XCTAssertEqual(params.ambientColor.z, 0.04, accuracy: 1e-3)
