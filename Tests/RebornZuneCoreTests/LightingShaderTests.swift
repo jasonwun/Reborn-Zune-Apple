@@ -30,9 +30,9 @@ final class LightingShaderTests: XCTestCase {
         // M5.10: ambient lowered to (0.03, 0.03, 0.03) so non-pool areas
         // are barely visible — user feedback on M5.9 wanted the dark-room
         // intuition pushed further.
-        XCTAssertEqual(params.ambientColor.x, 0.02, accuracy: 1e-3)
-        XCTAssertEqual(params.ambientColor.y, 0.02, accuracy: 1e-3)
-        XCTAssertEqual(params.ambientColor.z, 0.02, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.x, 0.01, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.y, 0.01, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.z, 0.01, accuracy: 1e-3)
     }
 
     func testParametersStoredFieldCount() {
