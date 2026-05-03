@@ -31,7 +31,7 @@ public struct TileWallView: View {
 
     public init(
         tiles: [TileWallEntry],
-        unitSize: CGFloat = 70,
+        unitSize: CGFloat = 50,
         lightingAnimator: LightingAnimator? = LightingAnimator(),
         entryAnimation: TileEntryAnimation = TileEntryAnimation(),
         entrySeed: UInt64 = 0
@@ -169,7 +169,7 @@ public extension TileWallView {
     /// fully completed (opacity=1, scale=1).
     static func staticSnapshot(
         tiles: [TileWallEntry],
-        unitSize: CGFloat = 70,
+        unitSize: CGFloat = 50,
         lightingAnimator: LightingAnimator? = LightingAnimator(),
         frozenTime: TimeInterval,
         panelSize: CGSize
