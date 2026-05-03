@@ -105,12 +105,25 @@ final class NowPlayingCenter {
     }
 
     private func makeArtwork(from data: Data) -> MPMediaItemArtwork? {
+        // The boundsSize handler closure is invoked on MediaPlayer's own
+        // background queue, NOT on the main actor. With Swift 6 strict
+        // concurrency, an implicitly-@MainActor-isolated closure called
+        // off-main trips `dispatch_assert_queue_fail` at runtime.
+        //
+        // Fix: make the closure `@Sendable` and have it capture only `Data`
+        // (which is Sendable). The NSImage / UIImage is constructed inside
+        // the closure on whatever queue MediaPlayer chose, then returned
+        // by value — no MainActor crossing.
         #if canImport(UIKit)
-        guard let image = UIImage(data: data) else { return nil }
-        return MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        guard let probe = UIImage(data: data) else { return nil }
+        return MPMediaItemArtwork(boundsSize: probe.size) { @Sendable _ in
+            UIImage(data: data) ?? UIImage()
+        }
         #elseif canImport(AppKit)
-        guard let image = NSImage(data: data) else { return nil }
-        return MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        guard let probe = NSImage(data: data) else { return nil }
+        return MPMediaItemArtwork(boundsSize: probe.size) { @Sendable _ in
+            NSImage(data: data) ?? NSImage()
+        }
         #else
         return nil
         #endif
