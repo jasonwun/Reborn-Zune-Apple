@@ -111,9 +111,10 @@ public struct TileView: View {
         //   IN:  opacity 0→1 over 1300ms (no rotation animation)
         // Total: 1800 ms.
 
-        // OUT PHASE
+        // OUT PHASE — rotate the opposite direction (0 → -90°) so the tile
+        // appears to flip away from the viewer in the reversed sense.
         withAnimation(.linear(duration: 0.4)) {
-            rotationDegrees = 90
+            rotationDegrees = -90
         }
         withAnimation(.linear(duration: 0.2).delay(0.25)) {
             opacity = 0
