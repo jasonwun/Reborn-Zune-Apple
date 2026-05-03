@@ -26,27 +26,42 @@ public enum MusicTileBuilder {
         var spanSeq = TileSpanSequence()
 
         // Decode artwork up front so each tile can reference cached images.
-        // Nil is fine for tracks without embedded artwork — TileView renders
-        // a black square in that case.
-        let images: [CGImage?] = tracks.map { decodeArtwork($0.artworkData) }
+        let decoded: [CGImage?] = tracks.map { decodeArtwork($0.artworkData) }
 
-        let nonNilCount = images.lazy.compactMap { $0 }.count
+        // Index list of tracks WITH artwork — used to substitute for tracks
+        // whose own files lack embedded album art (otherwise those tiles
+        // would render as solid black squares).
+        let nonNilIndices: [Int] = decoded.enumerated().compactMap { idx, img in
+            img != nil ? idx : nil
+        }
+
+        // Helper: pick a random non-nil artwork, optionally avoiding `exclude`.
+        func pickAnyArtwork(excluding exclude: Int? = nil) -> CGImage? {
+            guard !nonNilIndices.isEmpty else { return nil }
+            for _ in 0..<8 {
+                let pickIdx = Int(rng.next() % UInt64(nonNilIndices.count))
+                let trackIdx = nonNilIndices[pickIdx]
+                if trackIdx != exclude, let candidate = decoded[trackIdx] {
+                    return candidate
+                }
+            }
+            // Fallback after retries: any non-nil image, even if it matches
+            // `exclude`.
+            return decoded[nonNilIndices.first!]
+        }
 
         return tracks.enumerated().map { index, _ in
-            let primary = images[index]
+            // Primary: the track's own artwork, or another track's artwork
+            // if this one has none. Guarantees no all-black tiles in the
+            // wall when at least one track in the library has artwork.
+            let primary = decoded[index] ?? pickAnyArtwork(excluding: nil)
 
-            // Flip target: a different track's artwork. If only one
-            // track has artwork, fall back to the primary so the flip
-            // becomes a no-op (TileView skips flipping with ≤1 image).
+            // Flip target: a different track's artwork. Falls back to
+            // `primary` if the library has only one image (TileView then
+            // skips flipping anyway).
             let flipTarget: CGImage? = {
-                guard nonNilCount > 1 else { return primary }
-                for _ in 0..<8 {
-                    let candidateIdx = Int(rng.next() % UInt64(images.count))
-                    if candidateIdx != index, let candidate = images[candidateIdx] {
-                        return candidate
-                    }
-                }
-                return primary
+                guard nonNilIndices.count > 1 else { return primary }
+                return pickAnyArtwork(excluding: index)
             }()
 
             let span = spanSeq.next(using: &rng)
