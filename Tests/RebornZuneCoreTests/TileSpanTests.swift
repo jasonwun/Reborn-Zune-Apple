@@ -17,25 +17,28 @@ final class TileSpanTests: XCTestCase {
     func testDistributionWithSeededRNG() {
         var rng = SeededRNG(state: 0xC0FFEE_C0FFEE)
         let n = 10_000
-        var counts: [TileSpan: Int] = [.unit: 0, .medium: 0, .large: 0]
+        var counts: [TileSpan: Int] = [.unit: 0, .small: 0, .medium: 0, .large: 0]
         for _ in 0..<n {
             counts[TileSpan.random(using: &rng), default: 0] += 1
         }
 
         let unitFraction = Double(counts[.unit] ?? 0) / Double(n)
+        let smallFraction = Double(counts[.small] ?? 0) / Double(n)
         let mediumFraction = Double(counts[.medium] ?? 0) / Double(n)
         let largeFraction = Double(counts[.large] ?? 0) / Double(n)
 
-        // Spec target: 87.5% unit, 10% medium, 2.5% large. Tolerate ±2%.
-        XCTAssertEqual(unitFraction, 0.875, accuracy: 0.02)
-        XCTAssertEqual(mediumFraction, 0.10, accuracy: 0.02)
-        XCTAssertEqual(largeFraction, 0.025, accuracy: 0.02)
+        // M5.5 target: 70% unit, 20% small, 8% medium, 2% large. Tolerate ±2%.
+        XCTAssertEqual(unitFraction, 0.70, accuracy: 0.02)
+        XCTAssertEqual(smallFraction, 0.20, accuracy: 0.02)
+        XCTAssertEqual(mediumFraction, 0.08, accuracy: 0.02)
+        XCTAssertEqual(largeFraction, 0.02, accuracy: 0.02)
 
         XCTAssertEqual(counts.values.reduce(0, +), n)
     }
 
     func testRawValuesMatchSpanSides() {
         XCTAssertEqual(TileSpan.unit.rawValue, 1)
+        XCTAssertEqual(TileSpan.small.rawValue, 2)
         XCTAssertEqual(TileSpan.medium.rawValue, 3)
         XCTAssertEqual(TileSpan.large.rawValue, 4)
     }

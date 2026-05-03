@@ -51,8 +51,7 @@ public struct LightingModifier: ViewModifier {
             .float3(l2c.x, l2c.y, l2c.z),
             .float3(amb.x, amb.y, amb.z),
             .float(parameters.light1Intensity),
-            .float(parameters.light2Intensity),
-            .float(parameters.attenuationScale)
+            .float(parameters.light2Intensity)
         )
         content.colorEffect(shader)
     }

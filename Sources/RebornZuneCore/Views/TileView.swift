@@ -1,42 +1,48 @@
 import SwiftUI
 
-/// A single album-art tile with the UWP-style periodic flip animation.
+/// A single album-art tile with the UWP-style flip animation.
 ///
 /// Renders the current `CGImage` from `images` with `aspectFill` semantics
 /// and applies its `.tileSpan(span)` so callers can drop a `TileView` into
 /// `VariableSpanLayout` without thinking about the modifier.
 ///
-/// Periodically (every `flipPeriod` seconds, offset by `initialDelay`) the
-/// tile rotates around the Y axis 0° → 90° while fading to 0 over
-/// `flipDuration / 6`, swaps to the next image in `images`, then rotates
-/// 270° → 360° while fading back in over `flipDuration * 5/6`. This mirrors
-/// `Tile.UpdateThumbnail` in the UWP original.
+/// M5.8 update: the flip cadence is now driven externally by a wall-level
+/// `TileFlipCoordinator` instead of a per-tile timer. Each `TileView`
+/// observes the `flipPulse: Int` parameter; whenever it changes, the tile
+/// runs one flip animation. This matches the UWP behavior in
+/// `TilePage.xaml.cs:202-220` where one random tile flips every 5 s — with
+/// 250 tiles, the per-tile timer model produced ~50 flips/sec, far more
+/// than UWP's 0.2 flips/sec.
+///
+/// The flip animation itself (rotate 0° → 90° while fading 1 → 0, swap
+/// image, rotate 270° → 360° while fading 0 → 1) is unchanged from M5 —
+/// this matches `Tile.UpdateThumbnail` in the UWP original.
 ///
 /// If `images.count <= 1`, no flip occurs (the tile is static).
 public struct TileView: View {
     public let images: [CGImage?]
     public let span: TileSpan
-    public let flipPeriod: TimeInterval
+    /// External flip pulse — incrementing this Int triggers one flip
+    /// animation. Wired by `TileWallView`'s wall-level coordinator.
+    public let flipPulse: Int
     public let flipDuration: TimeInterval
-    public let initialDelay: TimeInterval
 
     public init(
         images: [CGImage?],
         span: TileSpan,
-        flipPeriod: TimeInterval = 5,
-        flipDuration: TimeInterval = 1.2,
-        initialDelay: TimeInterval = 0
+        flipPulse: Int = 0,
+        flipDuration: TimeInterval = 1.2
     ) {
         self.images = images
         self.span = span
-        self.flipPeriod = flipPeriod
+        self.flipPulse = flipPulse
         self.flipDuration = flipDuration
-        self.initialDelay = initialDelay
     }
 
     @State private var currentImageIndex: Int = 0
     @State private var rotationDegrees: Double = 0
     @State private var opacity: Double = 1
+    @State private var lastSeenPulse: Int = 0
     @State private var flipTask: Task<Void, Never>? = nil
 
     public var body: some View {
@@ -52,12 +58,27 @@ public struct TileView: View {
         .opacity(opacity)
         .rotation3DEffect(.degrees(rotationDegrees), axis: (x: 0, y: 1, z: 0))
         .overlay(
+            // M5.26: thicker border (2 px) and grey color matches the
+            // Zune-original recording's visible inter-tile gridlines.
             Rectangle()
-                .stroke(Color.black, lineWidth: 0.8)
+                .stroke(Color.black, lineWidth: 1.25)
         )
         .tileSpan(span)
         .onAppear {
-            startFlipTimer()
+            // Seed the lastSeenPulse so the first incoming pulse change
+            // triggers a flip rather than firing once on mount.
+            lastSeenPulse = flipPulse
+        }
+        .onChange(of: flipPulse) { _, newValue in
+            guard newValue != lastSeenPulse else { return }
+            lastSeenPulse = newValue
+            // Static tiles (≤1 image) skip the flip animation entirely —
+            // there is nothing to swap to.
+            guard images.count > 1 else { return }
+            flipTask?.cancel()
+            flipTask = Task { @MainActor in
+                await runFlip()
+            }
         }
         .onDisappear {
             flipTask?.cancel()
@@ -71,56 +92,36 @@ public struct TileView: View {
         return images[idx]
     }
 
-    private func startFlipTimer() {
-        flipTask?.cancel()
-        // Static tiles (≤1 image) skip the flip animation entirely.
-        guard images.count > 1, flipPeriod > 0 else { return }
-
-        flipTask = Task { @MainActor in
-            // Per-tile stagger so flips don't all fire simultaneously.
-            if initialDelay > 0 {
-                try? await Task.sleep(nanoseconds: UInt64(initialDelay * 1_000_000_000))
-            }
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(flipPeriod * 1_000_000_000))
-                if Task.isCancelled { break }
-                await runFlip()
-            }
-        }
-    }
-
     @MainActor
     private func runFlip() async {
-        let halfOut = flipDuration / 6.0   // 200 ms with default 1.2 s
-        let halfIn = flipDuration * 5.0 / 6.0 // 1000 ms with default 1.2 s
+        // M5.24: out phase reverted to UWP timing; in phase extended to 1300ms.
+        //   OUT: rotation 0→90° over 400ms, opacity 1→0 over 200ms after 250ms delay, total 500ms wait
+        //   SWAP (invisible): image to next, rotation jumps to 0, opacity stays 0
+        //   IN:  opacity 0→1 over 1300ms (no rotation animation)
+        // Total: 1800 ms.
 
-        // Rotate 0 → 90° while fading 1 → 0.
-        withAnimation(.linear(duration: halfOut)) {
+        // OUT PHASE
+        withAnimation(.linear(duration: 0.4)) {
             rotationDegrees = 90
+        }
+        withAnimation(.linear(duration: 0.2).delay(0.25)) {
             opacity = 0
         }
-        try? await Task.sleep(nanoseconds: UInt64(halfOut * 1_000_000_000))
+        try? await Task.sleep(nanoseconds: 500_000_000)
         if Task.isCancelled { return }
 
-        // Swap image and reset rotation to the back side (270°).
+        // SWAP — at this point opacity == 0 so the rotation reset is invisible.
         currentImageIndex = (currentImageIndex + 1) % max(images.count, 1)
-        var transaction = Transaction(animation: nil)
-        transaction.disablesAnimations = true
-        withTransaction(transaction) {
-            rotationDegrees = 270
-        }
-
-        // Rotate 270° → 360° while fading 0 → 1.
-        withAnimation(.linear(duration: halfIn)) {
-            rotationDegrees = 360
-            opacity = 1
-        }
-        try? await Task.sleep(nanoseconds: UInt64(halfIn * 1_000_000_000))
-        if Task.isCancelled { return }
-
-        // Reset rotation to 0 with no animation so the next flip cycle starts clean.
-        withTransaction(transaction) {
+        var noAnim = Transaction(animation: nil)
+        noAnim.disablesAnimations = true
+        withTransaction(noAnim) {
             rotationDegrees = 0
         }
+
+        // IN PHASE — pure opacity fade.
+        withAnimation(.linear(duration: 1.1)) {
+            opacity = 1
+        }
+        try? await Task.sleep(nanoseconds: 1_100_000_000)
     }
 }

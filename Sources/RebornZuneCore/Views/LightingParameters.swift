@@ -4,14 +4,26 @@ import simd
 /// Per-frame uniform values consumed by the `zuneLighting` Metal shader.
 ///
 /// The shader applies two animated point lights and a single ambient color
-/// to a sampled pixel. `attenuationScale` tunes the distance falloff —
-/// `1 / (1 + d² * attenuationScale)`. The default `1e-6` gives a falloff of
-/// `0.5` at a 1000-pixel distance, matching the visual softness of the UWP
-/// reference at typical 1920×1080 panel sizes.
+/// to a pre-desaturated (via SwiftUI `.saturation(0)`) tile-wall pixel.
+///
+/// M5.6 update: switched the shader to Lambertian diffuse against a
+/// surface normal of (0, 0, 1). The light's Z-component (200, baked into
+/// the keyframe positions) provides the natural pool falloff, so a
+/// separate `attenuationScale` parameter is no longer needed and has been
+/// removed from this type and the shader signature.
+///
+/// Defaults match the UWP `TilePage.xaml.cs` source, with M5.7/M5.8 tweaks:
+/// - `light1Intensity` / `light2Intensity` = 1.8 (raised from 1.3 in M5.7
+///   to broaden the visible wash; UWP source is 1.3 but Lambertian falloff
+///   produces a tighter pool than the UWP composition lighting).
+/// - `ambientColor` = (0.05, 0.05, 0.05) — M5.8 lowered from (0.165,
+///   0.165, 0.165) so the majority of the wall reads as DARK with only
+///   the moving light pool visibly bright. The UWP recording's
+///   `overview_011.png` shows ~70% of the wall near-black; the previous
+///   ambient bled the whole wall to a uniform mid-grey wash.
 ///
 /// `ambientColor` is the ambient RGB **already multiplied by the ambient
-/// intensity** — the shader does not re-scale it. The default value
-/// `(0.211, 0.211, 0.211)` is `#d3d3d3 * 0.20`, matching the UWP setup.
+/// intensity** — the shader does not re-scale it.
 public struct LightingParameters: Equatable, Sendable {
     public var panelSize: CGSize
     public var light1Position: SIMD3<Float>
@@ -21,18 +33,16 @@ public struct LightingParameters: Equatable, Sendable {
     public var light2Color: SIMD3<Float>
     public var light2Intensity: Float
     public var ambientColor: SIMD3<Float>
-    public var attenuationScale: Float
 
     public init(
         panelSize: CGSize,
         light1Position: SIMD3<Float>,
         light1Color: SIMD3<Float>,
-        light1Intensity: Float = 1.3,
+        light1Intensity: Float = 4.8,
         light2Position: SIMD3<Float>,
         light2Color: SIMD3<Float>,
-        light2Intensity: Float = 1.3,
-        ambientColor: SIMD3<Float> = SIMD3<Float>(0.211, 0.211, 0.211),
-        attenuationScale: Float = 1.0e-6
+        light2Intensity: Float = 4.8,
+        ambientColor: SIMD3<Float> = SIMD3<Float>(0.04, 0.04, 0.04)
     ) {
         self.panelSize = panelSize
         self.light1Position = light1Position
@@ -42,6 +52,5 @@ public struct LightingParameters: Equatable, Sendable {
         self.light2Color = light2Color
         self.light2Intensity = light2Intensity
         self.ambientColor = ambientColor
-        self.attenuationScale = attenuationScale
     }
 }

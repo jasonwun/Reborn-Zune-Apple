@@ -43,11 +43,31 @@ public struct TileWallView: View {
         self.entrySeed = entrySeed
     }
 
+    /// M5.8: `@State` of an `@Observable` reference type pins the
+    /// coordinator instance for the view's lifetime. Children read
+    /// `flipPulses[index]` and the framework re-runs their bodies when
+    /// that slot changes.
+    @State private var flipCoordinator = TileFlipCoordinator()
+
     public var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            // M5.26: background grey (~0.20 luminance) matches the
+            // Zune-original recording — the gaps between tiles and the
+            // window frame are visibly grey, not black.
+            Color(white: 0.10).ignoresSafeArea()
+            // M5.6: `.saturation(0)` matches the UWP `BackdropSaturationBrush(Saturation=0)`
+            // overlay — tiles are converted to grayscale BEFORE the lighting
+            // shader tints them. Applied to the layout (parent) so the cost is
+            // paid once for the whole wall, not per-tile.
             tileLayout
+                .saturation(0)
                 .modifier(OptionalLightingModifier(animator: lightingAnimator))
+        }
+        .onAppear {
+            flipCoordinator.start(tileCount: tiles.count)
+        }
+        .onDisappear {
+            flipCoordinator.stop()
         }
     }
 
@@ -60,19 +80,19 @@ public struct TileWallView: View {
         )
         VariableSpanLayout(unitSize: unitSize) {
             ForEach(Array(tiles.enumerated()), id: \.element.id) { index, entry in
-                let initialDelay = (Double(index % 8) / 8.0) * 5.0
                 let waveParams = entryAnimation.parameters(
                     forWave: waveAssignments[index]
                 )
+                let pulse = (index < flipCoordinator.flipPulses.count)
+                    ? flipCoordinator.flipPulses[index]
+                    : 0
                 TileEntryWrapper(
                     entryParameters: waveParams
                 ) {
                     TileView(
                         images: entry.images,
                         span: entry.span,
-                        flipPeriod: 5,
-                        flipDuration: 1.2,
-                        initialDelay: initialDelay
+                        flipPulse: pulse
                     )
                 }
                 .tileSpan(entry.span)
@@ -124,12 +144,17 @@ struct StaticTileWallSnapshot: View {
     let panelSize: CGSize
 
     var body: some View {
+        // M5.6: pre-desaturate the tile layout so the lighting shader receives
+        // grayscale `currentColor` — same architecture as the UWP TilePage's
+        // `BackdropSaturationBrush(Saturation=0)` overlay above the tile wrap
+        // panel.
         let layout = VariableSpanLayout(unitSize: unitSize) {
             ForEach(tiles) { entry in
                 StaticTile(image: entry.images.first ?? nil, span: entry.span)
                     .tileSpan(entry.span)
             }
         }
+        .saturation(0)
 
         ZStack {
             Color.black

@@ -13,8 +13,10 @@ public struct TileEntryAnimation: Sendable {
     public let scaleDuration: TimeInterval
 
     public init(
-        waveCount: Int = 14,
-        waveDelayStep: TimeInterval = 0.08,
+        // M5.47: 30 batches × 0.05 s step = 1.5 s total entry range.
+        // ~8 tiles per batch with 250 tiles.
+        waveCount: Int = 30,
+        waveDelayStep: TimeInterval = 0.05,
         opacityDuration: TimeInterval = 0.45,
         scaleDuration: TimeInterval = 0.6
     ) {

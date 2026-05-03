@@ -32,6 +32,13 @@ public struct LightingAnimator: Sendable {
     /// any monotonic timestamp — the cycle is reduced modulo
     /// `cycleDuration`. For times below `startDelay`, BOTH lights are held
     /// at their `progress=0` keyframes (matching the UWP composition delay).
+    ///
+    /// M5.7: the keyframe X/Y values from `TilePage.xaml.cs` were
+    /// calibrated for a ~2300×1300 panel. At smaller panel sizes (iPad
+    /// ~1180 px wide, tvOS 1920 px) much of the orbit ended up off-screen,
+    /// shrinking the visible wash. We scale interpolated XY positions
+    /// proportionally to `panelSize / referencePanelSize`. Z is left
+    /// unscaled — it represents light depth and is panel-independent.
     public func parameters(at time: TimeInterval, panelSize: CGSize) -> LightingParameters {
         let warmProgress = Self.clampedProgress(
             time: time - startDelay,
@@ -42,11 +49,20 @@ public struct LightingAnimator: Sendable {
             cycle: cycleDuration
         )
 
+        let warmPos = warm.position(at: warmProgress)
+        let coolPos = cool.position(at: coolProgress)
+
+        let scaleX = Float(panelSize.width / Self.referencePanelSize.width)
+        let scaleY = Float(panelSize.height / Self.referencePanelSize.height)
+
+        let scaledWarmPos = SIMD3<Float>(warmPos.x * scaleX, warmPos.y * scaleY, warmPos.z)
+        let scaledCoolPos = SIMD3<Float>(coolPos.x * scaleX, coolPos.y * scaleY, coolPos.z)
+
         return LightingParameters(
             panelSize: panelSize,
-            light1Position: warm.position(at: warmProgress),
+            light1Position: scaledWarmPos,
             light1Color: warm.color(at: warmProgress),
-            light2Position: cool.position(at: coolProgress),
+            light2Position: scaledCoolPos,
             light2Color: cool.color(at: coolProgress)
         )
     }
@@ -73,4 +89,13 @@ public struct LightingAnimator: Sendable {
         if wrapped < 0 { wrapped += cycle }
         return wrapped / cycle
     }
+}
+
+public extension LightingAnimator {
+    /// The panel dimensions the UWP source's keyframe X/Y coordinates were
+    /// calibrated for (`Reborn-Zune/TilePage.xaml.cs` lines 106–143).
+    /// Light positions are scaled proportionally to the actual panel size
+    /// at render time so the orbit stays inside the visible region on
+    /// smaller displays (iPad ~1180 px wide, tvOS 1920 px).
+    static let referencePanelSize: CGSize = CGSize(width: 2300, height: 1300)
 }

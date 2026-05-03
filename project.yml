@@ -65,6 +65,8 @@ targets:
         CFBundleName: Reborn Zune
         UILaunchScreen:
           UIColorName: ""
+        UIBackgroundModes:
+          - audio
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
@@ -84,6 +86,10 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Apps/tvOS
+        excludes:
+          - "Resources/**"
+      - path: Apps/tvOS/Resources/silence.m4a
+        buildPhase: resources
     dependencies:
       - package: RebornZuneCore
         product: RebornZuneCore
@@ -92,6 +98,8 @@ targets:
       properties:
         CFBundleDisplayName: Reborn Zune
         CFBundleName: Reborn Zune
+        UIBackgroundModes:
+          - audio
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.yjd.rebornzune.tvos

@@ -20,8 +20,15 @@ You verify the executor's work against the spec.
 3. **For milestones producing on-screen behavior, perform visual verification.**
    - Boot the appropriate simulator (`xcrun simctl create` + `boot`) or run the
      macOS app natively.
-   - Launch the app target the milestone exercises and capture screenshots
-     (`xcrun simctl io <UDID> screenshot`) at the times the spec specifies.
+   - Launch the app target the milestone exercises and capture screenshots:
+     - iOS/iPadOS/tvOS sims: `xcrun simctl io <UDID> screenshot output.png`
+       (no permissions required; reads the simulator framebuffer directly)
+     - macOS: `screencapture -x output.png` for full-screen, or
+       `screencapture -x -R x,y,w,h output.png` for a region. **Screen
+       Recording permission has been granted** to the harness terminal,
+       so this works. macOS native captures show the actual Metal output
+       (the snapshot harness's `ImageRenderer` does NOT, so only use it
+       for layout-only verification).
      For animated content, capture at least two screenshots separated by
      enough time to expose the animation, and confirm they differ.
    - For longer animation cycles (e.g. the 120 s lighting orbit) use

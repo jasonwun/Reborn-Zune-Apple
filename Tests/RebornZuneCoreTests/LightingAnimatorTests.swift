@@ -3,12 +3,17 @@ import simd
 @testable import RebornZuneCore
 
 final class LightingAnimatorTests: XCTestCase {
-    private let panel = CGSize(width: 1920, height: 1080)
+    /// Reference panel size — keyframe X/Y values live in this coordinate
+    /// space, so passing this size to `parameters(at:panelSize:)` produces
+    /// unscaled positions that match the raw `LightingPalette` data.
+    private let panel = LightingAnimator.referencePanelSize
 
     func testParametersAtTimeZero() {
         let animator = LightingAnimator()
         let params = animator.parameters(at: 0, panelSize: panel)
         // Both lights are held at progress=0 because t=0 < startDelay=0.6.
+        // Panel == referencePanelSize, so scale is 1.0 and positions match
+        // the raw keyframe values.
         XCTAssertEqual(params.light1Position, LightingPalette.warm.positions.first!.position)
         XCTAssertEqual(params.light1Color, LightingPalette.warm.colors.first!.color)
         XCTAssertEqual(params.light2Position, LightingPalette.cool.positions.first!.position)
@@ -21,6 +26,8 @@ final class LightingAnimatorTests: XCTestCase {
         let b = animator.parameters(at: animator.cycleDuration, panelSize: panel)
         // At t=cycleDuration, both lights are at (cycleDuration - startDelay)
         // mod cycleDuration → 119.4s of a 120s cycle, near the wrap point.
+        // panel == referencePanelSize → scale 1.0, so animator output equals
+        // raw keyframe interpolation.
         let warmEnd = animator.warm.position(at: 119.4 / 120.0)
         let coolEnd = animator.cool.position(at: 119.4 / 120.0)
         XCTAssertEqual(b.light1Position, warmEnd)
@@ -73,6 +80,40 @@ final class LightingAnimatorTests: XCTestCase {
         XCTAssertEqual(params.panelSize, custom)
     }
 
+    /// M5.7 §1: the reference panel size is locked at 2300×1300 — the
+    /// dimensions UWP `TilePage.xaml.cs` calibrated keyframe X/Y for.
+    func testReferencePanelSizeConstant() {
+        XCTAssertEqual(LightingAnimator.referencePanelSize, CGSize(width: 2300, height: 1300))
+    }
+
+    /// M5.7 §1: at the same time `t`, halving the panel halves the
+    /// returned light XY positions. Z is panel-independent and stays put.
+    func testKeyframesScaleWithPanelSize() {
+        let animator = LightingAnimator()
+        let t: TimeInterval = 25  // mid-cycle, lights well into their orbit
+        let referenceSize = LightingAnimator.referencePanelSize
+        let halfSize = CGSize(
+            width: referenceSize.width / 2,
+            height: referenceSize.height / 2
+        )
+
+        let full = animator.parameters(at: t, panelSize: referenceSize)
+        let half = animator.parameters(at: t, panelSize: halfSize)
+
+        // Light 1 (warm) XY are halved.
+        XCTAssertEqual(half.light1Position.x, full.light1Position.x / 2, accuracy: 0.001)
+        XCTAssertEqual(half.light1Position.y, full.light1Position.y / 2, accuracy: 0.001)
+        // Light 2 (cool) XY are halved.
+        XCTAssertEqual(half.light2Position.x, full.light2Position.x / 2, accuracy: 0.001)
+        XCTAssertEqual(half.light2Position.y, full.light2Position.y / 2, accuracy: 0.001)
+        // Z is NOT scaled — it represents light depth, panel-independent.
+        XCTAssertEqual(half.light1Position.z, full.light1Position.z, accuracy: 0.001)
+        XCTAssertEqual(half.light2Position.z, full.light2Position.z, accuracy: 0.001)
+        // Colors are unaffected by panel scaling.
+        XCTAssertEqual(half.light1Color, full.light1Color)
+        XCTAssertEqual(half.light2Color, full.light2Color)
+    }
+
     func testProgressClampHelper() {
         XCTAssertEqual(LightingAnimator.clampedProgress(time: -1, cycle: 120), 0)
         XCTAssertEqual(LightingAnimator.clampedProgress(time: 0, cycle: 120), 0)
@@ -90,9 +131,14 @@ final class LightingAnimatorTests: XCTestCase {
     func testDefaultIntensityAndAmbient() {
         let animator = LightingAnimator()
         let params = animator.parameters(at: 0, panelSize: panel)
-        XCTAssertEqual(params.light1Intensity, 1.3, accuracy: 1e-6)
-        XCTAssertEqual(params.light2Intensity, 1.3, accuracy: 1e-6)
-        XCTAssertEqual(params.ambientColor.x, 0.211, accuracy: 1e-3)
-        XCTAssertEqual(params.attenuationScale, 1e-6, accuracy: 1e-12)
+        // M5.10 defaults: intensities stay at 1.8 (peaks bright); ambient
+        // dropped to (0.03, 0.03, 0.03) so non-pool areas are barely
+        // visible — user wanted the dark-room intuition pushed further
+        // than M5.8/M5.9.
+        XCTAssertEqual(params.light1Intensity, 4.8, accuracy: 1e-6)
+        XCTAssertEqual(params.light2Intensity, 4.8, accuracy: 1e-6)
+        XCTAssertEqual(params.ambientColor.x, 0.04, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.y, 0.04, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.z, 0.04, accuracy: 1e-3)
     }
 }

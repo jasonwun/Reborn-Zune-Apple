@@ -3,24 +3,26 @@ import XCTest
 
 final class TileEntryAnimationTests: XCTestCase {
     func testWaveDelaysAreEvenlyStepped() {
+        // M5.47 defaults: 30 waves × 0.05 s step.
         let entry = TileEntryAnimation()
         let wave0 = entry.parameters(forWave: 0)
         let wave13 = entry.parameters(forWave: 13)
 
         XCTAssertEqual(wave0.delay, 0.0, accuracy: 1e-9)
-        XCTAssertEqual(wave13.delay, 1.040, accuracy: 1e-9)
+        XCTAssertEqual(wave13.delay, 13 * 0.05, accuracy: 1e-9)  // 0.65
         XCTAssertEqual(wave0.opacityDuration, 0.45, accuracy: 1e-9)
         XCTAssertEqual(wave0.scaleDuration, 0.6, accuracy: 1e-9)
     }
 
     func testWaveModuloWraps() {
+        // M5.47 defaults: waveCount = 30, so 30 wraps to 0.
         let entry = TileEntryAnimation()
         let wave0 = entry.parameters(forWave: 0)
-        let wave14 = entry.parameters(forWave: 14)
-        let wave28 = entry.parameters(forWave: 28)
+        let wave30 = entry.parameters(forWave: 30)
+        let wave60 = entry.parameters(forWave: 60)
 
-        XCTAssertEqual(wave0.delay, wave14.delay, accuracy: 1e-9)
-        XCTAssertEqual(wave0.delay, wave28.delay, accuracy: 1e-9)
+        XCTAssertEqual(wave0.delay, wave30.delay, accuracy: 1e-9)
+        XCTAssertEqual(wave0.delay, wave60.delay, accuracy: 1e-9)
     }
 
     func testCustomStepProducesProportionalDelays() {
@@ -30,10 +32,10 @@ final class TileEntryAnimationTests: XCTestCase {
     }
 
     func testNegativeWaveIndexWraps() {
+        // M5.47 defaults: 30 waves × 0.05 s. -1 mod 30 → 29.
         let entry = TileEntryAnimation()
-        // -1 mod 14 should be 13
         let wave = entry.parameters(forWave: -1)
-        XCTAssertEqual(wave.delay, 1.040, accuracy: 1e-9)
+        XCTAssertEqual(wave.delay, 29.0 * 0.05, accuracy: 1e-9)
     }
 
     func testCustomDurationsArePropagated() {

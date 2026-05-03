@@ -6,3 +6,4 @@ DerivedData/
 xcuserdata/
 *.xcscheme
 Package.resolved
+build/
