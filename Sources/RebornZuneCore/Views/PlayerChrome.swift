@@ -4,14 +4,16 @@ import CoreGraphics
 import ImageIO
 #endif
 
-/// The full-window player chrome that overlays the tile wall, modeled
-/// on the Zune layout adapted to Apple's Liquid Glass:
-/// - Bottom-left: standalone "Now Playing" card (artwork + metadata)
-/// - Bottom-center: standalone "Transport" card (prev/play/next + progress)
-/// - Right side: standalone "Up Next" queue panel
+/// Player chrome modeled directly on the Zune client layout (no glass /
+/// material backgrounds). Three regions live in the bottom band of the
+/// window, drawn as text + thin lines directly over the tile wall:
 ///
-/// Each panel is its own .ultraThinMaterial container with a hairline
-/// stroke. They float independently over the tile wall — no shared bar.
+/// - Bottom-left: large square artwork + artist / album / title + heart
+/// - Bottom-center: track title above a thin progress line, current and
+///   remaining time on either side
+/// - Bottom-right: compact "Wonder / ADOY / SAVE AS PLAYLIST" pill + a
+///   row of queue/repeat/shuffle icons, transport (prev / play / next),
+///   and a VOLUME label
 @MainActor
 public struct PlayerChrome: View {
     @Bindable private var engine: PlaybackEngine
@@ -21,224 +23,174 @@ public struct PlayerChrome: View {
     }
 
     public var body: some View {
-        ZStack(alignment: .topLeading) {
-            // Right-side queue panel — anchored top-trailing, fills most
-            // of the right column's height.
-            VStack {
-                QueueCard(engine: engine)
-                    .frame(width: 320)
-                    .padding(.top, 24)
-                    .padding(.trailing, 24)
-                Spacer()
-            }
-            .frame(maxWidth: .infinity, alignment: .trailing)
+        VStack {
+            Spacer()
+            HStack(alignment: .bottom, spacing: 0) {
+                NowPlaying(item: engine.currentItem)
+                    .padding(.leading, 32)
+                    .padding(.bottom, 24)
 
-            // Bottom row — two independent cards, left and center.
-            VStack {
-                Spacer()
-                HStack(alignment: .bottom, spacing: 24) {
-                    NowPlayingCard(item: engine.currentItem)
-                    Spacer(minLength: 0)
-                    TransportCard(engine: engine)
-                    Spacer(minLength: 0)
-                    // Reserve a sliver on the right so the bottom row
-                    // doesn't visually collide with the queue panel above.
-                    Color.clear.frame(width: 332, height: 1)
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
+                Spacer(minLength: 0)
+
+                CenterTimeline(engine: engine)
+                    .padding(.bottom, 28)
+                    .frame(maxWidth: 360)
+
+                Spacer(minLength: 0)
+
+                RightTransport(engine: engine)
+                    .padding(.trailing, 32)
+                    .padding(.bottom, 24)
             }
         }
     }
 }
 
-// MARK: - Card 1 — now playing
+// MARK: - Bottom-LEFT: now playing block
 
-private struct NowPlayingCard: View {
+private struct NowPlaying: View {
     let item: Music?
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .top, spacing: 14) {
             ArtworkView(data: item?.artworkData)
-                .frame(width: 64, height: 64)
+                .frame(width: 80, height: 80)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item?.title ?? "Not playing")
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(item?.artist ?? "—")
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                Text(item?.artist ?? "—")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.75))
-                    .lineLimit(1)
                 Text(item?.albumTitle ?? "")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.55))
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.65))
                     .lineLimit(1)
+                Text(item?.title ?? "")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.65))
+                    .lineLimit(1)
+                    .padding(.top, 6)
+
+                Image(systemName: "heart")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .padding(.top, 6)
             }
+            .frame(minHeight: 80, alignment: .top)
         }
-        .padding(12)
-        .frame(maxWidth: 360, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(.white.opacity(0.18), lineWidth: 0.5)
-        )
     }
 }
 
-// MARK: - Card 2 — transport + progress
+// MARK: - Bottom-CENTER: title + thin progress + time labels
 
-private struct TransportCard: View {
+private struct CenterTimeline: View {
     @Bindable var engine: PlaybackEngine
 
     var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 28) {
-                Button { engine.previous() } label: {
-                    Image(systemName: "backward.fill").font(.title3)
-                }
-                .accessibilityLabel("Previous")
+        VStack(spacing: 4) {
+            Text(engine.currentItem?.title ?? "")
+                .font(.system(size: 11))
+                .foregroundStyle(.white.opacity(0.7))
+                .lineLimit(1)
 
-                Button { engine.togglePlayPause() } label: {
-                    Image(systemName: engine.state == .playing ? "pause.fill" : "play.fill")
-                        .font(.system(size: 30, weight: .medium))
-                }
-                .accessibilityLabel(engine.state == .playing ? "Pause" : "Play")
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(.white.opacity(0.18))
+                    .frame(height: 1)
 
-                Button { engine.next() } label: {
-                    Image(systemName: "forward.fill").font(.title3)
-                }
-                .accessibilityLabel("Next")
-            }
-            .foregroundStyle(.white)
-            .buttonStyle(.plain)
-
-            ProgressBar(current: engine.currentTime, total: engine.duration)
-                .frame(width: 360)
-        }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(.white.opacity(0.18), lineWidth: 0.5)
-        )
-    }
-}
-
-private struct ProgressBar: View {
-    let current: TimeInterval
-    let total: TimeInterval
-
-    var body: some View {
-        VStack(spacing: 3) {
-            GeometryReader { geo in
-                let progress = total > 0 ? CGFloat(min(max(current / total, 0), 1)) : 0
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(.white.opacity(0.18))
-                    Capsule()
+                GeometryReader { geo in
+                    let progress = engine.duration > 0
+                        ? CGFloat(min(max(engine.currentTime / engine.duration, 0), 1))
+                        : 0
+                    Rectangle()
                         .fill(.white.opacity(0.85))
-                        .frame(width: geo.size.width * progress)
+                        .frame(width: geo.size.width * progress, height: 1)
                 }
+                .frame(height: 1)
             }
-            .frame(height: 3)
-            .clipShape(Capsule())
+            .frame(height: 1)
 
             HStack {
-                Text(format(current))
+                Text(format(engine.currentTime))
                 Spacer()
-                Text("-\(format(max(0, total - current)))")
+                Text("-\(format(max(0, engine.duration - engine.currentTime)))")
             }
-            .font(.caption2.monospacedDigit())
-            .foregroundStyle(.white.opacity(0.6))
+            .font(.system(size: 10).monospacedDigit())
+            .foregroundStyle(.white.opacity(0.55))
         }
     }
 
     private func format(_ seconds: TimeInterval) -> String {
         guard seconds.isFinite, seconds >= 0 else { return "0:00" }
         let total = Int(seconds.rounded(.down))
-        let m = total / 60
-        let s = total % 60
-        return String(format: "%d:%02d", m, s)
+        return String(format: "%d:%02d", total / 60, total % 60)
     }
 }
 
-// MARK: - Card 3 — queue side panel (always-on right column)
+// MARK: - Bottom-RIGHT: track pill + transport + volume
 
-private struct QueueCard: View {
+private struct RightTransport: View {
     @Bindable var engine: PlaybackEngine
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Up Next")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                Spacer()
-                Text("\(engine.queue.count) tracks")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.5))
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 10)
-
-            Divider().background(.white.opacity(0.12))
-
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(engine.queue, id: \.id) { item in
-                        QueueRow(
-                            item: item,
-                            isCurrent: item.id == engine.currentItem?.id
-                        )
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        Divider().background(.white.opacity(0.06))
-                    }
-                }
-            }
-        }
-        .frame(maxHeight: 560)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(.white.opacity(0.18), lineWidth: 0.5)
-        )
-    }
-}
-
-private struct QueueRow: View {
-    let item: Music
-    let isCurrent: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
-            if isCurrent {
-                Image(systemName: "speaker.wave.2.fill")
-                    .font(.caption)
-                    .foregroundStyle(.white)
-                    .frame(width: 14)
-            } else {
-                Color.clear.frame(width: 14, height: 14)
-            }
-
+        VStack(alignment: .trailing, spacing: 6) {
+            // Compact track pill with "SAVE AS PLAYLIST" affordance.
             VStack(alignment: .leading, spacing: 2) {
-                Text(item.title)
-                    .font(.subheadline)
-                    .foregroundStyle(.white)
-                    .fontWeight(isCurrent ? .semibold : .regular)
-                    .lineLimit(1)
-                if let artist = item.artist {
-                    Text(artist)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.55))
+                HStack(spacing: 4) {
+                    Image(systemName: "music.note")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.7))
+                    Text(engine.currentItem?.title ?? "—")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
                         .lineLimit(1)
                 }
+                Text(engine.currentItem?.artist ?? "")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.65))
+                    .lineLimit(1)
+                Text("SAVE AS PLAYLIST")
+                    .font(.system(size: 9, weight: .semibold))
+                    .tracking(0.5)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.top, 4)
             }
-            Spacer(minLength: 0)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(.black.opacity(0.45))
+
+            // Transport row: list / repeat / shuffle / prev / play-pause / next.
+            HStack(spacing: 14) {
+                Image(systemName: "list.bullet")
+                Image(systemName: "repeat")
+                Image(systemName: "shuffle")
+
+                Button { engine.previous() } label: {
+                    Image(systemName: "backward.fill")
+                }
+                .accessibilityLabel("Previous")
+
+                Button { engine.togglePlayPause() } label: {
+                    Image(systemName: engine.state == .playing ? "pause.fill" : "play.fill")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(width: 24, height: 24)
+                }
+                .accessibilityLabel(engine.state == .playing ? "Pause" : "Play")
+
+                Button { engine.next() } label: {
+                    Image(systemName: "forward.fill")
+                }
+                .accessibilityLabel("Next")
+            }
+            .font(.system(size: 12))
+            .foregroundStyle(.white.opacity(0.85))
+            .buttonStyle(.plain)
+
+            Text("VOLUME 25")
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(0.6)
+                .foregroundStyle(.white.opacity(0.55))
         }
     }
 }
@@ -257,11 +209,7 @@ private struct ArtworkView: View {
                     .aspectRatio(contentMode: .fill)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(.white.opacity(0.10), lineWidth: 0.5)
-        )
+        .clipped()
     }
 
     private var decodedImage: CGImage? {
