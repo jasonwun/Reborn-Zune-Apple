@@ -98,14 +98,14 @@ public struct TileWallView: View {
         let cellsH = max(1, Int((panelSize.height / unitSize).rounded(.up)))
         let maxCells = cellsW * cellsH
 
-        // Average cells per tile under our M5.20 distribution
-        // (70/20/8/2 split → 1 + 4*0.20 + 9*0.08 + 16*0.02 = 2.54 cells/tile).
-        // Theory: maxCells / 2.54 tiles should fill the panel.
+        // Average cells per tile under the UWP-faithful distribution
+        // (87.5/10/2.5 split → 1*0.875 + 9*0.10 + 16*0.025 = 2.175 cells/tile).
+        // Theory: maxCells / 2.175 tiles should fill the panel.
         // Reality: variable-span packing leaves irregular vertical edges —
         // some columns reach the bottom, others end mid-wall. Bump the slack
         // hard (×2.5) so even pessimistic packings overshoot the bottom edge,
         // matching the user's "exceed the screen a little is fine" preference.
-        let target = Int((Double(maxCells) / 2.54) * 2.5)
+        let target = Int((Double(maxCells) / 2.175) * 2.5)
 
         if source.count >= target { return source }
 

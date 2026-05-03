@@ -27,29 +27,24 @@ final class SyntheticTilesTests: XCTestCase {
         let count = 10_000
         let tiles = SyntheticTiles.sample(seed: 0, count: count)
         var unit = 0
-        var small = 0
         var medium = 0
         var large = 0
         for tile in tiles {
             switch tile.span {
             case .unit: unit += 1
-            case .small: small += 1
             case .medium: medium += 1
             case .large: large += 1
             }
         }
 
         let unitFraction = Double(unit) / Double(count)
-        let smallFraction = Double(small) / Double(count)
         let mediumFraction = Double(medium) / Double(count)
         let largeFraction = Double(large) / Double(count)
 
-        // M5.5 reference-driven probabilities:
-        // 70% unit, 20% small, 8% medium, 2% large; ±2% tolerance.
-        XCTAssertEqual(unitFraction, 0.70, accuracy: 0.02)
-        XCTAssertEqual(smallFraction, 0.20, accuracy: 0.02)
-        XCTAssertEqual(mediumFraction, 0.08, accuracy: 0.02)
-        XCTAssertEqual(largeFraction, 0.02, accuracy: 0.02)
+        // UWP TileViewModel.Spans: 87.5% unit, 10% medium, 2.5% large; ±2%.
+        XCTAssertEqual(unitFraction, 0.875, accuracy: 0.02)
+        XCTAssertEqual(mediumFraction, 0.10, accuracy: 0.02)
+        XCTAssertEqual(largeFraction, 0.025, accuracy: 0.02)
     }
 
     /// M5.5: synthetic tiles must be dark/medium-toned so the multiplicative

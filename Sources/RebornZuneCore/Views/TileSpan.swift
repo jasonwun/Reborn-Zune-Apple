@@ -2,34 +2,29 @@ import Foundation
 
 /// The bit-normalized size a tile occupies in the variable-span grid.
 ///
-/// Mirrors the spans used by the original UWP `Reborn-Zune` app, with one
-/// addition for M5.5: a 2×2 "small" tile, which the Zune references show is
-/// actually the most common "feature" size between the dominant 1×1 unit and
-/// the rare 3×3/4×4 medium/large tiles. The raw value is the side length in
-/// cells.
+/// Matches the original UWP `Reborn-Zune` (and Zune client) span set:
+/// 1×1 unit, 3×3 medium, 4×4 large. The 2×2 "small" tile that earlier
+/// passes used has been dropped — the Zune visual only uses three sizes.
+/// The raw value is the side length in cells.
 public enum TileSpan: Int, Sendable, Hashable {
     case unit = 1   // 1×1
-    case small = 2  // 2×2
     case medium = 3 // 3×3
     case large = 4  // 4×4
 }
 
 public extension TileSpan {
-    /// Random span using the M5.5 reference-driven distribution:
-    /// 70% unit, 20% small, 8% medium, 2% large. Uses the provided RNG
-    /// (defaults to `SystemRandomNumberGenerator`).
+    /// Random span matching the UWP `TileViewModel.Spans` distribution:
+    /// 87.5% unit, 10% medium, 2.5% large. Uses the provided RNG (defaults
+    /// to `SystemRandomNumberGenerator`).
     ///
-    /// Implementation draws an integer in `[0, 100)` and thresholds:
-    /// `< 2` → large (2%), `< 10` → medium (8%), `< 30` → small (20%),
-    /// otherwise unit (70%).
+    /// Implementation: draw an integer in `[0, 200)` and threshold per the
+    /// original UWP source (`val < 5` → large, `val < 25` → medium, else unit).
     static func random<G: RandomNumberGenerator>(using rng: inout G) -> TileSpan {
-        let value = Int.random(in: 0..<100, using: &rng)
-        if value < 2 {
+        let value = Int.random(in: 0..<200, using: &rng)
+        if value < 5 {
             return .large
-        } else if value < 10 {
+        } else if value < 25 {
             return .medium
-        } else if value < 30 {
-            return .small
         } else {
             return .unit
         }
