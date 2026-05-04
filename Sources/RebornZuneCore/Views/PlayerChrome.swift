@@ -33,10 +33,10 @@ public struct PlayerChrome: View {
                 Spacer()
                 HStack {
                     NowPlaying(item: engine.currentItem)
-                        .padding(.leading, 80)
+                        .padding(.leading, 110)
                     Spacer(minLength: 0)
                 }
-                .padding(.bottom, 100)
+                .padding(.bottom, 130)
             }
 
             // Bottom-CENTER timeline.
@@ -69,7 +69,7 @@ private struct NowPlaying: View {
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             ArtworkView(data: item?.artworkData)
-                .frame(width: 120, height: 120)
+                .frame(width: 170, height: 170)
                 // Solid 5px white frame.
                 .overlay(
                     Rectangle()
@@ -78,27 +78,22 @@ private struct NowPlaying: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(item?.artist ?? "Unknown Artist")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 30, weight: .bold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 Text(item?.albumTitle ?? "Unknown Album")
-                    .font(.system(size: 16))
-                    .foregroundStyle(.white.opacity(0.65))
-                    .lineLimit(1)
-                // Title uses the same bold treatment as the artist.
-                Text(item?.title ?? "")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 24))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                    .padding(.top, 6)
-
-                Image(systemName: "heart")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .padding(.top, 6)
+                // Title uses the same bold treatment as the artist.
+                Text(item?.title ?? "Unknown Title")
+                    .font(.system(size: 25, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .padding(.top, 17)
             }
-            .padding(.top, 5)
-            .padding(.leading, 10)
+            .padding(.top, 12)
+            .padding(.leading, 7)
             .frame(minHeight: 120, alignment: .top)
         }
     }
@@ -119,8 +114,8 @@ private struct CenterTimeline: View {
 
             ZStack(alignment: .leading) {
                 Rectangle()
-                    .fill(.white.opacity(0.18))
-                    .frame(height: 1)
+                    .fill(.gray)
+                    .frame(height: 3)
 
                 GeometryReader { geo in
                     let progress = engine.duration > 0
@@ -128,11 +123,11 @@ private struct CenterTimeline: View {
                         : 0
                     Rectangle()
                         .fill(.white.opacity(0.85))
-                        .frame(width: geo.size.width * progress, height: 1)
+                        .frame(width: geo.size.width * progress, height: 4)
                 }
-                .frame(height: 1)
+                .frame(height: 4)
             }
-            .frame(height: 1)
+            .frame(height: 3)
 
             HStack {
                 Text(format(engine.currentTime))
@@ -156,65 +151,92 @@ private struct CenterTimeline: View {
 private struct RightTransport: View {
     @Bindable var engine: PlaybackEngine
 
+    private static let accent = Color(red: 0.93, green: 0.18, blue: 0.55)
+
     var body: some View {
-        VStack(alignment: .trailing, spacing: 6) {
-            // Compact track pill with "SAVE AS PLAYLIST" affordance.
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.7))
-                    Text(engine.currentItem?.title ?? "—")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
+        VStack(alignment: .trailing, spacing: 8) {
+            // Horizontal track pill: equalizer | title+artist | heart.
+            VStack(spacing: 10){
+                HStack(spacing: 10) {
+                    Image(systemName: "waveform")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Self.accent)
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(engine.currentItem?.title ?? "—")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Self.accent)
+                            .lineLimit(1)
+                        Text(engine.currentItem?.artist ?? "")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.7))
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Self.accent)
                 }
-                Text(engine.currentItem?.artist ?? "")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.65))
-                    .lineLimit(1)
-                Text("SAVE AS PLAYLIST")
-                    .font(.system(size: 9, weight: .semibold))
-                    .tracking(0.5)
-                    .foregroundStyle(.white.opacity(0.7))
-                    .padding(.top, 4)
+                .padding(.top, 10)
+                .padding(.bottom, 30)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(.black.opacity(0.45))
-
-            // Transport row: list / repeat / shuffle / prev / play-pause / next.
-            HStack(spacing: 14) {
-                Image(systemName: "list.bullet")
-                Image(systemName: "repeat")
-                Image(systemName: "shuffle")
-
-                Button { engine.previous() } label: {
-                    Image(systemName: "backward.fill")
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(width: 320)
+            .background(.black.opacity(0.8))
+            
+            // Transport row: three groups separated by visible gaps.
+            HStack(spacing: 22) {
+                // Group A — queue / repeat / shuffle (pink).
+                HStack(spacing: 14) {
+                    Image(systemName: "list.bullet")
+                    Image(systemName: "repeat")
+                    Image(systemName: "shuffle")
                 }
-                .accessibilityLabel("Previous")
+                .foregroundStyle(Self.accent)
 
-                Button { engine.togglePlayPause() } label: {
-                    Image(systemName: engine.state == .playing ? "pause.fill" : "play.fill")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(.white)
-                        .frame(width: 24, height: 24)
-                }
-                .accessibilityLabel(engine.state == .playing ? "Pause" : "Play")
+                // Group B — prev / play (ringed) / next.
+                HStack(spacing: 14) {
+                    Button { engine.previous() } label: {
+                        Image(systemName: "backward.fill")
+                    }
+                    .accessibilityLabel("Previous")
 
-                Button { engine.next() } label: {
-                    Image(systemName: "forward.fill")
+                    Button { engine.togglePlayPause() } label: {
+                        Image(systemName: engine.state == .playing ? "pause.fill" : "play.fill")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                            .overlay(
+                                Circle()
+                                    .stroke(.white, lineWidth: 1.25)
+                            )
+                    }
+                    .accessibilityLabel(engine.state == .playing ? "Pause" : "Play")
+
+                    Button { engine.next() } label: {
+                        Image(systemName: "forward.fill")
+                    }
+                    .accessibilityLabel("Next")
                 }
-                .accessibilityLabel("Next")
+                .foregroundStyle(.white.opacity(0.85))
+
+                // Group C — expand / close.
+                HStack(spacing: 14) {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    Image(systemName: "xmark")
+                }
+                .foregroundStyle(.white.opacity(0.85))
             }
             .font(.system(size: 12))
-            .foregroundStyle(.white.opacity(0.85))
             .buttonStyle(.plain)
 
             Text("VOLUME 25")
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 8, weight: .light))
                 .tracking(0.6)
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.gray)
         }
     }
 }

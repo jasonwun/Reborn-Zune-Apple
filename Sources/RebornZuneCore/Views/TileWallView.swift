@@ -49,6 +49,11 @@ public struct TileWallView: View {
     /// that slot changes.
     @State private var flipCoordinator = TileFlipCoordinator()
 
+    /// Stable across the view's lifetime, fresh per launch — drives the
+    /// expansion span/image sampling so the wall varies session-to-session
+    /// but does not reshuffle on window resize.
+    @State private var expansionSeed: UInt64 = .random(in: 0..<UInt64.max)
+
     public var body: some View {
         ZStack {
             // M5.26: background grey (~0.20 luminance) matches the
@@ -68,7 +73,8 @@ public struct TileWallView: View {
                 let renderTiles = Self.expanded(
                     source: tiles,
                     forPanelSize: geo.size,
-                    unitSize: unitSize
+                    unitSize: unitSize,
+                    seed: expansionSeed
                 )
                 tileLayout(tiles: renderTiles)
                     .saturation(0)
@@ -89,7 +95,8 @@ public struct TileWallView: View {
     static func expanded(
         source: [TileWallEntry],
         forPanelSize panelSize: CGSize,
-        unitSize: CGFloat
+        unitSize: CGFloat,
+        seed: UInt64 = 0
     ) -> [TileWallEntry] {
         guard !source.isEmpty, unitSize > 0 else { return source }
 
@@ -109,15 +116,34 @@ public struct TileWallView: View {
 
         if source.count >= target { return source }
 
+        // Small-library path: cycling the source verbatim produces visible
+        // stripes — the same span sequence repeats every `source.count`
+        // cells, and copies of the same track always flip to the same
+        // partner. Instead, treat source as an image pool and synthesize
+        // fresh entries so the run-cap / no-adjacent-non-units rules hold
+        // across the *whole* expanded wall.
+        let primaryPool: [CGImage] = source.compactMap { $0.images.first ?? nil }
+        let allPool: [CGImage] = source.flatMap { $0.images }.compactMap { $0 }
+        let imagePool: [CGImage] = primaryPool.isEmpty ? allPool : primaryPool
+
+        var rng = ZuneSeededRNG(seed: seed)
+        var spanSeq = TileSpanSequence()
         var out: [TileWallEntry] = []
         out.reserveCapacity(target)
-        // Cycle the source list assigning fresh UUIDs so each tile is
-        // identifiable in the wall (matters for ForEach + flip coordinator).
-        var index = 0
         while out.count < target {
-            let original = source[index % source.count]
-            out.append(TileWallEntry(images: original.images, span: original.span))
-            index += 1
+            let span = spanSeq.next(using: &rng)
+            let primary: CGImage? = imagePool.isEmpty
+                ? nil
+                : imagePool[Int(rng.next() % UInt64(imagePool.count))]
+            let flip: CGImage? = {
+                guard imagePool.count > 1 else { return primary }
+                for _ in 0..<6 {
+                    let candidate = imagePool[Int(rng.next() % UInt64(imagePool.count))]
+                    if candidate !== primary { return candidate }
+                }
+                return primary
+            }()
+            out.append(TileWallEntry(images: [primary, flip], span: span))
         }
         return out
     }

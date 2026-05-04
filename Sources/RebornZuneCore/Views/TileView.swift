@@ -72,7 +72,7 @@ public struct TileView: View {
             // M5.26: thicker border (2 px) and grey color matches the
             // Zune-original recording's visible inter-tile gridlines.
             Rectangle()
-                .stroke(Color.black, lineWidth: 1.25)
+                .stroke(Color.black, lineWidth: 2.0)
         )
         .tileSpan(span)
         .onAppear {
