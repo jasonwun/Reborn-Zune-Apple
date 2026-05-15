@@ -23,6 +23,9 @@ let package = Package(
             // file from sources entirely and let the build-tool plugin
             // below find it on disk and emit `default.metallib`.
             exclude: ["Views/LightingShader.metal"],
+            resources: [
+                .process("Resources/Fonts"),
+            ],
             plugins: [
                 .plugin(name: "MetalCompilerPlugin")
             ]
