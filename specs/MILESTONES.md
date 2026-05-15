@@ -14,6 +14,9 @@ approved before the next one starts.
 | M6 | Audio + Now Playing | `PlaybackEngine` (AVQueuePlayer) with shuffle, queue management. `MPNowPlayingInfoCenter` populated; remote commands wired. |
 | M7 | App shells | macOS/iPad β shells with folder picker + Now Playing strip; tvOS α shell directly on the tile wall. All three apps actually play music. |
 | M8 | Persistence | SwiftData models for playlists/settings on macOS/iPad. Playlists survive relaunches. |
+| M9 | Resonant UI · macOS | Full Resonant redesign on macOS — design-system tokens, pivot nav, mini-player, all browse + detail screens, Now Playing wrapping the existing tile wall with the new control overlays. Light theme, English. |
+| M10 | Resonant UI · iPad | iPad shell on top of M9: status bar / home indicator, touch-sized controls, hidden scrollbars, hidden panorama arrows, cozy density default. |
+| M11 | Resonant UI · tvOS | tvOS shell: focus engine, 1920×1080 type scale, single-row alphabet keyboard, no mini-player, full-bleed Now Playing dismissed via remote Back. |
 
 ## Stop conditions per milestone
 
