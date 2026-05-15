@@ -8,10 +8,10 @@ struct ContentView: View {
         if let path = SnapshotHarness.requestedOutputPath {
             SnapshotView(outputPath: path)
         } else {
-            DefaultContent()
+            ResonantHost()
         }
         #else
-        DefaultContent()
+        ResonantHost()
         #endif
     }
 }
@@ -49,55 +49,62 @@ private struct SnapshotView: View {
 }
 #endif
 
-private struct DefaultContent: View {
+@MainActor
+private struct ResonantHost: View {
     @State private var engine = PlaybackEngine()
-    @State private var library = LibraryHostState()
+    @State private var state = LibraryHostState()
     @State private var showPicker = false
 
     var body: some View {
-        // M5.8 debug hook still honored — disables lighting for grayscale verification.
         let lighting: LightingAnimator? =
             ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_NO_LIGHTING"] == "1"
             ? nil
             : LightingAnimator()
 
-        ZStack(alignment: .bottom) {
-            switch library.phase {
-            case .needsFolder:
-                FolderPrompt(showPicker: $showPicker)
-            case .loading:
-                LoadingView()
-            case .ready:
-                TileWallView(
-                    tiles: library.tiles.isEmpty ? SyntheticTiles.sample(count: 250) : library.tiles,
-                    lightingAnimator: lighting
-                )
-            }
+        let tilesToShow = state.tiles.isEmpty
+            ? SyntheticTiles.sample(count: 250)
+            : state.tiles
+        let library = state.library
 
-            // Liquid-glass player chrome: bottom-strip with now-playing
-            // info, transport + progress, and a toggleable queue panel.
-            PlayerChrome(engine: engine)
+        IPadShell(route: .home) {
+            ResonantApp(
+                engine: engine,
+                library: library,
+                tiles: tilesToShow,
+                lightingAnimator: lighting,
+                density: .cozy,
+                platform: .ipad,
+                needsLibraryFolder: state.phase == .needsFolder,
+                onPickFolder: { showPicker = true }
+            )
+            .padding(.top, 32)   // status bar
+            .padding(.bottom, 28) // home indicator
         }
+        .ignoresSafeArea()
         .fileImporter(
             isPresented: $showPicker,
             allowedContentTypes: [.folder]
         ) { result in
             if case .success(let url) = result {
-                Task { await library.load(folder: url, into: engine) }
+                Task { await state.load(folder: url, into: engine) }
             }
         }
         .task {
-            // Debug override (testing / sim launch convenience). If
-            // `REBORN_ZUNE_DEBUG_LIBRARY_FOLDER` is set in the env, use
-            // that as the library folder instead of restoring a saved
-            // bookmark or waiting for the user to pick.
-            if let override = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_LIBRARY_FOLDER"] {
-                await library.load(folder: URL(fileURLWithPath: override), into: engine)
+            if ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_DEMO_LIBRARY"] == "1" {
+                let tracks = ResonantDemoLibrary.makeMusic()
+                state.tracks = tracks
+                state.tiles = MusicTileBuilder.tiles(from: tracks)
+                state.library = ResonantLibrary.from(tracks: tracks)
+                state.phase = .ready
+                engine.setQueue(tracks)
                 return
             }
-            // Restore last folder if persisted.
+            if let override = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_LIBRARY_FOLDER"] {
+                await state.load(folder: URL(fileURLWithPath: override), into: engine)
+                return
+            }
             if let saved = LibraryFolderStore.read() {
-                await library.load(folder: saved, into: engine)
+                await state.load(folder: saved, into: engine)
             }
         }
     }
@@ -115,6 +122,7 @@ private final class LibraryHostState {
     var phase: LibraryPhase = .needsFolder
     var tiles: [TileWallEntry] = []
     var tracks: [Music] = []
+    var library: ResonantLibrary = ResonantLibrary(albums: [], artists: [])
 
     func load(folder: URL, into engine: PlaybackEngine) async {
         phase = .loading
@@ -123,6 +131,7 @@ private final class LibraryHostState {
             let loaded = try await source.load()
             tracks = loaded
             tiles = MusicTileBuilder.tiles(from: loaded)
+            library = ResonantLibrary.from(tracks: loaded)
             LibraryFolderStore.write(folder)
             phase = .ready
             if !loaded.isEmpty {
@@ -131,35 +140,5 @@ private final class LibraryHostState {
         } catch {
             phase = .needsFolder
         }
-    }
-}
-
-private struct FolderPrompt: View {
-    @Binding var showPicker: Bool
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("Reborn Zune")
-                .font(.largeTitle)
-            Text("Pick a folder of music to begin.")
-                .foregroundStyle(.secondary)
-            Button("Choose Folder…") {
-                showPicker = true
-            }
-            .controlSize(.large)
-            .buttonStyle(.borderedProminent)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
-    }
-}
-
-private struct LoadingView: View {
-    var body: some View {
-        VStack(spacing: 12) {
-            ProgressView()
-            Text("Reading library…")
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
