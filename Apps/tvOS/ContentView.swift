@@ -7,10 +7,10 @@ struct ContentView: View {
         if let path = SnapshotHarness.requestedOutputPath {
             SnapshotView(outputPath: path)
         } else {
-            DefaultContent()
+            ResonantHost()
         }
         #else
-        DefaultContent()
+        ResonantHost()
         #endif
     }
 }
@@ -48,9 +48,11 @@ private struct SnapshotView: View {
 }
 #endif
 
-private struct DefaultContent: View {
+@MainActor
+private struct ResonantHost: View {
     @State private var engine = PlaybackEngine()
     @State private var tiles: [TileWallEntry] = []
+    @State private var library: ResonantLibrary = ResonantLibrary(albums: [], artists: [])
 
     var body: some View {
         let lighting: LightingAnimator? =
@@ -58,16 +60,23 @@ private struct DefaultContent: View {
             ? nil
             : LightingAnimator()
 
-        ZStack(alignment: .bottom) {
-            TileWallView(
-                tiles: tiles.isEmpty ? SyntheticTiles.sample(count: 250) : tiles,
-                lightingAnimator: lighting
-            )
-            PlayerChrome(engine: engine)
-        }
+        let tilesToShow = tiles.isEmpty ? SyntheticTiles.sample(count: 250) : tiles
+
+        TvResonantApp(
+            engine: engine,
+            library: library,
+            tiles: tilesToShow,
+            lightingAnimator: lighting
+        )
         .task {
-            // Load music bundled at Resources/UserMusic/. If no music is
-            // bundled, fall back to the silence.m4a sample.
+            if ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_DEMO_LIBRARY"] == "1" {
+                let tracks = ResonantDemoLibrary.makeMusic()
+                tiles = MusicTileBuilder.tiles(from: tracks)
+                library = ResonantLibrary.from(tracks: tracks)
+                engine.setQueue(tracks)
+                engine.play()
+                return
+            }
             let userMusic = BundleLibrarySource(subdirectory: "UserMusic")
             do {
                 var tracks = try await userMusic.load()
@@ -77,11 +86,13 @@ private struct DefaultContent: View {
                 }
                 if !tracks.isEmpty {
                     tiles = MusicTileBuilder.tiles(from: tracks)
+                    library = ResonantLibrary.from(tracks: tracks)
                     engine.setQueue(tracks)
                     engine.play()
                 }
             } catch {
-                // Leave tiles empty → falls back to synthetic wall.
+                // Empty library — Home will show the synthetic wall behind, all
+                // browse screens will just be empty grids.
             }
         }
     }
