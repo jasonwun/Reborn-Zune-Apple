@@ -1,0 +1,334 @@
+import SwiftUI
+
+public struct NowPlayingScreen: View {
+    let tiles: [TileWallEntry]
+    let lightingAnimator: LightingAnimator?
+    let engine: PlaybackEngine
+    let upNext: [Music]
+    let spacing: ResonantSpacing
+    let onBack: () -> Void
+
+    @State private var liked = false
+    @State private var shuffle = false
+    @State private var repeatMode: RepeatMode = .off
+    @State private var volume: Double = 72
+    @State private var backHover = false
+
+    enum RepeatMode { case off, all, one }
+
+    public init(tiles: [TileWallEntry],
+                lightingAnimator: LightingAnimator?,
+                engine: PlaybackEngine,
+                upNext: [Music],
+                spacing: ResonantSpacing,
+                onBack: @escaping () -> Void) {
+        self.tiles = tiles
+        self.lightingAnimator = lightingAnimator
+        self.engine = engine
+        self.upNext = upNext
+        self.spacing = spacing
+        self.onBack = onBack
+    }
+
+    public var body: some View {
+        ZStack {
+            // 1. Existing tile wall + ambient lighting — preserved from M5.
+            TileWallView(tiles: tiles, lightingAnimator: lightingAnimator)
+                .ignoresSafeArea()
+
+            // 2. Sepia/olive multiply tint
+            Color(red: 40/255, green: 36/255, blue: 8/255)
+                .opacity(0.78)
+                .blendMode(.multiply)
+                .allowsHitTesting(false)
+
+            // 3. Magenta radial wash (bottom-left)
+            RadialGradient(
+                gradient: Gradient(colors: [
+                    Color(red: 1, green: 0, blue: 0.5).opacity(0.18),
+                    .clear
+                ]),
+                center: UnitPoint(x: 0.3, y: 0.8),
+                startRadius: 0,
+                endRadius: 800
+            )
+            .allowsHitTesting(false)
+
+            // 4. Vignette top + bottom
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: .black.opacity(0.25), location: 0),
+                    .init(color: .clear, location: 0.3),
+                    .init(color: .clear, location: 0.6),
+                    .init(color: .black.opacity(0.5), location: 1)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .allowsHitTesting(false)
+
+            // 5. Oversized off-canvas back button (top-left)
+            VStack {
+                HStack {
+                    bigBackButton
+                        .offset(x: -42, y: -42)
+                    Spacer()
+                }
+                Spacer()
+            }
+
+            // 6. Bottom-left meta card
+            VStack {
+                Spacer()
+                HStack(alignment: .bottom, spacing: 18) {
+                    if let track = engine.currentItem,
+                       let album = albumForCurrentTrack() {
+                        CoverArt(entry: album.coverEntry)
+                            .frame(width: 120, height: 120)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(track.title)
+                                .font(ResonantFont.display(26, weight: .light))
+                                .tracking(-0.26)
+                                .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255))
+                                .lineLimit(2)
+                                .frame(maxWidth: 520, alignment: .leading)
+                            Text("\(track.albumArtist ?? track.artist ?? "Unknown Artist") · \(ResonantSynth.runtime(seconds: track.duration))")
+                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                .tracking(1.8)
+                                .textCase(.uppercase)
+                                .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.7))
+                        }
+                        .padding(.bottom, 6)
+                        likeButton
+                    }
+                    Spacer()
+                }
+                .padding(.leading, spacing.padX)
+                .padding(.bottom, 140)
+            }
+
+            // 7. Up Next rail (bottom-right)
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    upNextRail
+                        .frame(width: 260)
+                        .padding(.trailing, spacing.padX)
+                        .padding(.bottom, 140)
+                }
+            }
+
+            // 8. Scrubber + transport
+            VStack {
+                Spacer()
+                scrubberRow
+                    .padding(.horizontal, spacing.padX)
+                    .padding(.bottom, 88)
+                transportRow
+                    .padding(.horizontal, spacing.padX)
+                    .padding(.bottom, 28)
+            }
+        }
+        .background(Color(red: 14/255, green: 13/255, blue: 10/255))
+    }
+
+    // MARK: - Subviews
+
+    private var bigBackButton: some View {
+        Button(action: onBack) {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 88, weight: .light))
+                .foregroundColor(backHover ? ResonantColors.magenta : Color(red: 244/255, green: 241/255, blue: 236/255))
+        }
+        .frame(width: 168, height: 168)
+        .background(Circle().fill(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.06)))
+        .overlay(
+            Circle().strokeBorder(
+                backHover ? ResonantColors.magenta : Color(red: 244/255, green: 241/255, blue: 236/255),
+                lineWidth: 11)
+        )
+        .clipShape(Circle())
+        .buttonStyle(.plain)
+        .onHover { backHover = $0 }
+    }
+
+    private var likeButton: some View {
+        Button {
+            liked.toggle()
+        } label: {
+            Image(systemName: liked ? "heart.fill" : "heart")
+                .font(.system(size: 22))
+                .foregroundColor(liked ? ResonantColors.magenta : Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.85))
+        }
+        .padding(.bottom, 4)
+        .buttonStyle(.plain)
+    }
+
+    private var upNextRail: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("UP NEXT")
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .tracking(2.0)
+                .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.7))
+                .padding(.bottom, 12)
+            ForEach(Array(upNext.prefix(3).enumerated()), id: \.offset) { idx, track in
+                HStack(spacing: 12) {
+                    Text(String(format: "%02d", idx + 1))
+                        .font(.system(size: 9, design: .monospaced))
+                        .tracking(1.6)
+                        .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.5))
+                    Text(track.title)
+                        .font(ResonantFont.display(20, weight: .light))
+                        .tracking(-0.2)
+                        .lineLimit(1)
+                        .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(ResonantSynth.runtime(seconds: track.duration))
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.6))
+                }
+                .padding(.vertical, 8)
+                .overlay(idx == 0
+                         ? Rectangle().fill(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.2)).frame(height: 0.5)
+                         : nil,
+                         alignment: .top)
+                .overlay(Rectangle().fill(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.2)).frame(height: 0.5),
+                         alignment: .bottom)
+            }
+        }
+    }
+
+    private var scrubberRow: some View {
+        HStack(spacing: 18) {
+            Text(format(engine.currentTime))
+                .font(.system(size: 11, design: .monospaced))
+                .tracking(0.88)
+                .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.8))
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Rectangle()
+                        .fill(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.25))
+                        .frame(height: 2)
+                    let prog: CGFloat = engine.duration > 0
+                        ? CGFloat(min(max(engine.currentTime / engine.duration, 0), 1))
+                        : 0
+                    Rectangle()
+                        .fill(ResonantColors.magenta)
+                        .frame(width: geo.size.width * prog, height: 2)
+                    Circle()
+                        .fill(ResonantColors.magenta)
+                        .frame(width: 10, height: 10)
+                        .shadow(color: ResonantColors.magenta.opacity(0.25), radius: 4)
+                        .offset(x: geo.size.width * prog - 5)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(height: 10)
+            Text("-\(format(max(0, engine.duration - engine.currentTime)))")
+                .font(.system(size: 11, design: .monospaced))
+                .tracking(0.88)
+                .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.8))
+        }
+    }
+
+    private var transportRow: some View {
+        HStack {
+            HStack(spacing: 22) {
+                npButton(symbol: "shuffle", active: shuffle) { shuffle.toggle() }
+                npButton(symbol: repeatSymbol, active: repeatMode != .off) {
+                    repeatMode = repeatMode == .off ? .all : (repeatMode == .all ? .one : .off)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 26) {
+                npButton(symbol: "backward.fill", active: false) { engine.previous() }
+                Button {
+                    engine.togglePlayPause()
+                } label: {
+                    Image(systemName: engine.state == .playing ? "pause.fill" : "play.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(red: 14/255, green: 13/255, blue: 10/255))
+                        .frame(width: 52, height: 52)
+                        .background(Circle().fill(ResonantColors.magenta))
+                        .overlay(Circle().stroke(ResonantColors.magenta.opacity(0.18), lineWidth: 8))
+                }
+                .buttonStyle(.plain)
+                npButton(symbol: "forward.fill", active: false) { engine.next() }
+            }
+
+            HStack(spacing: 22) {
+                npButton(symbol: "list.bullet", active: false) {}
+                volumeWidget
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+    }
+
+    private var volumeWidget: some View {
+        HStack(spacing: 10) {
+            Image(systemName: volume > 50 ? "speaker.wave.2" : (volume > 0 ? "speaker.wave.1" : "speaker"))
+                .font(.system(size: 14))
+                .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.85))
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.25))
+                    .frame(width: 72, height: 2)
+                Rectangle()
+                    .fill(Color(red: 244/255, green: 241/255, blue: 236/255))
+                    .frame(width: 72 * CGFloat(volume / 100), height: 2)
+            }
+            Text("\(Int(volume))")
+                .font(.system(size: 10, design: .monospaced))
+                .tracking(1.8)
+                .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.7))
+                .frame(width: 22, alignment: .trailing)
+        }
+    }
+
+    private var repeatSymbol: String {
+        switch repeatMode {
+        case .one: return "repeat.1"
+        default: return "repeat"
+        }
+    }
+
+    private func npButton(symbol: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 18))
+                .foregroundColor(active ? ResonantColors.magenta : Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.85))
+                .frame(width: 28, height: 28)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func format(_ seconds: TimeInterval) -> String {
+        guard seconds.isFinite, seconds >= 0 else { return "0:00" }
+        let total = Int(seconds.rounded(.down))
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+
+    private func albumForCurrentTrack() -> Album? {
+        guard let track = engine.currentItem else { return nil }
+        return MusicTileBuilderHelper.album(for: track)
+    }
+}
+
+// Helper — kept separate so we don't reach into the existing builder.
+enum MusicTileBuilderHelper {
+    static func album(for track: Music) -> Album? {
+        // Fabricate a single-track album entry on the fly so we get a
+        // matching CoverArt entry on the now-playing screen even when the
+        // surrounding library facade isn't reachable.
+        Album(
+            id: Album.makeID(title: track.albumTitle ?? track.title,
+                             albumArtist: track.albumArtist ?? track.artist ?? "Unknown Artist"),
+            title: track.albumTitle ?? track.title,
+            albumArtist: track.albumArtist ?? track.artist ?? "Unknown Artist",
+            year: track.year,
+            tracks: [track]
+        )
+    }
+}
