@@ -306,15 +306,17 @@ private struct HomePickPanel: View {
     }
 
     /// Title block: eyebrow tag + display title (+ optional sub).
-    /// Lines stack with `spacing: -22` to mimic the design's CSS
-    /// `line-height: 0.86` (= 150 × 0.86 = 129pt per line, vs SwiftUI's
-    /// natural ~1.0+) — adjacent display glyphs nestle without a
-    /// gap, the same tight typographic stack the design uses.
+    /// Each marquee gets a 130pt frame (= 150 × 0.86 ≈ design CSS
+    /// `line-height: 0.86`) so two stacked lines occupy 260pt instead
+    /// of SwiftUI's natural ~360pt. The marquee mask is unbounded
+    /// vertically (see ResonantMarquee.swift) so display-type
+    /// descenders spill into the gap freely, matching the design's
+    /// `overflow-x: clip; overflow-y: visible`.
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(pick.eyebrow)
                 .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
-            VStack(alignment: .leading, spacing: -22) {
+            VStack(alignment: .leading, spacing: 0) {
                 ResonantMarquee {
                     Text(pick.title)
                         .font(ResonantFont.display(150, weight: .ultraLight))

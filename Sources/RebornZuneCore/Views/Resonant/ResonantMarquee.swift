@@ -50,12 +50,7 @@ public struct ResonantMarquee<Content: View>: View {
                 }
             }
             .frame(width: geo.size.width, alignment: .leading)
-            // Mirror the design's `overflow-x: clip; overflow-y: visible`
-            // (marquee.jsx :79) — clip horizontal scroll but let display-
-            // type descenders / ascenders spill freely. SwiftUI has no
-            // axis-specific clip, so use a wide vertical mask that's
-            // anchored to the container's width and effectively unbounded
-            // vertically (1000pt headroom each side covers any glyph).
+            .clipped(antialiased: false)
             .mask(alignment: .leading) {
                 if overflow {
                     LinearGradient(
@@ -67,10 +62,8 @@ public struct ResonantMarquee<Content: View>: View {
                         startPoint: .leading,
                         endPoint: .trailing
                     )
-                    .frame(width: geo.size.width, height: 2000)
                 } else {
                     Color.black
-                        .frame(width: geo.size.width, height: 2000)
                 }
             }
             .background(
