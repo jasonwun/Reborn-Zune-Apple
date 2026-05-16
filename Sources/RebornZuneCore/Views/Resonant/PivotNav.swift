@@ -19,15 +19,15 @@ public struct PivotNav: View {
         }
         .padding(.leading, spacing.padX)
         .padding(.trailing, spacing.padX)
-        // Pivot row top padding follows the design's platform split:
-        //   [data-platform="ipad"] .pivots { padding-top: 48px }
-        //   [data-chrome="off"]:not([ipad/tv]) .pivots { padding-top: 56px }
-        // mac chrome=off recovers the missing 36px traffic-light gutter
-        // with 56pt; iPad doesn't have that gutter to begin with.
+        // Pivot row top padding:
+        //   mac chrome=off: 56pt (recovers missing traffic-light gutter)
+        //   iPad: 72pt (design CSS spec was 48; +24pt user tweak to
+        //   sit the tabs lower against the device top edge once the
+        //   real status bar is hidden)
         #if os(macOS)
         .padding(.top, 56)
         #else
-        .padding(.top, 48)
+        .padding(.top, 72)
         #endif
         .padding(.bottom, 8)
     }
@@ -106,8 +106,13 @@ private struct BackChevron: View {
                 .foregroundColor(
                     active && hover ? ResonantColors.magenta : ResonantColors.ink
                 )
-                .offset(x: active && hover ? -3 : 0,
-                        y: 6)   // optical center against pivot lowercase ink
+                // iPad nudges the chevron 8pt right for touch comfort
+                // and to clear the device top-left corner radius.
+                #if os(macOS)
+                .offset(x: active && hover ? -3 : 0, y: 6)
+                #else
+                .offset(x: 8 + (active && hover ? -3 : 0), y: 6)
+                #endif
                 .opacity(active ? 1 : 0.25)
                 .animation(.easeInOut(duration: 0.28), value: hover)
                 .contentShape(Rectangle())
