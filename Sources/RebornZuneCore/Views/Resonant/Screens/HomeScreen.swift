@@ -200,6 +200,16 @@ public struct HomeScreen: View {
                 Color.clear
                     .contentShape(Rectangle())
 
+                // Panel strip — natural width is `panels.count * panelW`,
+                // which would push the parent ZStack wide enough to
+                // center the HUD off-screen (arrows ended up at
+                // x ≈ 3760 inside a 6335-wide ZStack). Pinning the
+                // strip's layout footprint to `containerW` with leading
+                // alignment lets the offset still slide panels visually
+                // (overflow is clipped externally) while keeping the
+                // ZStack — and so the HUD — at the visible window
+                // width, so arrows land at the right edge under the
+                // peek where the design puts them.
                 HStack(spacing: 0) {
                     ForEach(Array(pks.enumerated()), id: \.element.id) { i, p in
                         HomePickPanel(pick: p, active: i == idx, padX: spacing.padX)
@@ -209,6 +219,7 @@ public struct HomeScreen: View {
                 }
                 .offset(x: -CGFloat(idx) * panelW + dragDX)
                 .animation(.timingCurve(0.22, 0.61, 0.36, 1, duration: 0.7), value: idx)
+                .frame(width: containerW, height: geo.size.height, alignment: .leading)
                 .allowsHitTesting(true)
 
                 hud(total: total)
