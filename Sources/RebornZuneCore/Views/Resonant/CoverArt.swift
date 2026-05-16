@@ -112,13 +112,15 @@ public struct CoverArt: View {
                     .offset(x: size * (v1 - 0.5) * 0.4, y: size * (v2 - 0.5) * 0.4)
             }
         case 2:
-            // 4x4 grid mosaic
+            // 4x4 grid mosaic. Seed format matches cover.jsx (`seed + i`
+            // — plain string concat, no underscore) so the cell colors
+            // land in the same order across platforms.
             VStack(spacing: 0) {
                 ForEach(0..<4, id: \.self) { row in
                     HStack(spacing: 0) {
                         ForEach(0..<4, id: \.self) { col in
                             let i = row * 4 + col
-                            let r = SeededRNG(seed: seed + "_\(i)").peek(at: 0)
+                            let r = SeededRNG(seed: seed + "\(i)").peek(at: 0)
                             let fill = [c1, c2, c3][Int(r * 3) % 3]
                             Rectangle().fill(fill)
                         }
