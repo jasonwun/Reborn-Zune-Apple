@@ -1,9 +1,21 @@
 import SwiftUI
 
 public enum ResonantColors {
+    // OLED touch platforms (iPad / tvOS) want true #000000 paper so the
+    // panel meets the device bezel cleanly. macOS keeps the warmer
+    // near-black that reads better behind the traffic-light gutter and
+    // window chrome. Per design CSS:
+    //   [data-platform="ipad"][data-theme="dark"],
+    //   [data-platform="tv"][data-theme="dark"] { --paper: #000000; ... }
+    #if os(macOS)
     public static let paper       = Color(light: 0xF4F1EC, dark: 0x0E0D0A)
     public static let paper2      = Color(light: 0xEAE5DD, dark: 0x161512)
     public static let paper3      = Color(light: 0xDED7CB, dark: 0x1F1D19)
+    #else
+    public static let paper       = Color(light: 0xF4F1EC, dark: 0x000000)
+    public static let paper2      = Color(light: 0xEAE5DD, dark: 0x0A0A0A)
+    public static let paper3      = Color(light: 0xDED7CB, dark: 0x141414)
+    #endif
     public static let ink         = Color(light: 0x15140F, dark: 0xF4F1EC)
     public static let ink2        = Color(light: 0x7A736B, dark: 0x8A847B)
     public static let ink3        = Color(light: 0xB9B2A8, dark: 0x4A463F)
