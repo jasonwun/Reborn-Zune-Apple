@@ -26,6 +26,13 @@ public struct FilterChipRow<Value: Hashable>: View {
                     let v = pair.0
                     let lab = pair.1
                     let on = v == value
+                    // Background, border, and contentShape live INSIDE
+                    // the Button label so the whole chip is
+                    // hit-testable. With `.background`/`.overlay`
+                    // outside the Button, `.buttonStyle(.plain)` only
+                    // treated the rendered Text glyphs as hit targets
+                    // — clicking on the chip fill or the padded
+                    // interior between letters did nothing.
                     Button {
                         onChange(v)
                     } label: {
@@ -37,12 +44,13 @@ public struct FilterChipRow<Value: Hashable>: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
                             .frame(minHeight: 38)
+                            .background(on ? ResonantColors.ink : Color.clear)
+                            .overlay(Rectangle().strokeBorder(
+                                on ? ResonantColors.ink : ResonantColors.ink4,
+                                lineWidth: 1
+                            ))
+                            .contentShape(Rectangle())
                     }
-                    .background(on ? ResonantColors.ink : Color.clear)
-                    .overlay(Rectangle().strokeBorder(
-                        on ? ResonantColors.ink : ResonantColors.ink4,
-                        lineWidth: 1
-                    ))
                     .buttonStyle(.plain)
                     .animation(.easeInOut(duration: 0.22), value: on)
                 }
