@@ -319,7 +319,10 @@ private struct HomePickPanel: View {
                 .padding(.bottom, 4)
             }
         }
-        .padding(.top, 18)
+        // screens/home.jsx :252 — v2 pushed the eyebrow + display title
+        // 30pt lower so the panorama page is visually centered against
+        // the bigger top gutter that chrome="off" produces.
+        .padding(.top, 48)
         .padding(.bottom, 80)
         .padding(.horizontal, padX)
         .opacity(active ? 1.0 : 0.55)
