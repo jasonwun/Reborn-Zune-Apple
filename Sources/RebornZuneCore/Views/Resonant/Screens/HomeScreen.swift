@@ -314,7 +314,7 @@ private struct HomePickPanel: View {
                     // overlap by 8pt in layout, which translates to
                     // a tight optical pairing once the display
                     // typeface's leading is accounted for.
-                    .offset(x: padX, y: 38)
+                    .offset(x: padX, y: 42)
                 bottomStrip
                     .frame(width: innerW, height: 220, alignment: .bottomLeading)
                     .offset(x: padX, y: geo.size.height - 80 - 220)
@@ -346,7 +346,7 @@ private struct HomePickPanel: View {
                 // block offset (+8 from round 7), eyebrow drops 8pt
                 // and title lifts 2pt — pair is now 22pt tighter
                 // than the original design spacing.
-                .padding(.bottom, -8)
+                .padding(.bottom, -12)
             ZStack(alignment: .topLeading) {
                 Text(pick.title)
                     .font(ResonantFont.display(150, weight: .ultraLight))
