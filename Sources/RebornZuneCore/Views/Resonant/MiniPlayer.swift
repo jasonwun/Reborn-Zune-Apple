@@ -83,6 +83,11 @@ public struct MiniPlayer: View {
         .onAppear { startRotator() }
         .onDisappear { rotatorTask?.cancel() }
         .onChange(of: engine.state) { _, _ in startRotator() }
+        // upNext can flip from nil → set (or vice versa) while
+        // playback state stays `.playing` (queue change, advance).
+        // Restart the rotator so the tease activates the moment a
+        // next track exists.
+        .onChange(of: upNext?.id) { _, _ in startRotator() }
     }
 
     // MARK: - Now / Up-Next views
@@ -234,19 +239,38 @@ public struct MiniPlayer: View {
     private func startRotator() {
         rotatorTask?.cancel()
         guard engine.state == .playing, upNext != nil else {
-            mode = .now
-            exiting = nil
+            // Snap back to "now" without animating — paused / no
+            // upNext means nothing to tease.
+            var t = Transaction()
+            t.disablesAnimations = true
+            withTransaction(t) {
+                mode = .now
+                exiting = nil
+            }
             return
         }
         rotatorTask = Task { @MainActor in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 5_500_000_000)
                 if Task.isCancelled { break }
-                exiting = mode
-                mode = (mode == .now) ? .upNext : .now
+                // Cross-fade: bump both `exiting` and `mode` in the
+                // same animated transaction so SwiftUI batches them
+                // into one transition pass. The old mode slides out
+                // to the left, the new mode slides in from the right.
+                withAnimation(.timingCurve(0.22, 0.61, 0.36, 1, duration: 0.7)) {
+                    exiting = mode
+                    mode = (mode == .now) ? .upNext : .now
+                }
                 try? await Task.sleep(nanoseconds: 720_000_000)
                 if Task.isCancelled { break }
-                exiting = nil
+                // Clear `exiting` WITHOUT animation so the re-armed
+                // view snaps back to the right edge (matches CSS's
+                // `transition: none` on the parked state). Without
+                // this guard the parked view would visibly slide
+                // right after fading out.
+                var t = Transaction()
+                t.disablesAnimations = true
+                withTransaction(t) { exiting = nil }
             }
         }
     }
@@ -293,11 +317,17 @@ struct RotatorView<Content: View>: View {
     let state: State
     let content: () -> Content
 
+    // Animation is owned by `startRotator()` via withAnimation /
+    // withTransaction, so the view just renders for the current
+    // state. Trying to drive the timing here too (via
+    // `.animation(_:value:)`) double-applied — when state went
+    // exiting → parked, the implicit animation would slide the
+    // view from x=-36 to x=+36 instead of snapping.
     var body: some View {
         content()
             .opacity(state == .active ? 1 : 0)
             .offset(x: offset)
-            .animation(animation, value: state)
+            .allowsHitTesting(state == .active)
     }
 
     private var offset: CGFloat {
@@ -305,14 +335,6 @@ struct RotatorView<Content: View>: View {
         case .parked: return 36
         case .active: return 0
         case .exiting: return -36
-        }
-    }
-
-    private var animation: Animation? {
-        switch state {
-        case .parked: return nil
-        case .active, .exiting:
-            return .timingCurve(0.22, 0.61, 0.36, 1, duration: 0.7)
         }
     }
 }
