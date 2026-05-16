@@ -17,6 +17,7 @@ approved before the next one starts.
 | M9 | Resonant UI · macOS | Full Resonant redesign on macOS — design-system tokens, pivot nav, mini-player, all browse + detail screens, Now Playing wrapping the existing tile wall with the new control overlays. Light theme, English. |
 | M10 | Resonant UI · iPad | iPad shell on top of M9: status bar / home indicator, touch-sized controls, hidden scrollbars, hidden panorama arrows, cozy density default. |
 | M11 | Resonant UI · tvOS | tvOS shell: focus engine, 1920×1080 type scale, single-row alphabet keyboard, no mini-player, full-bleed Now Playing dismissed via remote Back. |
+| M12 | Resonant UI · macOS visual parity (design v2) | Drop window chrome (`.hiddenTitleBar`), bump pivot padding 28→56, home panorama padding 18→48 — match `Resonant.html` v2. |
 
 ## Stop conditions per milestone
 
