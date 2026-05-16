@@ -203,7 +203,8 @@ public struct HomeScreen: View {
                 HStack(spacing: 0) {
                     ForEach(Array(pks.enumerated()), id: \.element.id) { i, p in
                         HomePickPanel(pick: p, active: i == idx, padX: spacing.padX)
-                            .frame(width: panelW)
+                            .frame(width: panelW, height: geo.size.height)
+                            .clipped()
                     }
                 }
                 .offset(x: -CGFloat(idx) * panelW + dragDX)
@@ -284,10 +285,32 @@ private struct HomePickPanel: View {
     let padX: CGFloat
 
     var body: some View {
+        // Panel-level GeometryReader so we can place the title block at
+        // the top and the cover/meta/rail strip absolutely at the bottom
+        // — independent of Spacer behavior in nested padding chains,
+        // which collapsed to 0pt in earlier attempts and left the
+        // cover riding under the title.
+        GeometryReader { geo in
+            ZStack(alignment: .topLeading) {
+                titleBlock
+                    .position(x: padX + (geo.size.width - 2 * padX) / 2,
+                              y: 48 + titleBlockHeight / 2)
+                    .frame(width: geo.size.width - 2 * padX, alignment: .leading)
+                bottomStrip
+                    .frame(width: geo.size.width - 2 * padX)
+                    .position(x: padX + (geo.size.width - 2 * padX) / 2,
+                              y: geo.size.height - 80 - 220 / 2)
+            }
+        }
+        .opacity(active ? 1.0 : 0.55)
+        .animation(.timingCurve(0.22, 0.61, 0.36, 1, duration: 0.6), value: active)
+    }
+
+    /// Title block: eyebrow tag + display title (+ optional sub).
+    private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(pick.eyebrow)
                 .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
-
             VStack(alignment: .leading, spacing: 0) {
                 ResonantMarquee {
                     Text(pick.title)
@@ -308,53 +331,53 @@ private struct HomePickPanel: View {
                 }
             }
             .padding(.top, 14)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
-            Spacer(minLength: 0)
+    /// Estimated title block height: eyebrow (~14pt) + padding(14) +
+    /// 150 (title) + 150 (optional sub).
+    private var titleBlockHeight: CGFloat {
+        14 + 14 + 150 + (pick.sub == nil ? 0 : 150)
+    }
 
-            HStack(alignment: .bottom, spacing: 36) {
-                visual
-                    .frame(width: 220, height: 220)
-                VStack(alignment: .leading, spacing: 14) {
-                    Text(pick.meta)
-                        .resonantTag(size: 10, tracking: 1.8)
-                        .lineLimit(1)
-                    Text(pick.reason)
-                        .font(ResonantFont.display(22, weight: .light))
-                        .tracking(-0.11)
-                        .foregroundColor(ResonantColors.ink2)
-                        .frame(maxWidth: 520, alignment: .leading)
-                    HStack(spacing: 10) {
-                        primaryButton(label: pick.primaryLabel, action: pick.onPrimary)
-                        secondaryButton(label: pick.secondaryLabel, action: pick.onSecondary)
-                    }
-                    .padding(.top, 4)
+    /// Cover / meta / rail strip — anchored to the bottom of the panel.
+    private var bottomStrip: some View {
+        HStack(alignment: .bottom, spacing: 36) {
+            visual
+                .frame(width: 220, height: 220)
+            VStack(alignment: .leading, spacing: 14) {
+                Text(pick.meta)
+                    .resonantTag(size: 10, tracking: 1.8)
+                    .lineLimit(1)
+                Text(pick.reason)
+                    .font(ResonantFont.display(22, weight: .light))
+                    .tracking(-0.11)
+                    .foregroundColor(ResonantColors.ink2)
+                    .frame(maxWidth: 520, alignment: .leading)
+                HStack(spacing: 10) {
+                    primaryButton(label: pick.primaryLabel, action: pick.onPrimary)
+                    secondaryButton(label: pick.secondaryLabel, action: pick.onSecondary)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                VStack(alignment: .leading, spacing: 18) {
-                    ForEach(Array(pick.rail.enumerated()), id: \.offset) { _, item in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(item.label)
-                                .resonantTag(size: 10, tracking: 2.2)
-                            ForEach(item.lines, id: \.self) { l in
-                                Text(l)
-                                    .font(ResonantFont.display(20, weight: .light))
-                                    .tracking(-0.2)
-                            }
+                .padding(.top, 4)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 18) {
+                ForEach(Array(pick.rail.enumerated()), id: \.offset) { _, item in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(item.label)
+                            .resonantTag(size: 10, tracking: 2.2)
+                        ForEach(item.lines, id: \.self) { l in
+                            Text(l)
+                                .font(ResonantFont.display(20, weight: .light))
+                                .tracking(-0.2)
                         }
                     }
                 }
-                .frame(width: 200, alignment: .leading)
-                .padding(.bottom, 4)
             }
+            .frame(width: 200, alignment: .leading)
+            .padding(.bottom, 4)
         }
-        // screens/home.jsx :252 — v2 pushed the eyebrow + display title
-        // 30pt lower so the panorama page is visually centered against
-        // the bigger top gutter that chrome="off" produces.
-        .padding(.top, 48)
-        .padding(.bottom, 80)
-        .padding(.horizontal, padX)
-        .opacity(active ? 1.0 : 0.55)
-        .animation(.timingCurve(0.22, 0.61, 0.36, 1, duration: 0.6), value: active)
     }
 
     @ViewBuilder
