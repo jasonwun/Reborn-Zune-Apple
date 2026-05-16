@@ -320,14 +320,17 @@ private struct HomePickPanel: View {
                 titleBlock
                     .frame(width: innerW, alignment: .leading)
                     // Design panel uses `padding-top: 48px`. The block
-                    // offset slides the eyebrow further down (y:38)
+                    // offset slides the eyebrow further down (y:42)
                     // while a negative bottom-padding on the eyebrow
-                    // lifts the title another 2pt above where it
-                    // ended up in round 7 — title and eyebrow now
-                    // overlap by 8pt in layout, which translates to
-                    // a tight optical pairing once the display
-                    // typeface's leading is accounted for.
-                    .offset(x: padX, y: 42)
+                    // lifts the title another 2pt — title and
+                    // eyebrow overlap by 8pt in layout, which
+                    // translates to a tight optical pairing once the
+                    // display typeface's leading is accounted for.
+                    // The y-offset scales with displayFontScale so
+                    // the gap from the pivot row above shrinks
+                    // proportionally on smaller surfaces (iPad mini
+                    // would otherwise feel top-heavy).
+                    .offset(x: padX, y: 42 * layout.displayFontScale)
                 bottomStrip
                     .frame(width: innerW, height: 220 * layout.displayFontScale, alignment: .bottomLeading)
                     .offset(x: padX, y: geo.size.height - 80 - 220 * layout.displayFontScale)
