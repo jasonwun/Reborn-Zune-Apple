@@ -6,6 +6,7 @@ public struct ArtistsScreen: View {
     let onOpen: (Artist) -> Void
 
     @State private var sort: ArtistSort = .listeners
+    @Environment(\.resonantLayout) private var layout
     enum ArtistSort: Hashable { case listeners, az, albums }
 
     public init(library: ResonantLibrary, spacing: ResonantSpacing, onOpen: @escaping (Artist) -> Void) {
@@ -34,8 +35,8 @@ public struct ArtistsScreen: View {
                     .padding(.leading, 12)
                     .padding(.bottom, 12)
                 Text("artists")
-                    .font(ResonantFont.display(180, weight: .ultraLight))
-                    .tracking(-4.5)
+                    .font(ResonantFont.display(180 * layout.displayFontScale, weight: .ultraLight))
+                    .tracking(-4.5 * layout.displayFontScale)
                     .lineLimit(1)
                     .offset(x: -4)
             }

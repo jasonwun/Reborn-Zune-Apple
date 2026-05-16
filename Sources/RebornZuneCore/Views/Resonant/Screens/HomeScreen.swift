@@ -306,6 +306,8 @@ private struct HomePickPanel: View {
     let active: Bool
     let padX: CGFloat
 
+    @Environment(\.resonantLayout) private var layout
+
     var body: some View {
         // Panel-level GeometryReader so we can place the title block at
         // the top and the cover/meta/rail strip absolutely at the bottom
@@ -327,8 +329,8 @@ private struct HomePickPanel: View {
                     // typeface's leading is accounted for.
                     .offset(x: padX, y: 42)
                 bottomStrip
-                    .frame(width: innerW, height: 220, alignment: .bottomLeading)
-                    .offset(x: padX, y: geo.size.height - 80 - 220)
+                    .frame(width: innerW, height: 220 * layout.displayFontScale, alignment: .bottomLeading)
+                    .offset(x: padX, y: geo.size.height - 80 - 220 * layout.displayFontScale)
             }
         }
         .opacity(active ? 1.0 : 0.55)
@@ -347,7 +349,17 @@ private struct HomePickPanel: View {
     /// ≈ 286pt vs the marquee path's 328pt — recovers the 42pt the
     /// cover strip needed to land at the design's y position.
     private var titleBlock: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        // Layout-aware HUGE TITLE size: 150pt is calibrated for
+        // 1366pt+ surfaces and overwhelms the iPad mini, so the
+        // compact bucket scales it to ~105pt. tracking and the
+        // sub-line ZStack offset (150 × 0.86 = 129pt) scale
+        // proportionally so the line-height-0.86 relationship
+        // survives the resize.
+        let scale = layout.displayFontScale
+        let titleSize: CGFloat = 150 * scale
+        let trackingValue: CGFloat = -3.75 * scale
+        let subOffsetY: CGFloat = 129 * scale
+        return VStack(alignment: .leading, spacing: 0) {
             Text(pick.eyebrow)
                 .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
                 // Optical x-alignment: a 12pt leading inset on the
@@ -362,34 +374,37 @@ private struct HomePickPanel: View {
                 // above its round-7 position. Combined with the
                 // block offset (+12 from round 7), eyebrow drops
                 // 12pt and title lifts 2pt.
-                .padding(.bottom, -12)
+                .padding(.bottom, -12 * scale)
             ZStack(alignment: .topLeading) {
                 Text(pick.title)
-                    .font(ResonantFont.display(150, weight: .ultraLight))
-                    .tracking(-3.75)
+                    .font(ResonantFont.display(titleSize, weight: .ultraLight))
+                    .tracking(trackingValue)
                     .lineLimit(1)
                     .fixedSize()
                 if let sub = pick.sub, !sub.isEmpty {
                     Text(sub)
-                        .font(ResonantFont.display(150, weight: .ultraLight))
-                        .tracking(-3.75)
+                        .font(ResonantFont.display(titleSize, weight: .ultraLight))
+                        .tracking(trackingValue)
                         .foregroundColor(ResonantColors.ink2)
                         .lineLimit(1)
                         .fixedSize()
-                        .offset(y: 129)
+                        .offset(y: subOffsetY)
                 }
             }
-            .frame(height: (pick.sub?.isEmpty == false) ? 129 + 129 : 129,
+            .frame(height: (pick.sub?.isEmpty == false) ? subOffsetY + subOffsetY : subOffsetY,
                    alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// Cover / meta / rail strip — anchored to the bottom of the panel.
+    /// Cover size scales with `displayFontScale` so the visual hierarchy
+    /// matches the shrunken HUGE TITLE on compact surfaces (iPad mini).
     private var bottomStrip: some View {
-        HStack(alignment: .bottom, spacing: 36) {
+        let coverSize: CGFloat = 220 * layout.displayFontScale
+        return HStack(alignment: .bottom, spacing: 36) {
             visual
-                .frame(width: 220, height: 220)
+                .frame(width: coverSize, height: coverSize)
             VStack(alignment: .leading, spacing: 14) {
                 Text(pick.meta)
                     .resonantTag(size: 10, tracking: 1.8)

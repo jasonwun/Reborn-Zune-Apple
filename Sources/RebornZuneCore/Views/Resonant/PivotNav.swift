@@ -54,17 +54,20 @@ private struct PivotButton: View {
     let pivot: PivotID
     let router: ResonantRouter
     @State private var hover = false
+    @Environment(\.resonantLayout) private var layout
 
     var body: some View {
         let active = router.activePivot == pivot.route
-        Button {
+        let scale = layout.displayFontScale
+        let size: CGFloat = 42 * scale
+        return Button {
             router.go(pivot.route)
         } label: {
             Text(pivot.label)
-                .font(.system(size: 42,
+                .font(.system(size: size,
                               weight: active ? .light : .ultraLight)
                     .width(.condensed))
-                .tracking(-0.42)   // -0.01em at 42pt
+                .tracking(-0.01 * size)
                 .foregroundColor(
                     active ? ResonantColors.ink
                     : (hover ? ResonantColors.ink2 : ResonantColors.ink3)
@@ -75,8 +78,8 @@ private struct PivotButton: View {
                 // Without the explicit frame the SwiftUI Text renders at
                 // line-height ~1.2 (~50pt tall), making the pivot row 8pt
                 // taller than the design and stealing that vertical space
-                // from the panorama panel below.
-                .frame(height: 42)
+                // from the panorama panel below. Scales with displayFontScale.
+                .frame(height: size)
                 // Bare Text only hit-tests the painted glyph
                 // strokes, so clicks in the counters of "home" or
                 // the inter-letter gaps missed. `.contentShape`

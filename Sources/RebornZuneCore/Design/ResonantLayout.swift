@@ -41,13 +41,26 @@ public struct ResonantLayout: Equatable, Sendable {
 
     /// Multiplier for non-display text (body, mono tags, meta lines,
     /// rail copy, eyebrows). Display type (HUGE TITLE, pivot row,
-    /// large ResonantFont.display sizes) ignores this — those are
-    /// already calibrated per-platform.
+    /// large ResonantFont.display sizes) uses `displayFontScale`
+    /// instead.
     public var textScale: CGFloat {
         switch deviceClass {
         case .compact:  return 1.0
         case .regular:  return 1.15
         case .expanded: return 1.25
+        }
+    }
+
+    /// Multiplier for display type — the panorama HUGE TITLE (150pt),
+    /// pivot row labels (42pt), and the big "albums" / "playlists" /
+    /// "artists" page titles (180pt). Those numbers are calibrated
+    /// for 1366pt+ Mac / iPad Pro surfaces and overwhelm the smaller
+    /// 1133pt iPad mini, so the compact bucket scales them down.
+    public var displayFontScale: CGFloat {
+        switch deviceClass {
+        case .compact:  return 0.7
+        case .regular:  return 0.92
+        case .expanded: return 1.0
         }
     }
 }

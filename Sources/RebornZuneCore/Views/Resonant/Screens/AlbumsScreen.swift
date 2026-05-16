@@ -6,6 +6,7 @@ public struct AlbumsScreen: View {
     let onOpen: (Album) -> Void
 
     @State private var sort: AlbumSort = .title
+    @Environment(\.resonantLayout) private var layout
 
     enum AlbumSort: Hashable { case title, artist, year }
 
@@ -42,8 +43,8 @@ public struct AlbumsScreen: View {
                     .padding(.leading, 12)
                     .padding(.bottom, 12)
                 Text("albums")
-                    .font(ResonantFont.display(180, weight: .ultraLight))
-                    .tracking(-4.5)
+                    .font(ResonantFont.display(180 * layout.displayFontScale, weight: .ultraLight))
+                    .tracking(-4.5 * layout.displayFontScale)
                     .lineLimit(1)
                     .offset(x: -4)
             }

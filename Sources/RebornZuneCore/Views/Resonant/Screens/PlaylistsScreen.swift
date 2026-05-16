@@ -7,6 +7,7 @@ public struct PlaylistsScreen: View {
     let onOpen: (StoredPlaylist) -> Void
     let onCreateTapped: () -> Void
     @Query(sort: \StoredPlaylist.createdAt, order: .reverse) var playlists: [StoredPlaylist]
+    @Environment(\.resonantLayout) private var layout
 
     public init(library: ResonantLibrary,
                 spacing: ResonantSpacing,
@@ -27,8 +28,8 @@ public struct PlaylistsScreen: View {
                         .padding(.leading, 12)
                         .padding(.bottom, 12)
                     Text("playlists")
-                        .font(ResonantFont.display(180, weight: .ultraLight))
-                        .tracking(-4.5)
+                        .font(ResonantFont.display(180 * layout.displayFontScale, weight: .ultraLight))
+                        .tracking(-4.5 * layout.displayFontScale)
                         .lineLimit(1)
                         .offset(x: -4)
                 }
