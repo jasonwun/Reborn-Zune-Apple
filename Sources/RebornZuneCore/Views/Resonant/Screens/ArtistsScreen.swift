@@ -31,6 +31,7 @@ public struct ArtistsScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("COLLECTION · \(library.artists.count) ARTISTS")
                     .resonantTag(size: 10, tracking: 2.2)
+                    .padding(.leading, 12)
                     .padding(.bottom, 12)
                 Text("artists")
                     .font(ResonantFont.display(180, weight: .ultraLight))
@@ -47,6 +48,7 @@ public struct ArtistsScreen: View {
                 options: [(.listeners, "Listeners"), (.az, "A → Z"), (.albums, "Albums")],
                 onChange: { sort = $0 }
             )
+            .padding(.leading, 12)
             .padding(.top, 4)
             .padding(.bottom, 20)
 

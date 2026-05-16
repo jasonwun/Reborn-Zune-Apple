@@ -39,6 +39,7 @@ public struct AlbumsScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("COLLECTION · \(library.albums.count) ALBUMS · \(sortLabel)")
                     .resonantTag(size: 10, tracking: 2.2)
+                    .padding(.leading, 12)
                     .padding(.bottom, 12)
                 Text("albums")
                     .font(ResonantFont.display(180, weight: .ultraLight))
@@ -55,6 +56,7 @@ public struct AlbumsScreen: View {
                 options: [(.title, "A → Z"), (.artist, "Artist"), (.year, "Year")],
                 onChange: { sort = $0 }
             )
+            .padding(.leading, 12)
             .padding(.top, 4)
             .padding(.bottom, 20)
 

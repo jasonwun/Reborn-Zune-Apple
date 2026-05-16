@@ -24,6 +24,7 @@ public struct PlaylistsScreen: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("YOUR LISTS · \(playlists.count) TOTAL")
                         .resonantTag(size: 10, tracking: 2.2)
+                        .padding(.leading, 12)
                         .padding(.bottom, 12)
                     Text("playlists")
                         .font(ResonantFont.display(180, weight: .ultraLight))
