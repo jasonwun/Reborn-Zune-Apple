@@ -306,7 +306,11 @@ private struct HomePickPanel: View {
             ZStack(alignment: .topLeading) {
                 titleBlock
                     .frame(width: innerW, alignment: .leading)
-                    .offset(x: padX, y: 48)
+                    // Design panel uses `padding-top: 48px`; pulled up
+                    // a little so the HUGE TITLE breathes against the
+                    // pivot row above instead of sinking toward the
+                    // cover strip.
+                    .offset(x: padX, y: 24)
                 bottomStrip
                     .frame(width: innerW, height: 220, alignment: .bottomLeading)
                     .offset(x: padX, y: geo.size.height - 80 - 220)
