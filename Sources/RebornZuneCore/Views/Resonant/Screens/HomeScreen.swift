@@ -319,18 +319,15 @@ private struct HomePickPanel: View {
             ZStack(alignment: .topLeading) {
                 titleBlock
                     .frame(width: innerW, alignment: .leading)
-                    // Design panel uses `padding-top: 48px`. The block
-                    // offset slides the eyebrow further down (y:42)
-                    // while a negative bottom-padding on the eyebrow
-                    // lifts the title another 2pt — title and
-                    // eyebrow overlap by 8pt in layout, which
-                    // translates to a tight optical pairing once the
-                    // display typeface's leading is accounted for.
-                    // The y-offset scales with displayFontScale so
-                    // the gap from the pivot row above shrinks
-                    // proportionally on smaller surfaces (iPad mini
-                    // would otherwise feel top-heavy).
-                    .offset(x: padX, y: 42 * layout.displayFontScale)
+                    // Pivot-bottom → eyebrow-top gap: 20pt to match
+                    // Albums / Playlists / Artists screens, which
+                    // pair `.padding(.top, 8)` (outer screen) with
+                    // `.padding(.top, 12)` (eyebrow block) for 20pt
+                    // total. Fixed — no displayFontScale here so
+                    // the eyebrow consistently lands at the same
+                    // optical height across all tabs on a given
+                    // surface.
+                    .offset(x: padX, y: 20)
                 bottomStrip
                     .frame(width: innerW, height: 220 * layout.displayFontScale, alignment: .bottomLeading)
                     .offset(x: padX, y: geo.size.height - 80 - 220 * layout.displayFontScale)
@@ -371,13 +368,12 @@ private struct HomePickPanel: View {
                 // panel than a strict cap-to-cap alignment would
                 // give. Tuned by eye after iterative nudges.
                 .padding(.leading, 12)
-                // Eyebrow ↔ title gap: negative bottom-padding
-                // (-12) overlaps the title's layout box into the
-                // eyebrow's space so the title's cap rises 2pt
-                // above its round-7 position. Combined with the
-                // block offset (+12 from round 7), eyebrow drops
-                // 12pt and title lifts 2pt.
-                .padding(.bottom, -12 * scale)
+                // Eyebrow ↔ HUGE TITLE gap: 12pt to match the
+                // eyebrow→title spacing on Albums / Playlists /
+                // Artists screens (`.padding(.bottom, 12)` on the
+                // eyebrow there). Fixed value — same optical gap
+                // across every tab.
+                .padding(.bottom, 12)
             ZStack(alignment: .topLeading) {
                 Text(pick.title)
                     .font(ResonantFont.display(titleSize, weight: .ultraLight))
