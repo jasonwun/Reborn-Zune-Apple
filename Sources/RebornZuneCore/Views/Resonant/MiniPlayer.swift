@@ -148,7 +148,11 @@ public struct MiniPlayer: View {
     // MARK: - Scrubber
 
     private var scrubber: some View {
-        HStack(spacing: 10) {
+        // Design: `.scrub .bar { height: 2px }` on mac, `3px` on iPad
+        // (`[data-platform="ipad"] .scrub .bar { height: 3px }`) — the
+        // thicker bar makes the drag target friendlier for fingers.
+        let barH: CGFloat = isTouch ? 3 : 2
+        return HStack(spacing: 10) {
             Text(format(engine.currentTime))
                 .font(.system(size: 10, design: .monospaced))
                 .tracking(0.8)
@@ -157,14 +161,14 @@ public struct MiniPlayer: View {
                 ZStack(alignment: .leading) {
                     Rectangle()
                         .fill(ResonantColors.ink4)
-                        .frame(height: 2)
+                        .frame(height: barH)
                     let prog: CGFloat = engine.duration > 0
                         ? CGFloat(min(max(engine.currentTime / engine.duration, 0), 1))
                         : 0
                     ZStack(alignment: .trailing) {
                         Rectangle()
                             .fill(ResonantColors.magenta)
-                            .frame(width: geo.size.width * prog, height: 2)
+                            .frame(width: geo.size.width * prog, height: barH)
                         Circle()
                             .fill(ResonantColors.magenta)
                             .frame(width: 8, height: 8)

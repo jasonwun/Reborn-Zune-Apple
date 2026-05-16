@@ -127,7 +127,14 @@ struct TrackRow: View {
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundColor(ResonantColors.ink2)
         }
+        // Design: `.track-row { padding: 14px 0 }` on mac,
+        // `[data-platform="ipad"] .track-row { padding: 18px 0 }` —
+        // bigger row height for touch comfort.
+        #if os(macOS)
         .padding(.vertical, 14)
+        #else
+        .padding(.vertical, 18)
+        #endif
         .padding(.leading, hover ? 12 : 0)
         .overlay(Rectangle().fill(ResonantColors.ink4).frame(height: 0.5), alignment: .bottom)
         .contentShape(Rectangle())
