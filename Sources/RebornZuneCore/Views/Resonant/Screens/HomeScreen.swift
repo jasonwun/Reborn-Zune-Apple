@@ -48,12 +48,25 @@ public struct HomeScreen: View {
         let rail: [(label: String, lines: [String])]
     }
 
+    // Eyebrow date in the design ("TODAY · 14 MAY · PICK OF THE DAY") —
+    // formatted DD MMM uppercase. Computed once per `picks` access; no
+    // need to refresh sub-second.
+    private static let eyebrowDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d MMM"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+    private var todayLabel: String {
+        Self.eyebrowDateFormatter.string(from: Date()).uppercased()
+    }
+
     private var picks: [Pick] {
         var list: [Pick] = []
         if let a0 = library.albums.first {
             list.append(Pick(
                 id: "pick-\(a0.id)",
-                eyebrow: "TODAY · PICK OF THE DAY",
+                eyebrow: "TODAY · \(todayLabel) · PICK OF THE DAY",
                 title: a0.title,
                 sub: nil,
                 meta: "\(a0.albumArtist)  ·  \(a0.tracks.count) TRACKS · \(a0.resonantRuntime) · \(a0.resonantGenre.uppercased())",
@@ -94,7 +107,7 @@ public struct HomeScreen: View {
         if let newest = library.albums.sorted(by: { ($0.year ?? 0) > ($1.year ?? 0) }).first {
             list.append(Pick(
                 id: "new-\(newest.id)",
-                eyebrow: "NEW THIS WEEK",
+                eyebrow: "NEW THIS WEEK · \(todayLabel)",
                 title: newest.title,
                 sub: nil,
                 meta: "\(newest.albumArtist)  ·  \(newest.tracks.count) TRACKS · \(newest.resonantRuntime) · \(newest.resonantGenre.uppercased())",
