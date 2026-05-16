@@ -19,16 +19,11 @@ public struct PivotNav: View {
         }
         .padding(.leading, spacing.padX)
         .padding(.trailing, spacing.padX)
-        // Pivot row top padding:
-        //   mac chrome=off: 56pt (recovers missing traffic-light gutter)
-        //   iPad: 72pt (design CSS spec was 48; +24pt user tweak to
-        //   sit the tabs lower against the device top edge once the
-        //   real status bar is hidden)
-        #if os(macOS)
+        // Pivot row top padding: 56pt on every platform. Mac chrome=off
+        // recovers the missing traffic-light gutter with 56pt; iPad
+        // landed on the same value after iterative tightening from
+        // the design CSS spec of 48 (and several user tweaks).
         .padding(.top, 56)
-        #else
-        .padding(.top, 68)
-        #endif
         .padding(.bottom, 8)
     }
 }
