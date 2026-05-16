@@ -27,7 +27,7 @@ public struct PivotNav: View {
         #if os(macOS)
         .padding(.top, 56)
         #else
-        .padding(.top, 72)
+        .padding(.top, 84)
         #endif
         .padding(.bottom, 8)
     }
@@ -111,7 +111,7 @@ private struct BackChevron: View {
                 #if os(macOS)
                 .offset(x: active && hover ? -3 : 0, y: 6)
                 #else
-                .offset(x: 8 + (active && hover ? -3 : 0), y: 6)
+                .offset(x: 16 + (active && hover ? -3 : 0), y: 6)
                 #endif
                 .opacity(active ? 1 : 0.25)
                 .animation(.easeInOut(duration: 0.28), value: hover)
