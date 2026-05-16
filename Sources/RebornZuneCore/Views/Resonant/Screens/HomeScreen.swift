@@ -307,10 +307,12 @@ private struct HomePickPanel: View {
                 titleBlock
                     .frame(width: innerW, alignment: .leading)
                     // Design panel uses `padding-top: 48px`; pulled up
-                    // a little so the HUGE TITLE breathes against the
-                    // pivot row above instead of sinking toward the
-                    // cover strip.
-                    .offset(x: padX, y: 24)
+                    // so the HUGE TITLE breathes against the pivot
+                    // row above instead of sinking toward the cover
+                    // strip. Block offset nudged +2 so the eyebrow
+                    // drops 2pt while the title shrinks the
+                    // eyebrow-to-title gap by 4 (see titleBlock).
+                    .offset(x: padX, y: 26)
                 bottomStrip
                     .frame(width: innerW, height: 220, alignment: .bottomLeading)
                     .offset(x: padX, y: geo.size.height - 80 - 220)
@@ -335,7 +337,11 @@ private struct HomePickPanel: View {
         VStack(alignment: .leading, spacing: 0) {
             Text(pick.eyebrow)
                 .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
-                .padding(.bottom, 14)
+                // Eyebrow ↔ title gap: design uses 14pt; tightened to
+                // 10 so the eyebrow drops 2pt (from the block offset
+                // bump) and the title lifts 2pt, closing the pair by
+                // 4pt total. Matches the user's `each closer by 4`.
+                .padding(.bottom, 10)
             ZStack(alignment: .topLeading) {
                 Text(pick.title)
                     .font(ResonantFont.display(150, weight: .ultraLight))
