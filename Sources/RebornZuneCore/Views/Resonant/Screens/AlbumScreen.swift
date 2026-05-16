@@ -107,8 +107,7 @@ struct TrackRow: View {
                     Circle().fill(ResonantColors.magenta).frame(width: 8, height: 8)
                 } else {
                     Text(String(format: "%02d", number))
-                        .font(.system(size: 11, design: .monospaced))
-                        .tracking(0.8)
+                        .resonantScaledFont(11, design: .monospaced, tracking: 0.8)
                         .foregroundColor(playing ? ResonantColors.magenta : ResonantColors.ink3)
                 }
             }
@@ -124,7 +123,7 @@ struct TrackRow: View {
             Text(meta)
                 .resonantTag(size: 10, tracking: 1.4)
             Text(time)
-                .font(.system(size: 11, design: .monospaced))
+                .resonantScaledFont(11, design: .monospaced)
                 .foregroundColor(ResonantColors.ink2)
         }
         // Design: `.track-row { padding: 14px 0 }` on mac,

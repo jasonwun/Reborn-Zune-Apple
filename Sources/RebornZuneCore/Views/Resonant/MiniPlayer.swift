@@ -107,8 +107,7 @@ public struct MiniPlayer: View {
                         .opacity(pulseOpacity)
                 }
                 Text(metaLine(for: engine.currentItem))
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .tracking(1.6)
+                    .resonantScaledFont(10, weight: .medium, design: .monospaced, tracking: 1.6)
                     .textCase(.uppercase)
                     .foregroundColor(ResonantColors.ink2)
                     .lineLimit(1)
@@ -119,8 +118,7 @@ public struct MiniPlayer: View {
     private var upNextView: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text("↳ UP NEXT")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .tracking(2.8)
+                .resonantScaledFont(10, weight: .semibold, design: .monospaced, tracking: 2.8)
                 .foregroundColor(ResonantColors.magenta)
             Text(upNext?.title ?? "—")
                 .font(ResonantFont.display(22, weight: .light))
@@ -128,8 +126,7 @@ public struct MiniPlayer: View {
                 .foregroundColor(ResonantColors.ink)
                 .lineLimit(1)
             Text(metaLine(for: upNext))
-                .font(.system(size: 9, weight: .medium, design: .monospaced))
-                .tracking(1.6)
+                .resonantScaledFont(9, weight: .medium, design: .monospaced, tracking: 1.6)
                 .textCase(.uppercase)
                 .foregroundColor(ResonantColors.ink3)
                 .lineLimit(1)
@@ -154,8 +151,7 @@ public struct MiniPlayer: View {
         let barH: CGFloat = isTouch ? 3 : 2
         return HStack(spacing: 10) {
             Text(format(engine.currentTime))
-                .font(.system(size: 10, design: .monospaced))
-                .tracking(0.8)
+                .resonantScaledFont(10, design: .monospaced, tracking: 0.8)
                 .foregroundColor(ResonantColors.ink2)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -180,8 +176,7 @@ public struct MiniPlayer: View {
             }
             .frame(height: 8)
             Text("-\(format(max(0, engine.duration - engine.currentTime)))")
-                .font(.system(size: 10, design: .monospaced))
-                .tracking(0.8)
+                .resonantScaledFont(10, design: .monospaced, tracking: 0.8)
                 .foregroundColor(ResonantColors.ink2)
         }
     }

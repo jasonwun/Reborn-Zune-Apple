@@ -38,13 +38,67 @@ public enum ResonantFont {
 extension Text {
     /// Apply the canonical mono "tag" style — uppercase letterspacing for the
     /// eyebrow / catalog labels that appear on every screen.
+    ///
+    /// Returns `some View` rather than `Text` because the underlying
+    /// modifier reads `@Environment(\.resonantLayout)` to scale the
+    /// font size per device class (1.0× on compact / Mac default,
+    /// 1.15× on regular iPad, 1.25× on expanded iPad Pro 13).
+    /// Tracking is multiplied too so the optical letterspacing
+    /// stays balanced at the new size.
     public func resonantTag(size: CGFloat = 10, tracking: CGFloat = 1.6,
                             color: Color = ResonantColors.ink2,
-                            weight: Font.Weight = .medium) -> Text {
-        self
-            .font(ResonantFont.mono(size, weight: weight))
-            .tracking(tracking)
+                            weight: Font.Weight = .medium) -> some View {
+        self.modifier(ResonantTagModifier(
+            size: size, tracking: tracking, color: color, weight: weight
+        ))
+    }
+}
+
+private struct ResonantTagModifier: ViewModifier {
+    let size: CGFloat
+    let tracking: CGFloat
+    let color: Color
+    let weight: Font.Weight
+
+    @Environment(\.resonantLayout) private var layout
+
+    func body(content: Content) -> some View {
+        let scale = layout.textScale
+        return content
+            .font(ResonantFont.mono(size * scale, weight: weight))
+            .tracking(tracking * scale)
             .foregroundColor(color)
+    }
+}
+
+extension View {
+    /// Chainable replacement for `.font(.system(size:weight:design:))`
+    /// on small/secondary text. Reads `\.resonantLayout` and scales
+    /// the size so 10–12pt text feels right on iPad Pro 13 the same
+    /// way it does on a Mac window.
+    public func resonantScaledFont(_ size: CGFloat,
+                                   weight: Font.Weight = .regular,
+                                   design: Font.Design = .default,
+                                   tracking: CGFloat = 0) -> some View {
+        self.modifier(ResonantScaledFontModifier(
+            size: size, weight: weight, design: design, tracking: tracking
+        ))
+    }
+}
+
+private struct ResonantScaledFontModifier: ViewModifier {
+    let size: CGFloat
+    let weight: Font.Weight
+    let design: Font.Design
+    let tracking: CGFloat
+
+    @Environment(\.resonantLayout) private var layout
+
+    func body(content: Content) -> some View {
+        let scale = layout.textScale
+        return content
+            .font(.system(size: size * scale, weight: weight, design: design))
+            .tracking(tracking * scale)
     }
 }
 

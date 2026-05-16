@@ -37,8 +37,7 @@ public struct FilterChipRow<Value: Hashable>: View {
                         onChange(v)
                     } label: {
                         Text(lab)
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .tracking(1.6)
+                            .resonantScaledFont(11, weight: .medium, design: .monospaced, tracking: 1.6)
                             .textCase(.uppercase)
                             .foregroundColor(on ? ResonantColors.paper : ResonantColors.ink2)
                             .padding(.horizontal, 16)
