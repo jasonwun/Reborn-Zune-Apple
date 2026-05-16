@@ -28,20 +28,21 @@ public struct ArtistsScreen: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let scale = layout.displayFontScale
+        return VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 Text("COLLECTION · \(library.artists.count) ARTISTS")
                     .resonantTag(size: 10, tracking: 2.2)
                     .padding(.leading, 12)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 12 * scale)
                 Text("artists")
-                    .font(ResonantFont.display(180 * layout.displayFontScale, weight: .ultraLight))
-                    .tracking(-4.5 * layout.displayFontScale)
+                    .font(ResonantFont.display(180 * scale, weight: .ultraLight))
+                    .tracking(-4.5 * scale)
                     .lineLimit(1)
                     .offset(x: -4)
             }
-            .padding(.top, 12)
-            .padding(.bottom, 12)
+            .padding(.top, 12 * scale)
+            .padding(.bottom, 12 * scale)
 
             FilterChipRow(
                 label: "SORT",
@@ -50,8 +51,8 @@ public struct ArtistsScreen: View {
                 onChange: { sort = $0 }
             )
             .padding(.leading, 12)
-            .padding(.top, 4)
-            .padding(.bottom, 20)
+            .padding(.top, 4 * scale)
+            .padding(.bottom, 20 * scale)
 
             ScrollView {
                 LazyVStack(spacing: 0) {
@@ -77,7 +78,7 @@ public struct ArtistsScreen: View {
                 .padding(.bottom, 16)
             }
         }
-        .padding(.top, 8)
+        .padding(.top, 8 * scale)
         .padding(.horizontal, spacing.padX)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }

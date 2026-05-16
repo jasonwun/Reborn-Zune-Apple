@@ -20,16 +20,17 @@ public struct PlaylistsScreen: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let scale = layout.displayFontScale
+        return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("YOUR LISTS · \(playlists.count) TOTAL")
                         .resonantTag(size: 10, tracking: 2.2)
                         .padding(.leading, 12)
-                        .padding(.bottom, 12)
+                        .padding(.bottom, 12 * scale)
                     Text("playlists")
-                        .font(ResonantFont.display(180 * layout.displayFontScale, weight: .ultraLight))
-                        .tracking(-4.5 * layout.displayFontScale)
+                        .font(ResonantFont.display(180 * scale, weight: .ultraLight))
+                        .tracking(-4.5 * scale)
                         .lineLimit(1)
                         .offset(x: -4)
                 }
@@ -46,8 +47,8 @@ public struct PlaylistsScreen: View {
                 .background(ResonantColors.ink)
                 .buttonStyle(.plain)
             }
-            .padding(.top, 12)
-            .padding(.bottom, 28)
+            .padding(.top, 12 * scale)
+            .padding(.bottom, 28 * scale)
 
             ScrollView {
                 LazyVGrid(
@@ -63,7 +64,7 @@ public struct PlaylistsScreen: View {
                 .padding(.bottom, 16)
             }
         }
-        .padding(.top, 8)
+        .padding(.top, 8 * scale)
         .padding(.horizontal, spacing.padX)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }

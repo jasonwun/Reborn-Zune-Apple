@@ -319,15 +319,12 @@ private struct HomePickPanel: View {
             ZStack(alignment: .topLeading) {
                 titleBlock
                     .frame(width: innerW, alignment: .leading)
-                    // Pivot-bottom → eyebrow-top gap: 20pt to match
-                    // Albums / Playlists / Artists screens, which
-                    // pair `.padding(.top, 8)` (outer screen) with
-                    // `.padding(.top, 12)` (eyebrow block) for 20pt
-                    // total. Fixed — no displayFontScale here so
-                    // the eyebrow consistently lands at the same
-                    // optical height across all tabs on a given
-                    // surface.
-                    .offset(x: padX, y: 20)
+                    // Pivot-bottom → eyebrow-top gap matches Albums /
+                    // Playlists / Artists (8pt outer + 12pt block =
+                    // 20pt total) and scales with displayFontScale so
+                    // the rhythm shrinks on smaller iPads in lockstep
+                    // with the surrounding type.
+                    .offset(x: padX, y: 20 * layout.displayFontScale)
                 bottomStrip
                     .frame(width: innerW, height: 220 * layout.displayFontScale, alignment: .bottomLeading)
                     .offset(x: padX, y: geo.size.height - 80 - 220 * layout.displayFontScale)
@@ -368,12 +365,11 @@ private struct HomePickPanel: View {
                 // panel than a strict cap-to-cap alignment would
                 // give. Tuned by eye after iterative nudges.
                 .padding(.leading, 12)
-                // Eyebrow ↔ HUGE TITLE gap: 12pt to match the
-                // eyebrow→title spacing on Albums / Playlists /
-                // Artists screens (`.padding(.bottom, 12)` on the
-                // eyebrow there). Fixed value — same optical gap
-                // across every tab.
-                .padding(.bottom, 12)
+                // Eyebrow ↔ HUGE TITLE gap matches the 12pt used on
+                // Albums / Playlists / Artists, scaled with
+                // displayFontScale so the eyebrow stays glued to
+                // the title on smaller surfaces.
+                .padding(.bottom, 12 * scale)
             ZStack(alignment: .topLeading) {
                 Text(pick.title)
                     .font(ResonantFont.display(titleSize, weight: .ultraLight))
