@@ -65,6 +65,12 @@ private struct PivotButton: View {
                 )
                 .textCase(.lowercase)
                 .fixedSize()
+                // Match design `.pivot { font-size: 42px; line-height: 1 }`.
+                // Without the explicit frame the SwiftUI Text renders at
+                // line-height ~1.2 (~50pt tall), making the pivot row 8pt
+                // taller than the design and stealing that vertical space
+                // from the panorama panel below.
+                .frame(height: 42)
                 .animation(.easeInOut(duration: 0.36), value: active)
                 .animation(.easeInOut(duration: 0.36), value: hover)
         }
