@@ -18,6 +18,9 @@ approved before the next one starts.
 | M10 | Resonant UI · iPad | iPad shell on top of M9: status bar / home indicator, touch-sized controls, hidden scrollbars, hidden panorama arrows, cozy density default. |
 | M11 | Resonant UI · tvOS | tvOS shell: focus engine, 1920×1080 type scale, single-row alphabet keyboard, no mini-player, full-bleed Now Playing dismissed via remote Back. |
 | M12 | Resonant UI · macOS visual parity (design v2) | Drop window chrome (`.hiddenTitleBar`), bump pivot padding 28→56, home panorama padding 18→48 — match `Resonant.html` v2. |
+| M13 | Resonant UI · iPad visual parity (design v2) + responsive layout system | Hide status bar (mock + iOS), OLED→warm paper (unified), pivot 56pt, touch-sized scrubber + track rows, demo-library fallback, iPad-only target. Introduce `ResonantLayout` env value (deviceClass × orientation → `textScale`, `displayFontScale`) so type and gaps shrink correctly on iPad mini and grow on Pro 13. Universal hit-area fix for all `.buttonStyle(.plain)` chips/buttons. |
+| M14 | Resonant UI · tvOS visual parity (design v2) | Remove brand + clock from TV top nav, pivot vocab `listen` → `home`, font 40 → 56pt, adopt `ResonantLayout` (`.expanded` landscape at 1920×1080), home wall uses true black. No mini-player; Now Playing remote-back dismiss verified. |
+| M15 | Content curation + physical-device path | Hand-written reason / rail copy on first panorama pick (parity with design's "Because you played Vince Maro twice this week" feel) instead of `library.albums.first` boilerplate. Personal Apple ID signing wired so `Cmd+R` to the iPad mini works without per-developer setup. Optional: `LibraryFolderStore` "change folder" affordance now that demo is the default. |
 
 ## Stop conditions per milestone
 
