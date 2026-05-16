@@ -19,7 +19,10 @@ public struct PivotNav: View {
         }
         .padding(.leading, spacing.padX)
         .padding(.trailing, spacing.padX)
-        .padding(.top, 28)
+        // styles.css :945 — when chrome="off" (mac default in v2), the
+        // .app loses its 36px traffic-light gutter so the pivots get an
+        // extra 28px on top to restore breathing room.
+        .padding(.top, 56)
         .padding(.bottom, 8)
     }
 }
