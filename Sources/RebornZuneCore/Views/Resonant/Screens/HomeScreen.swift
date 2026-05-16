@@ -306,15 +306,15 @@ private struct HomePickPanel: View {
             ZStack(alignment: .topLeading) {
                 titleBlock
                     .frame(width: innerW, alignment: .leading)
-                    // Design panel uses `padding-top: 48px`; pulled up
-                    // so the HUGE TITLE breathes against the pivot
-                    // row above instead of sinking toward the cover
-                    // strip. Block offset bumped further (y:30) so
-                    // the eyebrow keeps dropping while the title
-                    // keeps rising (via the smaller padding in
-                    // titleBlock) — pair now 12pt tighter than the
-                    // original design spacing.
-                    .offset(x: padX, y: 30)
+                    // Design panel uses `padding-top: 48px`. The block
+                    // offset slides the eyebrow further down (y:38)
+                    // while a negative bottom-padding on the eyebrow
+                    // lifts the title another 2pt above where it
+                    // ended up in round 7 — title and eyebrow now
+                    // overlap by 8pt in layout, which translates to
+                    // a tight optical pairing once the display
+                    // typeface's leading is accounted for.
+                    .offset(x: padX, y: 38)
                 bottomStrip
                     .frame(width: innerW, height: 220, alignment: .bottomLeading)
                     .offset(x: padX, y: geo.size.height - 80 - 220)
@@ -339,11 +339,14 @@ private struct HomePickPanel: View {
         VStack(alignment: .leading, spacing: 0) {
             Text(pick.eyebrow)
                 .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
-                // Eyebrow ↔ title gap: design uses 14pt; tightened to
-                // 2 so the title lifts a further 4pt on top of the
-                // eyebrow's 4pt drop (block offset), closing the pair
-                // by 8 more pt — 12pt tighter than the design baseline.
-                .padding(.bottom, 2)
+                // Eyebrow ↔ title gap: negative bottom-padding
+                // (-8) overlaps the title's layout box into the
+                // eyebrow's space so the title's cap rises another
+                // 2pt above its round-7 position. Combined with the
+                // block offset (+8 from round 7), eyebrow drops 8pt
+                // and title lifts 2pt — pair is now 22pt tighter
+                // than the original design spacing.
+                .padding(.bottom, -8)
             ZStack(alignment: .topLeading) {
                 Text(pick.title)
                     .font(ResonantFont.display(150, weight: .ultraLight))
