@@ -71,6 +71,12 @@ private struct PivotButton: View {
                 // taller than the design and stealing that vertical space
                 // from the panorama panel below.
                 .frame(height: 42)
+                // Bare Text only hit-tests the painted glyph
+                // strokes, so clicks in the counters of "home" or
+                // the inter-letter gaps missed. `.contentShape`
+                // turns the full 42pt-tall pivot bounding box into
+                // the hit target — matches the design's `<button>`.
+                .contentShape(Rectangle())
                 .animation(.easeInOut(duration: 0.36), value: active)
                 .animation(.easeInOut(duration: 0.36), value: hover)
         }

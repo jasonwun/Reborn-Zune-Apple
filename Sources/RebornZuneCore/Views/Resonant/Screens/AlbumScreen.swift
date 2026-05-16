@@ -139,6 +139,11 @@ struct TrackRow: View {
 
 @MainActor
 func primaryButton(label: String, action: @escaping () -> Void) -> some View {
+    // Background + contentShape live INSIDE the Button label so the
+    // whole pill is hit-testable. With `.background` applied outside
+    // the Button, `.buttonStyle(.plain)` only treated the rendered
+    // Text glyphs as hit targets — clicking on the magenta fill or
+    // the padded interior did nothing.
     Button(action: action) {
         Text(label)
             .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -147,8 +152,9 @@ func primaryButton(label: String, action: @escaping () -> Void) -> some View {
             .foregroundColor(ResonantColors.paper)
             .padding(.horizontal, 22)
             .padding(.vertical, 12)
+            .background(ResonantColors.magenta)
+            .contentShape(Rectangle())
     }
-    .background(ResonantColors.magenta)
     .buttonStyle(.plain)
 }
 
@@ -162,7 +168,8 @@ func secondaryButton(label: String, action: @escaping () -> Void) -> some View {
             .foregroundColor(ResonantColors.ink)
             .padding(.horizontal, 22)
             .padding(.vertical, 12)
+            .overlay(Rectangle().strokeBorder(ResonantColors.ink4, lineWidth: 1))
+            .contentShape(Rectangle())
     }
-    .overlay(Rectangle().strokeBorder(ResonantColors.ink4, lineWidth: 1))
     .buttonStyle(.plain)
 }
