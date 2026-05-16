@@ -291,15 +291,14 @@ private struct HomePickPanel: View {
         // which collapsed to 0pt in earlier attempts and left the
         // cover riding under the title.
         GeometryReader { geo in
+            let innerW = geo.size.width - 2 * padX
             ZStack(alignment: .topLeading) {
                 titleBlock
-                    .position(x: padX + (geo.size.width - 2 * padX) / 2,
-                              y: 48 + titleBlockHeight / 2)
-                    .frame(width: geo.size.width - 2 * padX, alignment: .leading)
+                    .frame(width: innerW, alignment: .leading)
+                    .offset(x: padX, y: 48)
                 bottomStrip
-                    .frame(width: geo.size.width - 2 * padX)
-                    .position(x: padX + (geo.size.width - 2 * padX) / 2,
-                              y: geo.size.height - 80 - 220 / 2)
+                    .frame(width: innerW, height: 220, alignment: .bottomLeading)
+                    .offset(x: padX, y: geo.size.height - 80 - 220)
             }
         }
         .opacity(active ? 1.0 : 0.55)
