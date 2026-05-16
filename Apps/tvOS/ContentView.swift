@@ -70,11 +70,7 @@ private struct ResonantHost: View {
         )
         .task {
             if ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_DEMO_LIBRARY"] == "1" {
-                let tracks = ResonantDemoLibrary.makeMusic()
-                tiles = MusicTileBuilder.tiles(from: tracks)
-                library = ResonantLibrary.from(tracks: tracks)
-                engine.setQueue(tracks)
-                engine.play()
+                loadDemo(into: engine)
                 return
             }
             let userMusic = BundleLibrarySource(subdirectory: "UserMusic")
@@ -89,11 +85,22 @@ private struct ResonantHost: View {
                     library = ResonantLibrary.from(tracks: tracks)
                     engine.setQueue(tracks)
                     engine.play()
+                    return
                 }
             } catch {
-                // Empty library — Home will show the synthetic wall behind, all
-                // browse screens will just be empty grids.
+                // Bundle load failed; fall through to demo library.
             }
+            // No bundled tracks → load the demo library so Home is not
+            // an empty grid on first run.
+            loadDemo(into: engine)
         }
+    }
+
+    private func loadDemo(into engine: PlaybackEngine) {
+        let tracks = ResonantDemoLibrary.makeMusic()
+        tiles = MusicTileBuilder.tiles(from: tracks)
+        library = ResonantLibrary.from(tracks: tracks)
+        engine.setQueue(tracks)
+        engine.play()
     }
 }

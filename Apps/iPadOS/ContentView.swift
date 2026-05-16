@@ -96,12 +96,7 @@ private struct ResonantHost: View {
         }
         .task {
             if ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_DEMO_LIBRARY"] == "1" {
-                let tracks = ResonantDemoLibrary.makeMusic()
-                state.tracks = tracks
-                state.tiles = MusicTileBuilder.tiles(from: tracks)
-                state.library = ResonantLibrary.from(tracks: tracks)
-                state.phase = .ready
-                engine.setQueue(tracks)
+                loadDemoLibrary(into: engine)
                 return
             }
             if let override = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_LIBRARY_FOLDER"] {
@@ -110,8 +105,25 @@ private struct ResonantHost: View {
             }
             if let saved = LibraryFolderStore.read() {
                 await state.load(folder: saved, into: engine)
+                return
             }
+            // No env var, no saved folder → fall back to the demo
+            // library so the sim shows real content on first run
+            // instead of the empty-state picker. Users who want
+            // their own music can still trigger the file importer
+            // via the in-app Pick Folder affordance, which writes
+            // to LibraryFolderStore for subsequent launches.
+            loadDemoLibrary(into: engine)
         }
+    }
+
+    private func loadDemoLibrary(into engine: PlaybackEngine) {
+        let tracks = ResonantDemoLibrary.makeMusic()
+        state.tracks = tracks
+        state.tiles = MusicTileBuilder.tiles(from: tracks)
+        state.library = ResonantLibrary.from(tracks: tracks)
+        state.phase = .ready
+        engine.setQueue(tracks)
     }
 }
 
