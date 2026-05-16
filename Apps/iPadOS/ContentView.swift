@@ -77,7 +77,8 @@ private struct ResonantHost: View {
                 needsLibraryFolder: state.phase == .needsFolder,
                 onPickFolder: { showPicker = true }
             )
-            .padding(.top, 32)   // status bar
+            // status bar removed in design v2 (see IPadShell) — no
+            // top padding needed; content meets the device top edge.
             .padding(.bottom, 28) // home indicator
         }
         .ignoresSafeArea()

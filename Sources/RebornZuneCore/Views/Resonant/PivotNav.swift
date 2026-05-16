@@ -19,10 +19,16 @@ public struct PivotNav: View {
         }
         .padding(.leading, spacing.padX)
         .padding(.trailing, spacing.padX)
-        // styles.css :945 — when chrome="off" (mac default in v2), the
-        // .app loses its 36px traffic-light gutter so the pivots get an
-        // extra 28px on top to restore breathing room.
+        // Pivot row top padding follows the design's platform split:
+        //   [data-platform="ipad"] .pivots { padding-top: 48px }
+        //   [data-chrome="off"]:not([ipad/tv]) .pivots { padding-top: 56px }
+        // mac chrome=off recovers the missing 36px traffic-light gutter
+        // with 56pt; iPad doesn't have that gutter to begin with.
+        #if os(macOS)
         .padding(.top, 56)
+        #else
+        .padding(.top, 48)
+        #endif
         .padding(.bottom, 8)
     }
 }
