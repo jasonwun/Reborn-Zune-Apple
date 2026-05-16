@@ -339,12 +339,12 @@ private struct HomePickPanel: View {
         VStack(alignment: .leading, spacing: 0) {
             Text(pick.eyebrow)
                 .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
-                // Optical x-alignment: Barlow Condensed Light's "L"
-                // has ~4pt of left side-bearing, so a flush-left
-                // eyebrow visually sits 4pt LEFT of the title cap.
-                // Nudging the eyebrow right by 4pt lands it on the
-                // same vertical seam as the title.
-                .padding(.leading, 4)
+                // Optical x-alignment: a 12pt leading inset on the
+                // eyebrow sits it noticeably inset from the title's
+                // "L" — the tag-style "T" lands further into the
+                // panel than a strict cap-to-cap alignment would
+                // give. Tuned by eye after iterative nudges.
+                .padding(.leading, 12)
                 // Eyebrow ↔ title gap: negative bottom-padding
                 // (-12) overlaps the title's layout box into the
                 // eyebrow's space so the title's cap rises 2pt
