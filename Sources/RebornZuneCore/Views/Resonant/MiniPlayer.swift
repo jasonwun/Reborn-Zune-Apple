@@ -23,10 +23,16 @@ public struct MiniPlayer: View {
         self.onOpenNowPlaying = onOpenNowPlaying
     }
 
-    // Touch-sized metrics per styles.css#[data-platform="ipad"] .mini
-    private var artBox: CGFloat   { isTouch ? 64 : 56 }
+    // Touch-sized metrics per styles.css#[data-platform="ipad"] .mini.
+    // On the macOS side the design's `.mini { padding: 12px }` + 44pt
+    // art makes the row 68pt tall — Swift used to wrap the 44pt art in
+    // a 56pt artBox, which inflated the row to 80pt and stole 12pt
+    // from the panorama panel above. artBox now matches artFrame on
+    // macOS so the row height is exactly the design's.
+    private var artBox: CGFloat   { isTouch ? 64 : 44 }
     private var artFrame: CGFloat { isTouch ? 52 : 44 }
     private var metaWidth: CGFloat { isTouch ? 320 : 280 }
+    private var metaHeight: CGFloat { isTouch ? 56 : 44 }
     private var playSize: CGFloat { isTouch ? 48 : 38 }
     private var ctrlSize: CGFloat { isTouch ? 32 : 22 }
     private var ctrlGlyph: CGFloat { isTouch ? 20 : 14 }
@@ -54,7 +60,7 @@ public struct MiniPlayer: View {
                     RotatorView(state: viewState(for: .now)) { nowView }
                     RotatorView(state: viewState(for: .upNext)) { upNextView }
                 }
-                .frame(width: metaWidth, height: 48, alignment: .leading)
+                .frame(width: metaWidth, height: metaHeight, alignment: .leading)
             }
             .buttonStyle(.plain)
 
