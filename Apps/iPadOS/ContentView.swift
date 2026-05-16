@@ -82,6 +82,10 @@ private struct ResonantHost: View {
             .padding(.bottom, 28) // home indicator
         }
         .ignoresSafeArea()
+        // Design v2 prototype has no status bar at the top of the
+        // iPad canvas; hide the real iOS status bar so the pivot row
+        // meets the device top edge cleanly.
+        .statusBarHidden(true)
         .fileImporter(
             isPresented: $showPicker,
             allowedContentTypes: [.folder]
