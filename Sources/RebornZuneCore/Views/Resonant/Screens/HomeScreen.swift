@@ -277,13 +277,24 @@ public struct HomeScreen: View {
 
     private func arrowButton(direction: Int, disabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: direction < 0 ? "chevron.left" : "chevron.right")
-                .font(.system(size: 12, weight: .light))
-                .frame(width: 38, height: 38)
-                .foregroundColor(ResonantColors.ink)
+            // Background + border live INSIDE the button label so the
+            // whole 38×38 square is part of the hit region. With
+            // .background applied outside the Button, only the
+            // chevron glyph (~12pt) was clickable — click on the
+            // visible border or empty interior did nothing.
+            // `.contentShape(Rectangle())` makes the hit test explicit.
+            ZStack {
+                Rectangle()
+                    .fill(ResonantColors.paper)
+                Rectangle()
+                    .strokeBorder(ResonantColors.ink4, lineWidth: 1)
+                Image(systemName: direction < 0 ? "chevron.left" : "chevron.right")
+                    .font(.system(size: 12, weight: .light))
+                    .foregroundColor(ResonantColors.ink)
+            }
+            .frame(width: 38, height: 38)
+            .contentShape(Rectangle())
         }
-        .background(ResonantColors.paper)
-        .overlay(Rectangle().strokeBorder(ResonantColors.ink4, lineWidth: 1))
         .buttonStyle(.plain)
         .disabled(disabled)
         .opacity(disabled ? 0.3 : 1)
