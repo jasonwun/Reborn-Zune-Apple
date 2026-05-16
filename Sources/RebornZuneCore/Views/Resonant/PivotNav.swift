@@ -27,7 +27,7 @@ public struct PivotNav: View {
         #if os(macOS)
         .padding(.top, 56)
         #else
-        .padding(.top, 84)
+        .padding(.top, 76)
         #endif
         .padding(.bottom, 8)
     }
