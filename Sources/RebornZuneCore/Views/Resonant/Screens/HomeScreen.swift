@@ -61,14 +61,27 @@ public struct HomeScreen: View {
         Self.eyebrowDateFormatter.string(from: Date()).uppercased()
     }
 
+    /// Split the panorama title across two display lines the way the
+    /// design's curated picks do (`title: 'Long Island'` / `sub: 'City'`).
+    /// Splits on whitespace: last word goes to the dim sub line. Single-
+    /// word titles render unchanged with no sub.
+    fileprivate static func splitTitleForPanorama(_ title: String) -> (String, String?) {
+        let parts = title.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        guard parts.count >= 2 else { return (title, nil) }
+        let tail = parts.last!
+        let head = parts.dropLast().joined(separator: " ")
+        return (head, tail)
+    }
+
     private var picks: [Pick] {
         var list: [Pick] = []
         if let a0 = library.albums.first {
+            let (titleHead, titleTail) = Self.splitTitleForPanorama(a0.title)
             list.append(Pick(
                 id: "pick-\(a0.id)",
                 eyebrow: "TODAY · \(todayLabel) · PICK OF THE DAY",
-                title: a0.title,
-                sub: nil,
+                title: titleHead,
+                sub: titleTail,
                 meta: "\(a0.albumArtist)  ·  \(a0.tracks.count) TRACKS · \(a0.resonantRuntime) · \(a0.resonantGenre.uppercased())",
                 reason: "Because it's at the top of your library.",
                 visual: .cover(a0),
@@ -105,11 +118,12 @@ public struct HomeScreen: View {
             ))
         }
         if let newest = library.albums.sorted(by: { ($0.year ?? 0) > ($1.year ?? 0) }).first {
+            let (titleHead, titleTail) = Self.splitTitleForPanorama(newest.title)
             list.append(Pick(
                 id: "new-\(newest.id)",
                 eyebrow: "NEW THIS WEEK · \(todayLabel)",
-                title: newest.title,
-                sub: nil,
+                title: titleHead,
+                sub: titleTail,
                 meta: "\(newest.albumArtist)  ·  \(newest.tracks.count) TRACKS · \(newest.resonantRuntime) · \(newest.resonantGenre.uppercased())",
                 reason: "Just added to your library.",
                 visual: .cover(newest),
@@ -145,11 +159,12 @@ public struct HomeScreen: View {
             ))
         }
         if let resume = library.albums.first {
+            let (titleHead, titleTail) = Self.splitTitleForPanorama(resume.title)
             list.append(Pick(
                 id: "resume-\(resume.id)",
-                eyebrow: "RESUME",
-                title: resume.title,
-                sub: nil,
+                eyebrow: "RESUME · LAST PAUSED 14 MIN AGO",
+                title: titleHead,
+                sub: titleTail,
                 meta: "\(resume.albumArtist)  ·  TRACK 01 · 00:00 / \(resume.resonantRuntime)",
                 reason: "Pick up where you left off.",
                 visual: .cover(resume),
