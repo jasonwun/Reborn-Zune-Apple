@@ -66,20 +66,28 @@ private struct ResonantHost: View {
             : state.tiles
         let library = state.library
 
-        IPadShell(route: .home) {
-            ResonantApp(
-                engine: engine,
-                library: library,
-                tiles: tilesToShow,
-                lightingAnimator: lighting,
-                density: .cozy,
-                platform: .ipad,
-                needsLibraryFolder: state.phase == .needsFolder,
-                onPickFolder: { showPicker = true }
-            )
-            // status bar removed in design v2 (see IPadShell) — no
-            // top padding needed; content meets the device top edge.
-            .padding(.bottom, 28) // home indicator
+        // Wrap the iPad root in a GeometryReader so every descendant
+        // can read `\.resonantLayout` and tune typography / spacing
+        // to the device class (mini / regular / expanded) and the
+        // current orientation. The layout reacts live to rotation
+        // and multitasking resizes.
+        GeometryReader { proxy in
+            IPadShell(route: .home) {
+                ResonantApp(
+                    engine: engine,
+                    library: library,
+                    tiles: tilesToShow,
+                    lightingAnimator: lighting,
+                    density: .cozy,
+                    platform: .ipad,
+                    needsLibraryFolder: state.phase == .needsFolder,
+                    onPickFolder: { showPicker = true }
+                )
+                // status bar removed in design v2 (see IPadShell) — no
+                // top padding needed; content meets the device top edge.
+                .padding(.bottom, 28) // home indicator
+            }
+            .environment(\.resonantLayout, ResonantLayout.from(size: proxy.size))
         }
         .ignoresSafeArea()
         // Design v2 prototype has no status bar at the top of the
