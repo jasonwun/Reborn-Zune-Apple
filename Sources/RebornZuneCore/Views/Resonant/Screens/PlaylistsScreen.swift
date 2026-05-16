@@ -56,7 +56,7 @@ public struct PlaylistsScreen: View {
                         PlaylistTile(playlist: p, library: library, onClick: { onOpen(p) })
                     }
                 }
-                .padding(.top, 2)
+                .padding(.top, 4)
                 .padding(.horizontal, 8)
                 .padding(.bottom, 16)
             }
