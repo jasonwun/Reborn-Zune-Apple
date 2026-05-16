@@ -306,36 +306,39 @@ private struct HomePickPanel: View {
     }
 
     /// Title block: eyebrow tag + display title (+ optional sub).
-    /// Each marquee gets a 130pt frame (= 150 × 0.86 ≈ design CSS
-    /// `line-height: 0.86`) so two stacked lines occupy 260pt instead
-    /// of SwiftUI's natural ~360pt. The marquee mask is unbounded
-    /// vertically (see ResonantMarquee.swift) so display-type
-    /// descenders spill into the gap freely, matching the design's
-    /// `overflow-x: clip; overflow-y: visible`.
+    /// The curated panorama picks all fit (`Long Island`/`City`,
+    /// `Daily Mix`/`01`, etc.) so we bypass `ResonantMarquee` entirely
+    /// — the marquee's `.clipped()` + GeometryReader were forcing each
+    /// row to a fixed frame and either inflated the block to ~328pt
+    /// or clipped the sub glyphs when shrunk. A ZStack with explicit
+    /// `.offset(y: 129)` for the second line pins baseline-to-baseline
+    /// distance at exactly `150 × 0.86 = 129pt`, matching the design's
+    /// CSS `line-height: 0.86`. Total block: eyebrow + 14 + 129 + 129
+    /// ≈ 286pt vs the marquee path's 328pt — recovers the 42pt the
+    /// cover strip needed to land at the design's y position.
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(pick.eyebrow)
                 .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
-            VStack(alignment: .leading, spacing: 0) {
-                ResonantMarquee {
-                    Text(pick.title)
+                .padding(.bottom, 14)
+            ZStack(alignment: .topLeading) {
+                Text(pick.title)
+                    .font(ResonantFont.display(150, weight: .ultraLight))
+                    .tracking(-3.75)
+                    .lineLimit(1)
+                    .fixedSize()
+                if let sub = pick.sub, !sub.isEmpty {
+                    Text(sub)
                         .font(ResonantFont.display(150, weight: .ultraLight))
                         .tracking(-3.75)
+                        .foregroundColor(ResonantColors.ink2)
                         .lineLimit(1)
-                }
-                .frame(height: 150)
-                if let sub = pick.sub, !sub.isEmpty {
-                    ResonantMarquee {
-                        Text(sub)
-                            .font(ResonantFont.display(150, weight: .ultraLight))
-                            .tracking(-3.75)
-                            .foregroundColor(ResonantColors.ink2)
-                            .lineLimit(1)
-                    }
-                    .frame(height: 150)
+                        .fixedSize()
+                        .offset(y: 129)
                 }
             }
-            .padding(.top, 14)
+            .frame(height: (pick.sub?.isEmpty == false) ? 129 + 129 : 129,
+                   alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
