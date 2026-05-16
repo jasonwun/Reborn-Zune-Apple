@@ -339,13 +339,18 @@ private struct HomePickPanel: View {
         VStack(alignment: .leading, spacing: 0) {
             Text(pick.eyebrow)
                 .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
+                // Optical x-alignment: Barlow Condensed Light's "L"
+                // has ~4pt of left side-bearing, so a flush-left
+                // eyebrow visually sits 4pt LEFT of the title cap.
+                // Nudging the eyebrow right by 4pt lands it on the
+                // same vertical seam as the title.
+                .padding(.leading, 4)
                 // Eyebrow ↔ title gap: negative bottom-padding
-                // (-8) overlaps the title's layout box into the
-                // eyebrow's space so the title's cap rises another
-                // 2pt above its round-7 position. Combined with the
-                // block offset (+8 from round 7), eyebrow drops 8pt
-                // and title lifts 2pt — pair is now 22pt tighter
-                // than the original design spacing.
+                // (-12) overlaps the title's layout box into the
+                // eyebrow's space so the title's cap rises 2pt
+                // above its round-7 position. Combined with the
+                // block offset (+12 from round 7), eyebrow drops
+                // 12pt and title lifts 2pt.
                 .padding(.bottom, -12)
             ZStack(alignment: .topLeading) {
                 Text(pick.title)
