@@ -22,5 +22,9 @@ struct RebornZuneMacApp: App {
             ContentView()
         }
         .modelContainer(modelContainer)
+        // Resonant v2 sketch: chrome="off". Hide the system titlebar so
+        // the canvas extends to the top of the window; native traffic
+        // lights stay (functional necessity) and float over content.
+        .windowStyle(.hiddenTitleBar)
     }
 }
