@@ -28,9 +28,9 @@ public struct PivotNav: View {
     }
 }
 
-enum PivotID: String, CaseIterable, Identifiable {
+public enum PivotID: String, CaseIterable, Identifiable, Hashable, Sendable {
     case home, albums, playlists, artists, search
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
     var route: ResonantRouter.Route {
         switch self {
@@ -40,6 +40,15 @@ enum PivotID: String, CaseIterable, Identifiable {
         case .artists: return .artists
         case .search: return .search
         }
+    }
+
+    /// Inverse of `route`: maps a router route (or its parent pivot)
+    /// back to the pivot tab that should be highlighted/focused.
+    /// Returns nil for routes that don't belong to a pivot (e.g.
+    /// `.nowPlaying`).
+    static func from(route: ResonantRouter.Route) -> PivotID? {
+        guard let p = route.pivot else { return nil }
+        return PivotID.allCases.first(where: { $0.route == p })
     }
 
     var label: String { rawValue }

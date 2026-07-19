@@ -105,7 +105,9 @@ private struct TvKeyButton: View {
         .background(focused ? ResonantColors.magenta : Color.clear)
         .overlay(Rectangle().strokeBorder(focused ? ResonantColors.magenta : ResonantColors.ink4, lineWidth: 1))
         .focused($focused)
-        .buttonStyle(.plain)
+        // Same passthrough as the rest of the tv buttons — the magenta
+        // fill IS the focused appearance, no system pill underneath.
+        .buttonStyle(TvFlatButtonStyle())
         .animation(.easeInOut(duration: 0.18), value: focused)
     }
 }

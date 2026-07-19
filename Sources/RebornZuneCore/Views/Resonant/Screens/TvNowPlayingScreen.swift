@@ -124,7 +124,7 @@ private struct TvIconButton: View {
                  ? Rectangle().strokeBorder(ResonantColors.magenta, lineWidth: 2)
                  : nil)
         .focused($focused)
-        .buttonStyle(.plain)
+        .buttonStyle(TvFlatButtonStyle())
         .animation(.easeInOut(duration: 0.2), value: focused)
     }
 }

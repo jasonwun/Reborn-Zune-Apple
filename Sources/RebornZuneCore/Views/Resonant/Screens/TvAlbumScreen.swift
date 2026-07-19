@@ -49,7 +49,7 @@ public struct TvAlbumScreen: View {
                         .foregroundColor(ResonantColors.ink2)
                         .lineLimit(1)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TvFlatButtonStyle())
                 .padding(.bottom, 32)
 
                 HStack(spacing: 14) {
@@ -116,7 +116,7 @@ struct TvTrackRow: View {
         }
         .overlay(Rectangle().fill(ResonantColors.ink4).frame(height: 0.5), alignment: .bottom)
         .focused($focused)
-        .buttonStyle(.plain)
+        .buttonStyle(TvFlatButtonStyle())
         .animation(.easeInOut(duration: 0.22), value: focused)
     }
 }

@@ -34,7 +34,9 @@ public struct TvButton: View {
         .overlay(Rectangle().strokeBorder(border, lineWidth: 1))
         .offset(y: focused ? -3 : 0)
         .focused($focused)
-        .buttonStyle(.plain)
+        // Suppress the system "liquid glass" focus chrome — our magenta
+        // fill + lift IS the focused appearance.
+        .buttonStyle(TvFlatButtonStyle())
         .animation(.easeInOut(duration: 0.22), value: focused)
     }
 

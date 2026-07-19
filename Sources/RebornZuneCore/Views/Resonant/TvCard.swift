@@ -47,7 +47,9 @@ public struct TvCard<Art: View>: View {
             .offset(y: focused ? -8 : 0)
         }
         .focused($focused)
-        .buttonStyle(.plain)
+        // Suppress the system focus pill; the magenta title + `▶ OPEN`
+        // hint + 8pt lift IS the focused appearance.
+        .buttonStyle(TvFlatButtonStyle())
         .animation(.easeInOut(duration: 0.24), value: focused)
     }
 }

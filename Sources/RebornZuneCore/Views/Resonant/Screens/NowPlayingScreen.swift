@@ -91,7 +91,13 @@ public struct NowPlayingScreen: View {
                                 .tracking(-0.26)
                                 .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255))
                                 .lineLimit(2)
+                                // Cap wrap width at 520 (spec safety net) WITHOUT
+                                // forcing the frame to expand to 520 — fixedSize
+                                // keeps the title hugging its content so the
+                                // trailing heart sits next to the text instead of
+                                // being pushed ~520pt to the right.
                                 .frame(maxWidth: 520, alignment: .leading)
+                                .fixedSize(horizontal: true, vertical: false)
                             Text("\(track.albumArtist ?? track.artist ?? "Unknown Artist") · \(ResonantSynth.runtime(seconds: track.duration))")
                                 .font(.system(size: 10, weight: .medium, design: .monospaced))
                                 .tracking(1.8)
@@ -119,12 +125,21 @@ public struct NowPlayingScreen: View {
                 }
             }
 
-            // 8. Scrubber + transport
+            // 8. Scrubber — absolutely anchored at bottom 88 (per M9 §5.9).
+            // Kept in its OWN bottom-anchored overlay rather than stacked
+            // above the transport: stacking made the scrubber's real offset
+            // 28 + transportHeight + 88 ≈ 172pt, riding up into the meta card
+            // and Up Next rail.
             VStack {
                 Spacer()
                 scrubberRow
                     .padding(.horizontal, spacing.padX)
                     .padding(.bottom, 88)
+            }
+
+            // 9. Transport — absolutely anchored at bottom 28 (per M9 §5.9).
+            VStack {
+                Spacer()
                 transportRow
                     .padding(.horizontal, spacing.padX)
                     .padding(.bottom, 28)
