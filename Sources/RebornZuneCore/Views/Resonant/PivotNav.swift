@@ -4,6 +4,8 @@ public struct PivotNav: View {
     let router: ResonantRouter
     let spacing: ResonantSpacing
 
+    @Environment(\.resonantLayout) private var layout
+
     public init(router: ResonantRouter, spacing: ResonantSpacing) {
         self.router = router
         self.spacing = spacing
@@ -23,8 +25,11 @@ public struct PivotNav: View {
         // recovers the missing traffic-light gutter with 56pt; iPad
         // landed on the same value after iterative tightening from
         // the design CSS spec of 48 (and several user tweaks).
-        .padding(.top, 56)
-        .padding(.bottom, 8)
+        // `windowScale` is 1.0 on bucketed surfaces (iPad unchanged)
+        // and tracks the window width on Mac so the chrome rhythm
+        // follows the content scale.
+        .padding(.top, 56 * layout.windowScale)
+        .padding(.bottom, 8 * layout.windowScale)
     }
 }
 

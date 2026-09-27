@@ -52,7 +52,8 @@ public struct PlaylistsScreen: View {
 
             ScrollView {
                 LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 200), spacing: spacing.gap)],
+                    columns: [GridItem(.adaptive(minimum: 200 * layout.windowScale),
+                                       spacing: spacing.gap)],
                     spacing: 48
                 ) {
                     ForEach(playlists) { p in
@@ -61,7 +62,13 @@ public struct PlaylistsScreen: View {
                 }
                 .padding(.top, 4)
                 .padding(.horizontal, 8)
+                #if os(macOS)
+                // See ArtistScreen: end-of-scroll clearance ≈
+                // MiniPlayer height on macOS (M15 R2).
+                .padding(.bottom, 68 * layout.windowScale)
+                #else
                 .padding(.bottom, 16)
+                #endif
             }
         }
         .padding(.top, 8 * scale)

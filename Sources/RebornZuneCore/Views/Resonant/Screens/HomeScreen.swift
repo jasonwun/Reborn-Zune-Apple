@@ -6,23 +6,21 @@ public struct HomeScreen: View {
     let engine: PlaybackEngine
     let onOpen: (Album) -> Void
     let onArtist: (Artist) -> Void
-    let canvasWidth: CGFloat
     let showArrows: Bool
 
     @State private var idx: Int = 0
     @State private var dragDX: CGFloat = 0
+    @Environment(\.resonantLayout) private var layout
 
     public init(library: ResonantLibrary,
                 spacing: ResonantSpacing,
                 engine: PlaybackEngine,
-                canvasWidth: CGFloat = 1440,
                 showArrows: Bool = true,
                 onOpen: @escaping (Album) -> Void,
                 onArtist: @escaping (Artist) -> Void) {
         self.library = library
         self.spacing = spacing
         self.engine = engine
-        self.canvasWidth = canvasWidth
         self.showArrows = showArrows
         self.onOpen = onOpen
         self.onArtist = onArtist
@@ -181,7 +179,11 @@ public struct HomeScreen: View {
         return list
     }
 
-    private let peek: CGFloat = 173
+    /// Width of the next-panel peek strip on the right. A 1440pt-canvas
+    /// fossil: scales with `windowScale` (= `displayFontScale` on Mac,
+    /// 1.0 on bucketed iPad/tvOS surfaces) so the strip keeps its
+    /// proportion of the window instead of crowding narrow windows.
+    private var peek: CGFloat { 173 * layout.windowScale }
 
     public var body: some View {
         GeometryReader { geo in
@@ -316,18 +318,51 @@ private struct HomePickPanel: View {
         // cover riding under the title.
         GeometryReader { geo in
             let innerW = geo.size.width - 2 * padX
+            // Layout-aware vertical budget (M15 R2): R1 anchored the
+            // strip absolutely at `height − 80 − 220×scale` while the
+            // title block grew downward from the top — two blocks
+            // oblivious of each other. At the 900×600 window floor the
+            // title's *painted* sub-line (the frame under-reports the
+            // 150pt line box) collided with the cover mid-glyph. Now we
+            // estimate the painted title height honestly (eyebrow tag at
+            // textScale, 12pt gap, 129pt baseline offset + a 1.12em
+            // line box per display line), reserve the HUD zone (28pt
+            // bottom pad + 38pt arrow row = 66pt), and when
+            // title + gap + strip don't fit, shrink the whole
+            // composition by `fit` instead of letting them overlap.
+            // Invariant: strip bottom ≤ height − 66 and
+            // strip top ≥ painted title bottom + 12 × windowScale.
+            // At the 1440pt anchor (and every size where they fit)
+            // `fit` == 1 and every constant reduces to the exact R1
+            // values, so 1440×900 — and all bucketed iPad sizes —
+            // render bit-identical to R1.
+            let dScale = layout.displayFontScale
+            let hasSub = pick.sub?.isEmpty == false
+            let titleBudget = 20 * dScale
+                + 10 * layout.textScale * 1.35 + 12 * dScale
+                + (hasSub ? 129 * dScale + 150 * dScale * 1.12
+                          : 150 * dScale * 1.12)
+            let stripH0 = 220 * dScale
+            let minGap = 12 * layout.windowScale
+            let hudClear: CGFloat = 66
+            let fit = min(1, (geo.size.height - minGap - hudClear)
+                            / (titleBudget + stripH0))
+            let s = dScale * max(fit, 0.6)
+            let stripH = 220 * s
+            let stripY = max(geo.size.height - 80 - stripH,
+                             titleBudget * (s / dScale) + minGap)
             ZStack(alignment: .topLeading) {
-                titleBlock
+                titleBlock(scale: s)
                     .frame(width: innerW, alignment: .leading)
                     // Pivot-bottom → eyebrow-top gap matches Albums /
                     // Playlists / Artists (8pt outer + 12pt block =
-                    // 20pt total) and scales with displayFontScale so
-                    // the rhythm shrinks on smaller iPads in lockstep
+                    // 20pt total) and scales with the panel scale so
+                    // the rhythm shrinks on smaller surfaces in lockstep
                     // with the surrounding type.
-                    .offset(x: padX, y: 20 * layout.displayFontScale)
-                bottomStrip
-                    .frame(width: innerW, height: 220 * layout.displayFontScale, alignment: .bottomLeading)
-                    .offset(x: padX, y: geo.size.height - 80 - 220 * layout.displayFontScale)
+                    .offset(x: padX, y: 20 * s)
+                bottomStrip(scale: s)
+                    .frame(width: innerW, height: stripH, alignment: .bottomLeading)
+                    .offset(x: padX, y: stripY)
             }
         }
         .opacity(active ? 1.0 : 0.55)
@@ -342,17 +377,17 @@ private struct HomePickPanel: View {
     /// or clipped the sub glyphs when shrunk. A ZStack with explicit
     /// `.offset(y: 129)` for the second line pins baseline-to-baseline
     /// distance at exactly `150 × 0.86 = 129pt`, matching the design's
-    /// CSS `line-height: 0.86`. Total block: eyebrow + 14 + 129 + 129
-    /// ≈ 286pt vs the marquee path's 328pt — recovers the 42pt the
-    /// cover strip needed to land at the design's y position.
-    private var titleBlock: some View {
+    /// CSS `line-height: 0.86`.
+    /// `scale` is passed in by the panel (displayFontScale × the M15 R2
+    /// fit factor) so the block shrinks proportionally when the window
+    /// floor forces the vertical budget to compress.
+    private func titleBlock(scale: CGFloat) -> some View {
         // Layout-aware HUGE TITLE size: 150pt is calibrated for
         // 1366pt+ surfaces and overwhelms the iPad mini, so the
         // compact bucket scales it to ~105pt. tracking and the
         // sub-line ZStack offset (150 × 0.86 = 129pt) scale
         // proportionally so the line-height-0.86 relationship
         // survives the resize.
-        let scale = layout.displayFontScale
         let titleSize: CGFloat = 150 * scale
         let trackingValue: CGFloat = -3.75 * scale
         let subOffsetY: CGFloat = 129 * scale
@@ -386,29 +421,46 @@ private struct HomePickPanel: View {
                         .offset(y: subOffsetY)
                 }
             }
-            .frame(height: (pick.sub?.isEmpty == false) ? subOffsetY + subOffsetY : subOffsetY,
+            // Honest frame height (M15 R2): the painted line box of a
+            // 150pt display line is ~1.12em, not 129pt — R1's
+            // `subOffsetY + subOffsetY` under-reported the painted
+            // bottom and let the sub's descenders paint past the
+            // declared frame into the cover strip. The frame now
+            // matches the budget the panel reserves for this block.
+            .frame(height: (pick.sub?.isEmpty == false)
+                   ? subOffsetY + 150 * scale * 1.12
+                   : 150 * scale * 1.12,
                    alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Cover / meta / rail strip — anchored to the bottom of the panel.
-    /// Cover size scales with `displayFontScale` so the visual hierarchy
-    /// matches the shrunken HUGE TITLE on compact surfaces (iPad mini).
-    private var bottomStrip: some View {
-        let coverSize: CGFloat = 220 * layout.displayFontScale
-        return HStack(alignment: .bottom, spacing: 36) {
+    /// Cover / meta / rail strip — anchored below the title block (see
+    /// the panel body's fit-factor budget). Cover size tracks the panel
+    /// scale so the visual hierarchy matches the shrunken HUGE TITLE on
+    /// compact surfaces (iPad mini, 900pt window floor).
+    /// The fixed gaps, the meta wrap cap, and the rail column are
+    /// 1440pt-canvas fossils that scale with `windowScale` (Mac window
+    /// width; 1.0 on bucketed surfaces) so the row still fits at the
+    /// 900pt window floor; rail lines truncate instead of wrapping or
+    /// clipping mid-glyph. The primary meta line may wrap to two lines
+    /// (M15 R2, evaluator-sanctioned) — at 1440pt it fits one line, so
+    /// the anchor render is unchanged.
+    private func bottomStrip(scale: CGFloat) -> some View {
+        let coverSize: CGFloat = 220 * scale
+        let elastic = layout.windowScale
+        return HStack(alignment: .bottom, spacing: 36 * elastic) {
             visual
                 .frame(width: coverSize, height: coverSize)
             VStack(alignment: .leading, spacing: 14) {
                 Text(pick.meta)
                     .resonantTag(size: 10, tracking: 1.8)
-                    .lineLimit(1)
+                    .lineLimit(2)
                 Text(pick.reason)
                     .font(ResonantFont.display(22, weight: .light))
                     .tracking(-0.11)
                     .foregroundColor(ResonantColors.ink2)
-                    .frame(maxWidth: 520, alignment: .leading)
+                    .frame(maxWidth: 520 * elastic, alignment: .leading)
                 HStack(spacing: 10) {
                     primaryButton(label: pick.primaryLabel, action: pick.onPrimary)
                     secondaryButton(label: pick.secondaryLabel, action: pick.onSecondary)
@@ -425,11 +477,12 @@ private struct HomePickPanel: View {
                             Text(l)
                                 .font(ResonantFont.display(20, weight: .light))
                                 .tracking(-0.2)
+                                .lineLimit(1)
                         }
                     }
                 }
             }
-            .frame(width: 200, alignment: .leading)
+            .frame(width: 200 * elastic, alignment: .leading)
             .padding(.bottom, 4)
         }
     }

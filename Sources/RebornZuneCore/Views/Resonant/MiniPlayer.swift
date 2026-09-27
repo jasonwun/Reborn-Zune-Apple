@@ -10,6 +10,7 @@ public struct MiniPlayer: View {
     @State private var mode: RotatorMode = .now
     @State private var exiting: RotatorMode? = nil
     @State private var rotatorTask: Task<Void, Never>? = nil
+    @Environment(\.resonantLayout) private var layout
 
     public init(engine: PlaybackEngine,
                 spacing: ResonantSpacing,
@@ -29,17 +30,23 @@ public struct MiniPlayer: View {
     // a 56pt artBox, which inflated the row to 80pt and stole 12pt
     // from the panorama panel above. artBox now matches artFrame on
     // macOS so the row height is exactly the design's.
-    private var artBox: CGFloat   { isTouch ? 64 : 44 }
-    private var artFrame: CGFloat { isTouch ? 52 : 44 }
-    private var metaWidth: CGFloat { isTouch ? 320 : 280 }
-    private var metaHeight: CGFloat { isTouch ? 56 : 44 }
-    private var playSize: CGFloat { isTouch ? 48 : 38 }
-    private var ctrlSize: CGFloat { isTouch ? 32 : 22 }
-    private var ctrlGlyph: CGFloat { isTouch ? 20 : 14 }
-    private var rowVPad: CGFloat { isTouch ? 14 : 12 }
+    //
+    // The non-touch (macOS) values are 1440pt-canvas fossils: they
+    // multiply by `windowScale` so the chrome rhythm tracks the window
+    // width. `windowScale` is 1.0 on bucketed surfaces and the touch
+    // branch is untouched, so iPad renders bit-identically.
+    private var elastic: CGFloat { layout.windowScale }
+    private var artBox: CGFloat   { isTouch ? 64 : 44 * elastic }
+    private var artFrame: CGFloat { isTouch ? 52 : 44 * elastic }
+    private var metaWidth: CGFloat { isTouch ? 320 : 280 * elastic }
+    private var metaHeight: CGFloat { isTouch ? 56 : 44 * elastic }
+    private var playSize: CGFloat { isTouch ? 48 : 38 * elastic }
+    private var ctrlSize: CGFloat { isTouch ? 32 : 22 * elastic }
+    private var ctrlGlyph: CGFloat { isTouch ? 20 : 14 * elastic }
+    private var rowVPad: CGFloat { isTouch ? 14 : 12 * elastic }
 
     public var body: some View {
-        HStack(spacing: 24) {
+        HStack(spacing: 24 * elastic) {
             // Art (44pt)
             Button(action: onOpenNowPlaying) {
                 if let current = engine.currentItem {
@@ -190,7 +197,7 @@ public struct MiniPlayer: View {
     // MARK: - Transport
 
     private var transport: some View {
-        HStack(spacing: 22) {
+        HStack(spacing: 22 * elastic) {
             iconButton(symbol: "shuffle")
             iconButton(symbol: "backward.fill") { engine.previous() }
             playButton
@@ -205,7 +212,7 @@ public struct MiniPlayer: View {
             engine.togglePlayPause()
         } label: {
             Image(systemName: engine.state == .playing ? "pause.fill" : "play.fill")
-                .font(.system(size: isTouch ? 18 : 13, weight: .medium))
+                .font(.system(size: isTouch ? 18 : 13 * elastic, weight: .medium))
                 .foregroundColor(ResonantColors.paper)
                 .frame(width: playSize, height: playSize)
                 .background(Circle().fill(ResonantColors.ink))

@@ -7,6 +7,8 @@ public struct ArtistScreen: View {
     let onAlbum: (Album) -> Void
     let onArtist: (Artist) -> Void
 
+    @Environment(\.resonantLayout) private var layout
+
     public init(artist: Artist,
                 library: ResonantLibrary,
                 spacing: ResonantSpacing,
@@ -58,7 +60,15 @@ public struct ArtistScreen: View {
             }
             .padding(.top, 8)
             .padding(.horizontal, spacing.padX)
+            #if os(macOS)
+            // End-of-scroll clearance ≈ MiniPlayer height (68pt at the
+            // 1440pt anchor, scaling with windowScale) so the last
+            // section scrolls fully clear of the player chrome instead
+            // of resting 16pt above it (M15 R2, acceptance #4).
+            .padding(.bottom, 68 * layout.windowScale)
+            #else
             .padding(.bottom, 16)
+            #endif
         }
     }
 
@@ -87,7 +97,7 @@ public struct ArtistScreen: View {
 
             VStack(alignment: .trailing, spacing: 10) {
                 ArtistMonogram(entry: artist.monogramEntry)
-                    .frame(width: 240, height: 240)
+                    .frame(width: 240 * layout.windowScale, height: 240 * layout.windowScale)
                 Text("AR-\(String(artist.id.suffix(2)).uppercased())")
                     .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
             }
@@ -137,7 +147,7 @@ public struct ArtistScreen: View {
                              alignment: .top)
                 }
             }
-            .frame(width: 420)
+            .frame(maxWidth: 420 * layout.windowScale, alignment: .topLeading)
         }
         .padding(.bottom, 24)
         .overlay(Rectangle().fill(ResonantColors.ink4).frame(height: 0.5), alignment: .bottom)
@@ -152,12 +162,12 @@ public struct ArtistScreen: View {
                         Button(action: { onAlbum(album) }) {
                             VStack(alignment: .leading, spacing: 12) {
                                 CoverArt(entry: album.coverEntry)
-                                    .frame(width: 160, height: 160)
+                                    .frame(width: 160 * layout.windowScale, height: 160 * layout.windowScale)
                                 Text(album.title)
                                     .font(ResonantFont.display(22, weight: .light))
                                     .tracking(-0.22)
                                     .lineLimit(1)
-                                    .frame(width: 160, alignment: .leading)
+                                    .frame(width: 160 * layout.windowScale, alignment: .leading)
                                 Text(album.albumArtist == artist.name
                                      ? (album.year.map(String.init) ?? "—")
                                      : album.albumArtist.uppercased())

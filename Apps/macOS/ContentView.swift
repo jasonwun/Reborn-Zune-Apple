@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import RebornZuneCore
 import UniformTypeIdentifiers
 
@@ -66,15 +67,22 @@ private struct ResonantHost: View {
             : state.tiles
         let library = state.library
 
-        ResonantApp(
-            engine: engine,
-            library: library,
-            tiles: tilesToShow,
-            lightingAnimator: lighting,
-            density: .cozy,
-            needsLibraryFolder: state.phase == .needsFolder,
-            onPickFolder: { showPicker = true }
-        )
+        // Continuous Mac scale: derive `resonantLayout` from the live
+        // window size so dragging the window edge re-lays out the UI
+        // continuously (anchored 1.0 @ 1440pt — see ResonantLayout.mac).
+        GeometryReader { proxy in
+            ResonantApp(
+                engine: engine,
+                library: library,
+                tiles: tilesToShow,
+                lightingAnimator: lighting,
+                density: .cozy,
+                needsLibraryFolder: state.phase == .needsFolder,
+                onPickFolder: { showPicker = true }
+            )
+            .environment(\.resonantLayout, .mac(windowSize: proxy.size))
+        }
+        .background(WindowSizeAccessor(targetSize: Self.initialWindowTarget))
         .fileImporter(
             isPresented: $showPicker,
             allowedContentTypes: [.folder]
@@ -100,6 +108,55 @@ private struct ResonantHost: View {
             }
             if let saved = LibraryFolderStore.read() {
                 await state.load(folder: saved, into: engine)
+            }
+        }
+    }
+
+    /// DEBUG-only harness hook: `REBORN_ZUNE_DEBUG_WINDOW_SIZE=WxH`
+    /// forces the window's content size so the resize sweep can run
+    /// without Accessibility permissions — even over a restored frame
+    /// (a user's saved window always wins in production, where this
+    /// returns nil and `WindowSizeAccessor` does nothing). The forced
+    /// size still respects the 900 × 600 content minimum, so the hook
+    /// doubles as a window-floor probe.
+    private static var initialWindowTarget: CGSize? {
+        #if DEBUG
+        if let raw = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_WINDOW_SIZE"] {
+            let parts = raw.lowercased().split(separator: "x")
+            if parts.count == 2,
+               let w = Double(parts[0]), let h = Double(parts[1]),
+               w > 0, h > 0 {
+                return CGSize(width: w, height: h)
+            }
+        }
+        #endif
+        return nil
+    }
+}
+
+/// Bridges to the NSWindow once the view is installed, then applies the
+/// DEBUG target content size. The second, delayed pass corrects any
+/// later SwiftUI sizing that would otherwise override the first.
+private struct WindowSizeAccessor: NSViewRepresentable {
+    let targetSize: CGSize?
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        apply(to: view, delays: [0, 0.4])
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private func apply(to view: NSView, delays: [TimeInterval]) {
+        guard let targetSize else { return }
+        for delay in delays {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                guard let window = view.window else { return }
+                // Respect the content minimum (window floor 900 × 600).
+                let clamped = NSSize(width: max(targetSize.width, window.contentMinSize.width),
+                                     height: max(targetSize.height, window.contentMinSize.height))
+                window.setContentSize(clamped)
             }
         }
     }

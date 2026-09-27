@@ -6,6 +6,8 @@ public struct AlbumScreen: View {
     let engine: PlaybackEngine
     let onArtist: (String) -> Void
 
+    @Environment(\.resonantLayout) private var layout
+
     public init(album: Album, spacing: ResonantSpacing,
                 engine: PlaybackEngine,
                 onArtist: @escaping (String) -> Void) {
@@ -19,7 +21,7 @@ public struct AlbumScreen: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .bottom, spacing: 48) {
                 CoverArt(entry: album.coverEntry)
-                    .frame(width: 280, height: 280)
+                    .frame(width: 280 * layout.windowScale, height: 280 * layout.windowScale)
 
                 VStack(alignment: .leading, spacing: 0) {
                     Text("ALBUM · \(album.year.map(String.init) ?? "—") · \(album.resonantGenre.uppercased())")
@@ -82,7 +84,13 @@ public struct AlbumScreen: View {
                     }
                 }
                 .padding(.top, 8)
+                #if os(macOS)
+                // See ArtistScreen: end-of-scroll clearance ≈
+                // MiniPlayer height on macOS (M15 R2).
+                .padding(.bottom, 68 * layout.windowScale)
+                #else
                 .padding(.bottom, 16)
+                #endif
             }
         }
         .padding(.top, 8)

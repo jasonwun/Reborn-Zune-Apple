@@ -75,7 +75,13 @@ public struct ArtistsScreen: View {
                     }
                 }
                 .padding(.horizontal, 8)
+                #if os(macOS)
+                // See ArtistScreen: end-of-scroll clearance ≈
+                // MiniPlayer height on macOS (M15 R2).
+                .padding(.bottom, 68 * layout.windowScale)
+                #else
                 .padding(.bottom, 16)
+                #endif
             }
         }
         .padding(.top, 8 * scale)

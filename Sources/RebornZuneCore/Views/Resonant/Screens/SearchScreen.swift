@@ -7,6 +7,7 @@ public struct SearchScreen: View {
 
     @State private var query: String = ""
     @FocusState private var focused: Bool
+    @Environment(\.resonantLayout) private var layout
 
     public init(library: ResonantLibrary, spacing: ResonantSpacing, onOpen: @escaping (Album) -> Void) {
         self.library = library
@@ -48,7 +49,7 @@ public struct SearchScreen: View {
             ScrollView {
                 if query.trimmingCharacters(in: .whitespaces).isEmpty {
                     LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 180), spacing: 12)],
+                        columns: [GridItem(.adaptive(minimum: 180 * layout.windowScale), spacing: 12)],
                         spacing: 12
                     ) {
                         ForEach(Array(Self.genrePool.enumerated()), id: \.offset) { idx, g in
@@ -64,7 +65,7 @@ public struct SearchScreen: View {
                         .padding(.top, 8)
                 } else {
                     LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 200), spacing: spacing.gap)],
+                        columns: [GridItem(.adaptive(minimum: 200 * layout.windowScale), spacing: spacing.gap)],
                         spacing: 48
                     ) {
                         ForEach(matches) { album in
@@ -89,7 +90,13 @@ public struct SearchScreen: View {
                 }
             }
             .padding(.horizontal, 8)
+            #if os(macOS)
+            // See ArtistScreen: end-of-scroll clearance ≈
+            // MiniPlayer height on macOS (M15 R2).
+            .padding(.bottom, 68 * layout.windowScale)
+            #else
             .padding(.bottom, 16)
+            #endif
         }
         .padding(.top, 12)
         .padding(.horizontal, spacing.padX)

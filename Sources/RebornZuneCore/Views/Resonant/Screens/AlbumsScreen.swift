@@ -63,8 +63,13 @@ public struct AlbumsScreen: View {
             .padding(.bottom, 20 * scale)
 
             ScrollView {
+                // Adaptive floor scales with `windowScale` (= display
+                // scale on Mac, 1.0 on bucketed surfaces) so tiles stay
+                // readable at the 900pt window floor instead of
+                // squeezing to a hard 200pt minimum.
                 LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 200, maximum: 280),
+                    columns: [GridItem(.adaptive(minimum: 200 * layout.windowScale,
+                                                 maximum: 280 * layout.windowScale),
                                        spacing: spacing.gap)],
                     spacing: 48
                 ) {
@@ -74,7 +79,13 @@ public struct AlbumsScreen: View {
                 }
                 .padding(.top, 4)
                 .padding(.horizontal, 8)
+                #if os(macOS)
+                // See ArtistScreen: end-of-scroll clearance ≈
+                // MiniPlayer height on macOS (M15 R2).
+                .padding(.bottom, 68 * layout.windowScale)
+                #else
                 .padding(.bottom, 16)
+                #endif
             }
         }
         .padding(.top, 8 * scale)

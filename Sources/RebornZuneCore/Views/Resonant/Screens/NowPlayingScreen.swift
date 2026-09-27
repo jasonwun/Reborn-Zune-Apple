@@ -13,6 +13,7 @@ public struct NowPlayingScreen: View {
     @State private var repeatMode: RepeatMode = .off
     @State private var volume: Double = 72
     @State private var backHover = false
+    @Environment(\.resonantLayout) private var layout
 
     enum RepeatMode { case off, all, one }
 
@@ -71,7 +72,7 @@ public struct NowPlayingScreen: View {
             VStack {
                 HStack {
                     bigBackButton
-                        .offset(x: -42, y: -42)
+                        .offset(x: -backButtonCrop, y: -backButtonCrop)
                     Spacer()
                 }
                 Spacer()
@@ -113,13 +114,15 @@ public struct NowPlayingScreen: View {
                 .padding(.bottom, 140)
             }
 
-            // 7. Up Next rail (bottom-right)
+            // 7. Up Next rail (bottom-right) — the 260pt column is a
+            // 1440pt-canvas fossil; scales with `windowScale` so it
+            // keeps proportion at narrow window widths.
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
                     upNextRail
-                        .frame(width: 260)
+                        .frame(width: 260 * layout.windowScale)
                         .padding(.trailing, spacing.padX)
                         .padding(.bottom, 140)
                 }
@@ -150,18 +153,37 @@ public struct NowPlayingScreen: View {
 
     // MARK: - Subviews
 
+    /// Off-canvas crop for the oversized back ring (M15 R2). The 42pt
+    /// crop is a design token at the 1440pt anchor and keeps scaling
+    /// with `windowScale` for s ≥ 1, so 1440×900 renders bit-identical
+    /// to R1 and iPad (windowScale == 1) is untouched by construction.
+    /// Below s = 0.8 the crop ramps linearly to zero: at the 900pt
+    /// window floor the proportional crop (31.5pt on a 126pt ring) let
+    /// both window edges guillotine the circle, so the ring now renders
+    /// fully on-canvas near the floor (acceptance #4). The ramp is
+    /// continuous — no pop during a resize drag across the boundary.
+    private var backButtonCrop: CGFloat {
+        let s = layout.windowScale
+        return 42 * (s >= 1 ? s : max(0, (s - 0.8) / 0.2))
+    }
+
     private var bigBackButton: some View {
-        Button(action: onBack) {
+        // 168pt ring + floored off-canvas crop + 11pt border are one
+        // design token — scale together with `windowScale` so the crop
+        // proportion survives narrow windows down to s = 0.8; below
+        // that the crop floors at 0 (see `backButtonCrop`).
+        let s = layout.windowScale
+        return Button(action: onBack) {
             Image(systemName: "chevron.left")
-                .font(.system(size: 88, weight: .light))
+                .font(.system(size: 88 * s, weight: .light))
                 .foregroundColor(backHover ? ResonantColors.magenta : Color(red: 244/255, green: 241/255, blue: 236/255))
         }
-        .frame(width: 168, height: 168)
+        .frame(width: 168 * s, height: 168 * s)
         .background(Circle().fill(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.06)))
         .overlay(
             Circle().strokeBorder(
                 backHover ? ResonantColors.magenta : Color(red: 244/255, green: 241/255, blue: 236/255),
-                lineWidth: 11)
+                lineWidth: 11 * s)
         )
         .clipShape(Circle())
         .buttonStyle(.plain)
