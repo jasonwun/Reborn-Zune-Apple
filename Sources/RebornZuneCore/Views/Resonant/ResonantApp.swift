@@ -59,18 +59,36 @@ public struct ResonantApp: View {
         ZStack {
             ResonantColors.paper.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                if router.route != .nowPlaying {
-                    PivotNav(router: router, spacing: spacing)
+            if platform == .mac {
+                // macOS: the MiniPlayer is pinned to the window's bottom
+                // edge via safeAreaInset so shrinking the window HEIGHT can
+                // never push it off-screen (a VStack sibling gets pushed out
+                // whenever the content's fixed-height chain exceeds the
+                // window — the content scales with window WIDTH, so a
+                // wide-but-short window overflows). Overflow now compresses
+                // the content's safe area instead.
+                VStack(spacing: 0) {
+                    if router.route != .nowPlaying {
+                        PivotNav(router: router, spacing: spacing)
+                    }
+                    content
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                content
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                if router.route != .nowPlaying {
-                    MiniPlayer(engine: engine,
-                               spacing: spacing,
-                               upNext: upNext.first,
-                               isTouch: platform == .ipad,
-                               onOpenNowPlaying: { router.go(.nowPlaying) })
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if router.route != .nowPlaying {
+                        miniPlayer
+                    }
+                }
+            } else {
+                VStack(spacing: 0) {
+                    if router.route != .nowPlaying {
+                        PivotNav(router: router, spacing: spacing)
+                    }
+                    content
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    if router.route != .nowPlaying {
+                        miniPlayer
+                    }
                 }
             }
 
@@ -88,6 +106,14 @@ public struct ResonantApp: View {
                 .transition(.opacity)
             }
         }
+    }
+
+    private var miniPlayer: some View {
+        MiniPlayer(engine: engine,
+                   spacing: spacing,
+                   upNext: upNext.first,
+                   isTouch: platform == .ipad,
+                   onOpenNowPlaying: { router.go(.nowPlaying) })
     }
 
     @ViewBuilder

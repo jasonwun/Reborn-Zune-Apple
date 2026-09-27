@@ -14,6 +14,7 @@ public struct NowPlayingScreen: View {
     @State private var volume: Double = 72
     @State private var backHover = false
     @Environment(\.resonantLayout) private var layout
+    @Environment(\.resonantWindowSize) private var windowSize
 
     enum RepeatMode { case off, all, one }
 
@@ -115,16 +116,20 @@ public struct NowPlayingScreen: View {
             }
 
             // 7. Up Next rail (bottom-right) — the 260pt column is a
-            // 1440pt-canvas fossil; scales with `windowScale` so it
-            // keeps proportion at narrow window widths.
-            VStack {
-                Spacer()
-                HStack {
+            // 1440pt-canvas fossil; screen-fixed on macOS (M15.1) and
+            // hidden below 1000pt window width, where it would collide
+            // with the meta card (the queue button still reaches it).
+            // Bucketed surfaces render it unconditionally (bit-identical).
+            if !layout.arrangementDriven || windowSize.width >= 1000 {
+                VStack {
                     Spacer()
-                    upNextRail
-                        .frame(width: 260 * layout.windowScale)
-                        .padding(.trailing, spacing.padX)
-                        .padding(.bottom, 140)
+                    HStack {
+                        Spacer()
+                        upNextRail
+                            .frame(width: 260 * layout.windowScale)
+                            .padding(.trailing, spacing.padX)
+                            .padding(.bottom, 140)
+                    }
                 }
             }
 

@@ -55,6 +55,10 @@ private struct ResonantHost: View {
     @State private var engine = PlaybackEngine()
     @State private var state = LibraryHostState()
     @State private var showPicker = false
+    /// Hardware screen size backing the M15.1 screen-fixed scale tokens.
+    /// Re-derived only when the window moves to another screen — never
+    /// on window resize.
+    @State private var screenSize = CGSize(width: 1440, height: 900)
 
     var body: some View {
         let lighting: LightingAnimator? =
@@ -67,9 +71,9 @@ private struct ResonantHost: View {
             : state.tiles
         let library = state.library
 
-        // Continuous Mac scale: derive `resonantLayout` from the live
-        // window size so dragging the window edge re-lays out the UI
-        // continuously (anchored 1.0 @ 1440pt — see ResonantLayout.mac).
+        // M15.1: size tokens are fixed per screen (`.mac(screen:)`);
+        // the live window size goes to `resonantWindowSize`, which views
+        // use for discrete reflow decisions only (never as a multiplier).
         GeometryReader { proxy in
             ResonantApp(
                 engine: engine,
@@ -80,9 +84,14 @@ private struct ResonantHost: View {
                 needsLibraryFolder: state.phase == .needsFolder,
                 onPickFolder: { showPicker = true }
             )
-            .environment(\.resonantLayout, .mac(windowSize: proxy.size))
+            .environment(\.resonantLayout, .mac(screen: screenSize))
+            .environment(\.resonantWindowSize, proxy.size)
         }
         .background(WindowSizeAccessor(targetSize: Self.initialWindowTarget))
+        .onReceive(NotificationCenter.default.publisher(
+            for: NSWindow.didChangeScreenNotification)) { _ in
+            updateScreenSize()
+        }
         .fileImporter(
             isPresented: $showPicker,
             allowedContentTypes: [.folder]
@@ -92,6 +101,7 @@ private struct ResonantHost: View {
             }
         }
         .task {
+            updateScreenSize()
             // Debug: synthetic demo library to bypass TCC / sandbox file access.
             if ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_DEMO_LIBRARY"] == "1" {
                 let tracks = ResonantDemoLibrary.makeMusic()
@@ -109,6 +119,12 @@ private struct ResonantHost: View {
             if let saved = LibraryFolderStore.read() {
                 await state.load(folder: saved, into: engine)
             }
+        }
+    }
+
+    private func updateScreenSize() {
+        if let screen = NSApp.windows.first?.screen ?? NSScreen.main {
+            screenSize = screen.frame.size
         }
     }
 

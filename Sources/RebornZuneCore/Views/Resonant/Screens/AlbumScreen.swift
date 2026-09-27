@@ -7,6 +7,7 @@ public struct AlbumScreen: View {
     let onArtist: (String) -> Void
 
     @Environment(\.resonantLayout) private var layout
+    @Environment(\.resonantWindowSize) private var windowSize
 
     public init(album: Album, spacing: ResonantSpacing,
                 engine: PlaybackEngine,
@@ -19,50 +20,28 @@ public struct AlbumScreen: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .bottom, spacing: 48) {
-                CoverArt(entry: album.coverEntry)
-                    .frame(width: 280 * layout.windowScale, height: 280 * layout.windowScale)
-
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("ALBUM · \(album.year.map(String.init) ?? "—") · \(album.resonantGenre.uppercased())")
-                        .resonantTag(size: 10, tracking: 2.2)
-                        .padding(.bottom, 14)
-
-                    Text(album.title)
-                        .font(ResonantFont.display(140, weight: .ultraLight))
-                        .tracking(-2.8)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                        .lineSpacing(-20)
-
-                    Button {
-                        onArtist(album.albumArtist)
-                    } label: {
-                        Text(album.albumArtist)
-                            .font(ResonantFont.display(36, weight: .light))
-                            .tracking(-0.36)
-                            .foregroundColor(ResonantColors.ink2)
-                            .lineLimit(1)
-                            .padding(.top, 8)
-                    }
-                    .buttonStyle(.plain)
-
-                    HStack(spacing: 12) {
-                        primaryButton(label: "▶ play album") {
-                            engine.setQueue(album.tracks)
-                            engine.play()
-                        }
-                        secondaryButton(label: "+ add to library") {}
-                        Text("\(album.tracks.count) TRACKS · \(album.resonantRuntime)")
-                            .resonantTag(size: 10, tracking: 2.2)
-                            .padding(.leading, 16)
-                    }
-                    .padding(.top, 22)
+            // M15.1: below 1000pt window width the fixed-size title
+            // block can't sit beside the 280pt cover without clipping,
+            // so the header stacks (cover above, info below) instead of
+            // shrinking anything. Bucketed surfaces keep the side-by-side
+            // header bit-identically.
+            if layout.arrangementDriven && windowSize.width < 1000 {
+                VStack(alignment: .leading, spacing: 24) {
+                    CoverArt(entry: album.coverEntry)
+                        .frame(width: 280 * layout.windowScale, height: 280 * layout.windowScale)
+                    headerInfo
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 12)
+                .padding(.bottom, 24)
+            } else {
+                HStack(alignment: .bottom, spacing: 48) {
+                    CoverArt(entry: album.coverEntry)
+                        .frame(width: 280 * layout.windowScale, height: 280 * layout.windowScale)
+                    headerInfo
+                }
+                .padding(.top, 12)
+                .padding(.bottom, 24)
             }
-            .padding(.top, 12)
-            .padding(.bottom, 24)
 
             ScrollView {
                 LazyVStack(spacing: 0) {
@@ -96,6 +75,48 @@ public struct AlbumScreen: View {
         .padding(.top, 8)
         .padding(.horizontal, spacing.padX)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    /// Eyebrow / title / artist / actions block of the header — laid
+    /// out beside or below the cover depending on window width (M15.1).
+    private var headerInfo: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("ALBUM · \(album.year.map(String.init) ?? "—") · \(album.resonantGenre.uppercased())")
+                .resonantTag(size: 10, tracking: 2.2)
+                .padding(.bottom, 14)
+
+            Text(album.title)
+                .font(ResonantFont.display(140, weight: .ultraLight))
+                .tracking(-2.8)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .lineSpacing(-20)
+
+            Button {
+                onArtist(album.albumArtist)
+            } label: {
+                Text(album.albumArtist)
+                    .font(ResonantFont.display(36, weight: .light))
+                    .tracking(-0.36)
+                    .foregroundColor(ResonantColors.ink2)
+                    .lineLimit(1)
+                    .padding(.top, 8)
+            }
+            .buttonStyle(.plain)
+
+            HStack(spacing: 12) {
+                primaryButton(label: "▶ play album") {
+                    engine.setQueue(album.tracks)
+                    engine.play()
+                }
+                secondaryButton(label: "+ add to library") {}
+                Text("\(album.tracks.count) TRACKS · \(album.resonantRuntime)")
+                    .resonantTag(size: 10, tracking: 2.2)
+                    .padding(.leading, 16)
+            }
+            .padding(.top, 22)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

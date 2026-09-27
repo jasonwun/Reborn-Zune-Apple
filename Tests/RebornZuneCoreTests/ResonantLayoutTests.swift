@@ -2,104 +2,106 @@ import XCTest
 import SwiftUI
 @testable import RebornZuneCore
 
-/// M15 deliverable D.8 — pins the continuous macOS scale curve
-/// (anchor, clamps, monotonicity) and guards the iPad bucketed
+/// M15.1 — pins the screen-fixed macOS scale (anchor, clamps,
+/// monotonicity in **screen** width) and guards the iPad bucketed
 /// lookup tables against regression.
 final class ResonantLayoutTests: XCTestCase {
 
-    // MARK: - mac(windowSize:) anchor
+    // MARK: - mac(screen:) anchor
 
     func testMacScaleAnchorsAtDesignWidth() {
-        let l = ResonantLayout.mac(windowSize: CGSize(width: 1440, height: 900))
+        let l = ResonantLayout.mac(screen: CGSize(width: 1440, height: 900))
         XCTAssertEqual(l.displayFontScale, 1.0, accuracy: 1e-9,
                        "displayFontScale must be exactly 1.0 at the 1440pt design width")
         XCTAssertEqual(l.textScale, 1.0, accuracy: 1e-9,
                        "textScale must be exactly 1.0 at the 1440pt design width")
+        XCTAssertEqual(l.windowScale, 1.0, accuracy: 1e-9)
     }
 
-    // MARK: - mac(windowSize:) clamps
+    func testMacScaleOn1512Screen() {
+        // The owner's 14" MacBook Pro: 1512pt → 1.05.
+        let l = ResonantLayout.mac(screen: CGSize(width: 1512, height: 982))
+        XCTAssertEqual(l.displayFontScale, 1.05, accuracy: 1e-9)
+        XCTAssertEqual(l.windowScale, 1.05, accuracy: 1e-9)
+        XCTAssertEqual(l.textScale, 1.05, accuracy: 1e-9)
+    }
+
+    // MARK: - mac(screen:) clamps
 
     func testMacScaleLowerClamp() {
-        // 900pt window floor: ratio 0.625 → display clamps to 0.75,
-        // text clamps to 0.85 (raw value would be 0.8125).
-        let floor = ResonantLayout.mac(windowSize: CGSize(width: 900, height: 600))
-        XCTAssertEqual(floor.displayFontScale, 0.75, accuracy: 1e-9)
-        XCTAssertEqual(floor.textScale, 0.85, accuracy: 1e-9)
+        // 1280pt screen: raw 0.888… → clamps to 0.9.
+        let small = ResonantLayout.mac(screen: CGSize(width: 1280, height: 800))
+        XCTAssertEqual(small.displayFontScale, 0.9, accuracy: 1e-9)
+        XCTAssertEqual(small.textScale, 0.9, accuracy: 1e-9)
+        XCTAssertEqual(small.windowScale, 0.9, accuracy: 1e-9)
 
-        // Far below the floor (unreachable in the app, contractual anyway).
-        let tiny = ResonantLayout.mac(windowSize: CGSize(width: 320, height: 480))
-        XCTAssertEqual(tiny.displayFontScale, 0.75, accuracy: 1e-9)
-        XCTAssertEqual(tiny.textScale, 0.85, accuracy: 1e-9)
+        let tiny = ResonantLayout.mac(screen: CGSize(width: 1024, height: 640))
+        XCTAssertEqual(tiny.displayFontScale, 0.9, accuracy: 1e-9)
     }
 
     func testMacScaleUpperClamp() {
-        // 1920pt: ratio 1.333… → display clamps to 1.15,
-        // text clamps to 1.1 (raw value would be ~1.167).
-        let wide = ResonantLayout.mac(windowSize: CGSize(width: 1920, height: 1080))
+        // 1920pt: raw 1.333… → clamps to 1.15; text clamps at 1.1.
+        let wide = ResonantLayout.mac(screen: CGSize(width: 1920, height: 1080))
         XCTAssertEqual(wide.displayFontScale, 1.15, accuracy: 1e-9)
         XCTAssertEqual(wide.textScale, 1.1, accuracy: 1e-9)
 
-        let ultra = ResonantLayout.mac(windowSize: CGSize(width: 5120, height: 2880))
+        let ultra = ResonantLayout.mac(screen: CGSize(width: 5120, height: 2880))
         XCTAssertEqual(ultra.displayFontScale, 1.15, accuracy: 1e-9)
         XCTAssertEqual(ultra.textScale, 1.1, accuracy: 1e-9)
     }
 
     func testMacScaleClampBoundariesAreExact() {
-        // display hits its clamps at exactly 1440 × 0.75 = 1080 and
-        // 1440 × 1.15 = 1656.
-        XCTAssertEqual(ResonantLayout.mac(windowSize: CGSize(width: 1080, height: 800)).displayFontScale,
-                       0.75, accuracy: 1e-9)
-        XCTAssertEqual(ResonantLayout.mac(windowSize: CGSize(width: 1656, height: 900)).displayFontScale,
+        // display/window hit their clamps at exactly 1440 × 0.9 = 1296
+        // and 1440 × 1.15 = 1656.
+        XCTAssertEqual(ResonantLayout.mac(screen: CGSize(width: 1296, height: 810)).displayFontScale,
+                       0.9, accuracy: 1e-9)
+        XCTAssertEqual(ResonantLayout.mac(screen: CGSize(width: 1656, height: 900)).displayFontScale,
                        1.15, accuracy: 1e-9)
-        // text hits its clamps at 1440 × 0.7 = 1008 and 1440 × 1.2 = 1728.
-        XCTAssertEqual(ResonantLayout.mac(windowSize: CGSize(width: 1008, height: 800)).textScale,
-                       0.85, accuracy: 1e-9)
-        XCTAssertEqual(ResonantLayout.mac(windowSize: CGSize(width: 1728, height: 900)).textScale,
+        // text hits its 1.1 cap at 1440 × 1.1 = 1584.
+        XCTAssertEqual(ResonantLayout.mac(screen: CGSize(width: 1584, height: 900)).textScale,
                        1.1, accuracy: 1e-9)
     }
 
-    // MARK: - mac(windowSize:) monotonicity
+    // MARK: - mac(screen:) monotonicity + token relationships
 
     func testMacScaleIsMonotonicAcrossRange() {
         var prevDisplay: CGFloat = 0
         var prevText: CGFloat = 0
-        var width: CGFloat = 600
+        var width: CGFloat = 800
         while width <= 2600 {
-            let l = ResonantLayout.mac(windowSize: CGSize(width: width, height: 800))
+            let l = ResonantLayout.mac(screen: CGSize(width: width, height: 800))
             XCTAssertGreaterThanOrEqual(l.displayFontScale, prevDisplay,
-                                        "displayFontScale regressed at width \(width)")
+                                        "displayFontScale regressed at screen width \(width)")
             XCTAssertGreaterThanOrEqual(l.textScale, prevText,
-                                        "textScale regressed at width \(width)")
+                                        "textScale regressed at screen width \(width)")
             prevDisplay = l.displayFontScale
             prevText = l.textScale
             width += 25
         }
     }
 
-    func testMacScaleStrictlyIncreasesInsideClamps() {
-        // Between the clamp shoulders both scales must strictly grow
-        // with width (continuous re-layout while dragging).
-        var prev = ResonantLayout.mac(windowSize: CGSize(width: 1100, height: 800))
-        var width: CGFloat = 1125
-        while width <= 1600 {
-            let l = ResonantLayout.mac(windowSize: CGSize(width: width, height: 800))
-            XCTAssertGreaterThan(l.displayFontScale, prev.displayFontScale,
-                                 "displayFontScale stalled at width \(width)")
-            XCTAssertGreaterThan(l.textScale, prev.textScale,
-                                 "textScale stalled at width \(width)")
-            prev = l
-            width += 25
+    func testMacWindowScaleTracksDisplayScale() {
+        // The elastic-fossil token must equal displayFontScale on Mac.
+        for w in [1024, 1296, 1440, 1512, 1656, 1920] as [CGFloat] {
+            let l = ResonantLayout.mac(screen: CGSize(width: w, height: 800))
+            XCTAssertEqual(l.windowScale, l.displayFontScale, accuracy: 1e-9,
+                           "windowScale diverged from displayFontScale at screen width \(w)")
         }
     }
 
-    func testMacWindowScaleTracksDisplayScale() {
-        // The elastic-fossil token must equal displayFontScale on Mac
-        // so chrome rhythm matches display type at every width.
-        for w in [900, 1100, 1440, 1656, 1920] as [CGFloat] {
-            let l = ResonantLayout.mac(windowSize: CGSize(width: w, height: 800))
-            XCTAssertEqual(l.windowScale, l.displayFontScale, accuracy: 1e-9,
-                           "windowScale diverged from displayFontScale at width \(w)")
+    func testMacScaleDoesNotDependOnScreenHeight() {
+        // Tokens are a function of screen width only.
+        for h in [600, 900, 1440] as [CGFloat] {
+            let l = ResonantLayout.mac(screen: CGSize(width: 1512, height: h))
+            XCTAssertEqual(l.displayFontScale, 1.05, accuracy: 1e-9)
         }
+    }
+
+    // MARK: - resonantWindowSize environment default
+
+    func testWindowSizeEnvironmentDefault() {
+        let env = EnvironmentValues()
+        XCTAssertEqual(env.resonantWindowSize, CGSize(width: 1440, height: 900))
     }
 
     // MARK: - iPad bucketed init regression guard (M13 table values)

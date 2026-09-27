@@ -2,10 +2,10 @@ import SwiftUI
 
 /// Captures the surface the app is being rendered into so spacing /
 /// typography can adapt without every view re-checking `UIScreen` or
-/// `horizontalSizeClass`. Published as an `@Environment` value by a
-/// `GeometryReader` at the app root: bucketed (`from(size:)`) on iPad,
-/// continuous (`mac(windowSize:)`) on macOS, an explicit
-/// `.expanded .landscape` injection on tvOS.
+/// `horizontalSizeClass`. Published as an `@Environment` value by the
+/// app root: bucketed (`from(size:)`) on iPad, screen-fixed
+/// (`mac(screen:)`) on macOS, an explicit `.expanded .landscape`
+/// injection on tvOS.
 public struct ResonantLayout: Equatable, Sendable {
     /// Coarse iPad bucket. `compact` covers multitasking + mini;
     /// `regular` covers iPad 10/11 and Air 11; `expanded` covers
@@ -41,9 +41,17 @@ public struct ResonantLayout: Equatable, Sendable {
     /// 1440pt design canvas (panorama peek strip, rail columns, cover
     /// frames, grid minimums, chrome paddings). **1.0 on bucketed
     /// surfaces** (iPad / tvOS / unwired default) so M13/M14 visuals
-    /// stay bit-identical; on macOS it tracks the continuous
-    /// `displayFontScale` so these fossils flex with the window width.
+    /// stay bit-identical; on macOS it is fixed per hardware screen
+    /// (see `mac(screen:)`) — M15.1: window resizes reflow layout,
+    /// they never rescale sizes.
     public let windowScale: CGFloat
+
+    /// true only on macOS (M15.1): size tokens are screen-fixed and
+    /// views must respond to `\.resonantWindowSize` by reflowing
+    /// arrangement (column counts, panel stacking, internal scrolling)
+    /// instead of scaling sizes. false on bucketed iPad/tvOS surfaces,
+    /// which keep their legacy proportional behavior bit-identically.
+    public let arrangementDriven: Bool
 
     public init(deviceClass: DeviceClass, orientation: Orientation) {
         self.deviceClass = deviceClass
@@ -56,16 +64,18 @@ public struct ResonantLayout: Equatable, Sendable {
         case .expanded: textScale = 1.25; displayFontScale = 1.0
         }
         windowScale = 1.0
+        arrangementDriven = false
     }
 
     private init(deviceClass: DeviceClass, orientation: Orientation,
                  textScale: CGFloat, displayFontScale: CGFloat,
-                 windowScale: CGFloat) {
+                 windowScale: CGFloat, arrangementDriven: Bool = false) {
         self.deviceClass = deviceClass
         self.orientation = orientation
         self.textScale = textScale
         self.displayFontScale = displayFontScale
         self.windowScale = windowScale
+        self.arrangementDriven = arrangementDriven
     }
 
     /// Build a layout from a measured window size (iPad bucketing).
@@ -79,29 +89,27 @@ public struct ResonantLayout: Equatable, Sendable {
         return ResonantLayout(deviceClass: deviceClass, orientation: orientation)
     }
 
-    /// Continuous macOS scale, anchored at the 1440pt design width.
-    ///
-    /// Mac windows resize continuously, so discrete iPad-style buckets
-    /// would visibly jump at bucket boundaries mid-drag. Instead:
-    ///   displayFontScale = clamp(width / 1440, 0.75, 1.15)
-    ///   textScale        = clamp(0.5 + 0.5 · width / 1440, 0.85, 1.1)
-    /// Both anchor at exactly 1.0 @ 1440pt and are monotonic
-    /// non-decreasing in window width. `textScale` ramps at half the
-    /// rate of `displayFontScale` so body text stays readable while
-    /// display type carries the visual scaling. `windowScale` follows
-    /// `displayFontScale` so 1440pt-canvas fossils flex too.
-    public static func mac(windowSize: CGSize) -> ResonantLayout {
-        let ratio = windowSize.width / 1440
-        let display = min(max(ratio, 0.75), 1.15)
-        let text = min(max(0.5 + 0.5 * ratio, 0.85), 1.1)
+    /// Screen-fixed macOS scale (M15.1), derived **once** from the
+    /// hardware screen the window is on:
+    ///   scale            = clamp(screenWidth / 1440, 0.9, 1.15)
+    ///   displayFontScale = scale
+    ///   windowScale      = scale
+    ///   textScale        = min(scale, 1.1)
+    /// A 1512-pt screen yields 1.05. Window resizes must NOT change
+    /// these tokens — they reflow arrangement instead (callers read
+    /// `\.resonantWindowSize` for discrete layout decisions). Re-invoke
+    /// only when the window moves to a different screen.
+    public static func mac(screen: CGSize) -> ResonantLayout {
+        let scale = min(max(screen.width / 1440, 0.9), 1.15)
         return ResonantLayout(
             // `deviceClass` is an iPad concept; nothing consumes it on
             // macOS. `.regular` matches the historical Mac default.
             deviceClass: .regular,
-            orientation: windowSize.width > windowSize.height ? .landscape : .portrait,
-            textScale: text,
-            displayFontScale: display,
-            windowScale: display
+            orientation: screen.width > screen.height ? .landscape : .portrait,
+            textScale: min(scale, 1.1),
+            displayFontScale: scale,
+            windowScale: scale,
+            arrangementDriven: true
         )
     }
 }
@@ -110,9 +118,21 @@ private struct ResonantLayoutKey: EnvironmentKey {
     static let defaultValue = ResonantLayout(deviceClass: .regular, orientation: .landscape)
 }
 
+private struct ResonantWindowSizeKey: EnvironmentKey {
+    static let defaultValue = CGSize(width: 1440, height: 900)
+}
+
 public extension EnvironmentValues {
     var resonantLayout: ResonantLayout {
         get { self[ResonantLayoutKey.self] }
         set { self[ResonantLayoutKey.self] = newValue }
+    }
+
+    /// Live window/content size, published by the root GeometryReader.
+    /// macOS views use it for discrete reflow decisions (column counts,
+    /// panel visibility) — never as a size multiplier (M15.1).
+    var resonantWindowSize: CGSize {
+        get { self[ResonantWindowSizeKey.self] }
+        set { self[ResonantWindowSizeKey.self] = newValue }
     }
 }

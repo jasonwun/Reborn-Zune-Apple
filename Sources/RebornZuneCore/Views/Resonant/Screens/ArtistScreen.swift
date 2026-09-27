@@ -8,6 +8,7 @@ public struct ArtistScreen: View {
     let onArtist: (Artist) -> Void
 
     @Environment(\.resonantLayout) private var layout
+    @Environment(\.resonantWindowSize) private var windowSize
 
     public init(artist: Artist,
                 library: ResonantLibrary,
@@ -72,6 +73,14 @@ public struct ArtistScreen: View {
         }
     }
 
+    /// M15.1: on macOS, sections reflow below 1000pt window width
+    /// (hero monogram stacks under the name; TOP TRACKS stacks under
+    /// the bio) instead of squeezing fixed-size columns. Bucketed
+    /// surfaces always use the side-by-side composition.
+    private var stackSections: Bool {
+        layout.arrangementDriven && windowSize.width < 1000
+    }
+
     private var hero: some View {
         HStack(alignment: .bottom, spacing: 48) {
             VStack(alignment: .leading, spacing: 0) {
@@ -92,62 +101,85 @@ public struct ArtistScreen: View {
                 Text("\(artist.resonantGenre.uppercased()) · \(artist.resonantCity.uppercased()) · SINCE \(artist.resonantSince)")
                     .resonantTag(size: 10, tracking: 1.8)
                     .padding(.top, 18)
+                if stackSections {
+                    monogramBlock
+                        .padding(.top, 24)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: .trailing, spacing: 10) {
-                ArtistMonogram(entry: artist.monogramEntry)
-                    .frame(width: 240 * layout.windowScale, height: 240 * layout.windowScale)
-                Text("AR-\(String(artist.id.suffix(2)).uppercased())")
-                    .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
+            if !stackSections {
+                monogramBlock
             }
         }
         .padding(.top, 12)
         .padding(.bottom, 24)
     }
 
-    private var bioAndTopTracks: some View {
-        HStack(alignment: .top, spacing: 64) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("BIO").resonantTag(size: 10, tracking: 2.2).padding(.bottom, 12)
-                Text(artist.resonantBio)
-                    .font(ResonantFont.display(26, weight: .ultraLight))
-                    .tracking(-0.13)
-                    .foregroundColor(ResonantColors.ink)
-                    .frame(maxWidth: 720, alignment: .leading)
-                HStack(spacing: 10) {
-                    if let first = artist.albums.first {
-                        primaryButton(label: "▶ Shuffle artist") {
-                            onAlbum(first)
-                        }
-                    }
-                    secondaryButton(label: "+ Follow") {}
-                }
-                .padding(.top, 22)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+    private var monogramBlock: some View {
+        VStack(alignment: stackSections ? .leading : .trailing, spacing: 10) {
+            ArtistMonogram(entry: artist.monogramEntry)
+                .frame(width: 240 * layout.windowScale, height: 240 * layout.windowScale)
+            Text("AR-\(String(artist.id.suffix(2)).uppercased())")
+                .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 0) {
-                Text("TOP TRACKS").resonantTag(size: 10, tracking: 2.2).padding(.bottom, 12)
-                ForEach(Array(topTracks.enumerated()), id: \.offset) { idx, t in
-                    HStack(spacing: 16) {
-                        Text(String(format: "%02d", idx + 1))
-                            .resonantTag(size: 10, tracking: 1.4)
-                            .frame(width: 24, alignment: .leading)
-                        Text(t.title)
-                            .font(ResonantFont.display(22, weight: .light))
-                            .tracking(-0.22)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Text(ResonantSynth.runtime(seconds: t.duration))
-                            .resonantTag(size: 10, tracking: 1.2)
+    private var bioAndTopTracks: some View {
+        let bio = VStack(alignment: .leading, spacing: 0) {
+            Text("BIO").resonantTag(size: 10, tracking: 2.2).padding(.bottom, 12)
+            Text(artist.resonantBio)
+                .font(ResonantFont.display(26, weight: .ultraLight))
+                .tracking(-0.13)
+                .foregroundColor(ResonantColors.ink)
+                .frame(maxWidth: 720, alignment: .leading)
+            HStack(spacing: 10) {
+                if let first = artist.albums.first {
+                    primaryButton(label: "▶ Shuffle artist") {
+                        onAlbum(first)
                     }
-                    .padding(.vertical, 10)
-                    .overlay(idx == 0 ? nil : Rectangle().fill(ResonantColors.ink4).frame(height: 0.5),
-                             alignment: .top)
+                }
+                secondaryButton(label: "+ Follow") {}
+            }
+            .padding(.top, 22)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+        let tracks = VStack(alignment: .leading, spacing: 0) {
+            Text("TOP TRACKS").resonantTag(size: 10, tracking: 2.2).padding(.bottom, 12)
+            ForEach(Array(topTracks.enumerated()), id: \.offset) { idx, t in
+                HStack(spacing: 16) {
+                    Text(String(format: "%02d", idx + 1))
+                        .resonantTag(size: 10, tracking: 1.4)
+                        .frame(width: 24, alignment: .leading)
+                    Text(t.title)
+                        .font(ResonantFont.display(22, weight: .light))
+                        .tracking(-0.22)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(ResonantSynth.runtime(seconds: t.duration))
+                        .resonantTag(size: 10, tracking: 1.2)
+                }
+                .padding(.vertical, 10)
+                .overlay(idx == 0 ? nil : Rectangle().fill(ResonantColors.ink4).frame(height: 0.5),
+                         alignment: .top)
+            }
+        }
+
+        return Group {
+            if stackSections {
+                // M15.1 narrow window: TOP TRACKS stacks under the bio.
+                VStack(alignment: .leading, spacing: 32) {
+                    bio
+                    tracks
+                }
+            } else {
+                HStack(alignment: .top, spacing: 64) {
+                    bio
+                    tracks
+                        .frame(maxWidth: 420 * layout.windowScale, alignment: .topLeading)
                 }
             }
-            .frame(maxWidth: 420 * layout.windowScale, alignment: .topLeading)
         }
         .padding(.bottom, 24)
         .overlay(Rectangle().fill(ResonantColors.ink4).frame(height: 0.5), alignment: .bottom)

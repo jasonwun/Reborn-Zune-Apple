@@ -227,23 +227,60 @@ public struct HomeScreen: View {
                 hud(total: total)
             }
             .contentShape(Rectangle())
-            #if !os(tvOS)
-            .highPriorityGesture(
-                DragGesture(minimumDistance: 8)
-                    .onChanged { dragDX = $0.translation.width }
-                    .onEnded { v in
-                        let dx = v.translation.width
-                        if dx < -80 {
-                            idx = min(total - 1, idx + 1)
-                        } else if dx > 80 {
-                            idx = max(0, idx - 1)
-                        }
-                        dragDX = 0
-                    }
-            )
-            #endif
+            .modifier(PanoramaDrag(highPriority: !layout.arrangementDriven,
+                                   dragDX: $dragDX,
+                                   onSwipe: { dx in
+                                       if dx < -80 {
+                                           idx = min(total - 1, idx + 1)
+                                       } else if dx > 80 {
+                                           idx = max(0, idx - 1)
+                                       }
+                                   }))
             .clipped()
         }
+    }
+
+    /// Panorama swipe. On bucketed surfaces (iPad) it stays a
+    /// high-priority gesture — bit-identical interaction. On macOS
+    /// (M15.1) panels can scroll vertically when the composition
+    /// exceeds the window height, so the swipe runs as a simultaneous
+    /// gesture and only claims horizontal-dominant drags, leaving
+    /// vertical drags to the panel's ScrollView.
+    private struct PanoramaDrag: ViewModifier {
+        let highPriority: Bool
+        @Binding var dragDX: CGFloat
+        let onSwipe: (CGFloat) -> Void
+
+        func body(content: Content) -> some View {
+            #if os(tvOS)
+            content
+            #else
+            if highPriority {
+                content.highPriorityGesture(drag)
+            } else {
+                content.simultaneousGesture(drag)
+            }
+            #endif
+        }
+
+        #if !os(tvOS)
+        private var drag: some Gesture {
+            DragGesture(minimumDistance: 8)
+                .onChanged { v in
+                    let t = v.translation
+                    if highPriority || abs(t.width) > abs(t.height) {
+                        dragDX = t.width
+                    }
+                }
+                .onEnded { v in
+                    let t = v.translation
+                    if highPriority || abs(t.width) > abs(t.height) {
+                        onSwipe(t.width)
+                    }
+                    dragDX = 0
+                }
+        }
+        #endif
     }
 
     private func hud(total: Int) -> some View {
@@ -318,51 +355,64 @@ private struct HomePickPanel: View {
         // cover riding under the title.
         GeometryReader { geo in
             let innerW = geo.size.width - 2 * padX
-            // Layout-aware vertical budget (M15 R2): R1 anchored the
-            // strip absolutely at `height − 80 − 220×scale` while the
-            // title block grew downward from the top — two blocks
-            // oblivious of each other. At the 900×600 window floor the
-            // title's *painted* sub-line (the frame under-reports the
-            // 150pt line box) collided with the cover mid-glyph. Now we
-            // estimate the painted title height honestly (eyebrow tag at
-            // textScale, 12pt gap, 129pt baseline offset + a 1.12em
-            // line box per display line), reserve the HUD zone (28pt
-            // bottom pad + 38pt arrow row = 66pt), and when
-            // title + gap + strip don't fit, shrink the whole
-            // composition by `fit` instead of letting them overlap.
-            // Invariant: strip bottom ≤ height − 66 and
-            // strip top ≥ painted title bottom + 12 × windowScale.
-            // At the 1440pt anchor (and every size where they fit)
-            // `fit` == 1 and every constant reduces to the exact R1
-            // values, so 1440×900 — and all bucketed iPad sizes —
-            // render bit-identical to R1.
             let dScale = layout.displayFontScale
             let hasSub = pick.sub?.isEmpty == false
             let titleBudget = 20 * dScale
                 + 10 * layout.textScale * 1.35 + 12 * dScale
                 + (hasSub ? 129 * dScale + 150 * dScale * 1.12
                           : 150 * dScale * 1.12)
-            let stripH0 = 220 * dScale
             let minGap = 12 * layout.windowScale
             let hudClear: CGFloat = 66
-            let fit = min(1, (geo.size.height - minGap - hudClear)
-                            / (titleBudget + stripH0))
-            let s = dScale * max(fit, 0.6)
-            let stripH = 220 * s
-            let stripY = max(geo.size.height - 80 - stripH,
-                             titleBudget * (s / dScale) + minGap)
-            ZStack(alignment: .topLeading) {
-                titleBlock(scale: s)
-                    .frame(width: innerW, alignment: .leading)
-                    // Pivot-bottom → eyebrow-top gap matches Albums /
-                    // Playlists / Artists (8pt outer + 12pt block =
-                    // 20pt total) and scales with the panel scale so
-                    // the rhythm shrinks on smaller surfaces in lockstep
-                    // with the surrounding type.
-                    .offset(x: padX, y: 20 * s)
-                bottomStrip(scale: s)
-                    .frame(width: innerW, height: stripH, alignment: .bottomLeading)
-                    .offset(x: padX, y: stripY)
+
+            if layout.arrangementDriven {
+                // M15.1 (macOS): sizes are screen-fixed — NO fit-factor
+                // shrink. The rail column stacks under the meta block
+                // when the panel is narrow, and when the composition
+                // exceeds the panel height the panel scrolls vertically
+                // (PivotNav / MiniPlayer / HUD stay pinned).
+                let s = dScale
+                let stackRail = innerW < 700
+                let stripH = 220 * s + (stackRail ? 130 * s : 0)
+                let stripY = max(geo.size.height - 80 - stripH,
+                                 titleBudget + minGap)
+                let contentH = stripY + stripH + 80
+                ScrollView(.vertical, showsIndicators: false) {
+                    ZStack(alignment: .topLeading) {
+                        titleBlock(scale: s)
+                            .frame(width: innerW, alignment: .leading)
+                            .offset(x: padX, y: 20 * s)
+                        bottomStrip(scale: s, stackRail: stackRail)
+                            .frame(width: innerW, height: stripH, alignment: .bottomLeading)
+                            .offset(x: padX, y: stripY)
+                    }
+                    .frame(width: geo.size.width,
+                           height: max(geo.size.height, contentH),
+                           alignment: .topLeading)
+                }
+            } else {
+                // Bucketed surfaces (iPad/tvOS) — legacy M15 R2 path,
+                // bit-identical: estimate the painted title height
+                // honestly (eyebrow tag at textScale, 12pt gap, 129pt
+                // baseline offset + a 1.12em line box per display line),
+                // reserve the HUD zone (66pt), and when title + gap +
+                // strip don't fit, shrink the whole composition by
+                // `fit` instead of letting them overlap. At the 1440pt
+                // anchor (and every size where they fit) `fit` == 1.
+                let stripH0 = 220 * dScale
+                let fit = min(1, (geo.size.height - minGap - hudClear)
+                                / (titleBudget + stripH0))
+                let s = dScale * max(fit, 0.6)
+                let stripH = 220 * s
+                let stripY = max(geo.size.height - 80 - stripH,
+                                 titleBudget * (s / dScale) + minGap)
+                ZStack(alignment: .topLeading) {
+                    titleBlock(scale: s)
+                        .frame(width: innerW, alignment: .leading)
+                        .offset(x: padX, y: 20 * s)
+                    bottomStrip(scale: s, stackRail: false)
+                        .frame(width: innerW, height: stripH, alignment: .bottomLeading)
+                        .offset(x: padX, y: stripY)
+                }
             }
         }
         .opacity(active ? 1.0 : 0.55)
@@ -435,18 +485,15 @@ private struct HomePickPanel: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Cover / meta / rail strip — anchored below the title block (see
-    /// the panel body's fit-factor budget). Cover size tracks the panel
-    /// scale so the visual hierarchy matches the shrunken HUGE TITLE on
-    /// compact surfaces (iPad mini, 900pt window floor).
-    /// The fixed gaps, the meta wrap cap, and the rail column are
-    /// 1440pt-canvas fossils that scale with `windowScale` (Mac window
-    /// width; 1.0 on bucketed surfaces) so the row still fits at the
-    /// 900pt window floor; rail lines truncate instead of wrapping or
-    /// clipping mid-glyph. The primary meta line may wrap to two lines
-    /// (M15 R2, evaluator-sanctioned) — at 1440pt it fits one line, so
-    /// the anchor render is unchanged.
-    private func bottomStrip(scale: CGFloat) -> some View {
+    /// Cover / meta / rail strip. Cover size tracks the panel scale so
+    /// the visual hierarchy matches the HUGE TITLE on compact surfaces
+    /// (iPad mini); on macOS (M15.1) the scale is screen-fixed and the
+    /// strip instead reflows: `stackRail` (narrow panels) moves the
+    /// rail column under the meta block. The fixed gaps, the meta wrap
+    /// cap, and the rail column are 1440pt-canvas fossils that scale
+    /// with `windowScale` (1.0 on bucketed surfaces). The primary meta
+    /// line may wrap to two lines (M15 R2, evaluator-sanctioned).
+    private func bottomStrip(scale: CGFloat, stackRail: Bool) -> some View {
         let coverSize: CGFloat = 220 * scale
         let elastic = layout.windowScale
         return HStack(alignment: .bottom, spacing: 36 * elastic) {
@@ -466,25 +513,33 @@ private struct HomePickPanel: View {
                     secondaryButton(label: pick.secondaryLabel, action: pick.onSecondary)
                 }
                 .padding(.top, 4)
+                if stackRail { rail }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            VStack(alignment: .leading, spacing: 18) {
-                ForEach(Array(pick.rail.enumerated()), id: \.offset) { _, item in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(item.label)
-                            .resonantTag(size: 10, tracking: 2.2)
-                        ForEach(item.lines, id: \.self) { l in
-                            Text(l)
-                                .font(ResonantFont.display(20, weight: .light))
-                                .tracking(-0.2)
-                                .lineLimit(1)
-                        }
+            if !stackRail {
+                rail
+            }
+        }
+    }
+
+    /// MOOD / BEST FOR-style label+lines column.
+    private var rail: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            ForEach(Array(pick.rail.enumerated()), id: \.offset) { _, item in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(item.label)
+                        .resonantTag(size: 10, tracking: 2.2)
+                    ForEach(item.lines, id: \.self) { l in
+                        Text(l)
+                            .font(ResonantFont.display(20, weight: .light))
+                            .tracking(-0.2)
+                            .lineLimit(1)
                     }
                 }
             }
-            .frame(width: 200 * elastic, alignment: .leading)
-            .padding(.bottom, 4)
         }
+        .frame(width: 200 * layout.windowScale, alignment: .leading)
+        .padding(.bottom, 4)
     }
 
     @ViewBuilder

@@ -11,6 +11,7 @@ public struct MiniPlayer: View {
     @State private var exiting: RotatorMode? = nil
     @State private var rotatorTask: Task<Void, Never>? = nil
     @Environment(\.resonantLayout) private var layout
+    @Environment(\.resonantWindowSize) private var windowSize
 
     public init(engine: PlaybackEngine,
                 spacing: ResonantSpacing,
@@ -95,6 +96,9 @@ public struct MiniPlayer: View {
         // Restart the rotator so the tease activates the moment a
         // next track exists.
         .onChange(of: upNext?.id) { _, _ in startRotator() }
+        // M15.1: crossing the 1100pt window-width threshold starts or
+        // suppresses the up-next tease (constant on bucketed surfaces).
+        .onChange(of: windowSize.width) { _, _ in startRotator() }
     }
 
     // MARK: - Now / Up-Next views
@@ -235,8 +239,17 @@ public struct MiniPlayer: View {
 
     private enum RotatorMode { case now, upNext }
 
+    /// M15.1: on macOS the up-next tease is suppressed below 1100pt
+    /// window width so the narrow bar keeps a stable now-playing read.
+    /// Always allowed on bucketed surfaces (bit-identical iPad).
+    private var upNextAllowed: Bool {
+        !layout.arrangementDriven || windowSize.width >= 1100
+    }
+
     private func viewState(for which: RotatorMode) -> RotatorState {
-        if engine.state != .playing || upNext == nil { return which == .now ? .active : .parked }
+        if engine.state != .playing || upNext == nil || !upNextAllowed {
+            return which == .now ? .active : .parked
+        }
         if which == mode { return .active }
         if which == exiting { return .exiting }
         return .parked
@@ -244,7 +257,7 @@ public struct MiniPlayer: View {
 
     private func startRotator() {
         rotatorTask?.cancel()
-        guard engine.state == .playing, upNext != nil else {
+        guard engine.state == .playing, upNext != nil, upNextAllowed else {
             // Snap back to "now" without animating — paused / no
             // upNext means nothing to tease.
             var t = Transaction()

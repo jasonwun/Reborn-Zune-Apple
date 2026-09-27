@@ -12,24 +12,38 @@ public struct PivotNav: View {
     }
 
     public var body: some View {
-        HStack(spacing: 56) {
+        // M15.1: label size and gaps are screen-fixed now, so below
+        // ~1000pt window width the row can exceed the window — let it
+        // scroll horizontally instead of clipping "search" off the
+        // trailing edge. At comfortable widths nothing scrolls.
+        // Bucketed surfaces keep the plain row (bit-identical).
+        let row = HStack(spacing: 56) {
             BackChevron(router: router)
             ForEach(PivotID.allCases) { p in
                 PivotButton(pivot: p, router: router)
             }
             Spacer(minLength: 0)
         }
-        .padding(.leading, spacing.padX)
-        .padding(.trailing, spacing.padX)
-        // Pivot row top padding: 56pt on every platform. Mac chrome=off
-        // recovers the missing traffic-light gutter with 56pt; iPad
-        // landed on the same value after iterative tightening from
-        // the design CSS spec of 48 (and several user tweaks).
-        // `windowScale` is 1.0 on bucketed surfaces (iPad unchanged)
-        // and tracks the window width on Mac so the chrome rhythm
-        // follows the content scale.
-        .padding(.top, 56 * layout.windowScale)
-        .padding(.bottom, 8 * layout.windowScale)
+
+        if layout.arrangementDriven {
+            ScrollView(.horizontal, showsIndicators: false) {
+                row
+            }
+            .padding(.leading, spacing.padX)
+            .padding(.trailing, spacing.padX)
+            .padding(.top, 56 * layout.windowScale)
+            .padding(.bottom, 8 * layout.windowScale)
+        } else {
+            row
+            .padding(.leading, spacing.padX)
+            .padding(.trailing, spacing.padX)
+            // Pivot row top padding: 56pt on every platform. Mac chrome=off
+            // recovers the missing traffic-light gutter with 56pt; iPad
+            // landed on the same value after iterative tightening from
+            // the design CSS spec of 48 (and several user tweaks).
+            .padding(.top, 56 * layout.windowScale)
+            .padding(.bottom, 8 * layout.windowScale)
+        }
     }
 }
 
