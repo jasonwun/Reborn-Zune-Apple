@@ -20,6 +20,7 @@ approved before the next one starts.
 | M12 | Resonant UI · macOS visual parity (design v2) | Drop window chrome (`.hiddenTitleBar`), bump pivot padding 28→56, home panorama padding 18→48 — match `Resonant.html` v2. |
 | M13 | Resonant UI · iPad visual parity (design v2) + responsive layout system | Hide status bar (mock + iOS), OLED→warm paper (unified), pivot 56pt, touch-sized scrubber + track rows, demo-library fallback, iPad-only target. Introduce `ResonantLayout` env value (deviceClass × orientation → `textScale`, `displayFontScale`) so type and gaps shrink correctly on iPad mini and grow on Pro 13. Universal hit-area fix for all `.buttonStyle(.plain)` chips/buttons. |
 | M14 | Resonant UI · tvOS visual parity (design v2) | Remove brand + clock from TV top nav, pivot vocab `listen` → `home`, font 40 → 56pt, adopt `ResonantLayout` (`.expanded` landscape at 1920×1080), home wall uses true black. No mini-player; Now Playing remote-back dismiss verified. |
+| M15 | Resonant UI · macOS responsive layout | Wire `resonantLayout` on Mac with a continuous window-width scale (anchored 1.0 @ 1440pt, clamped 0.75–1.15) instead of the silent `.regular` default; window floor 900 × 600, default 1440 × 900; elastic fixes for fixed-width fossils (Home panorama strip, detail-screen frames, grid minimums); dead `canvasWidth` removed. iPad / tvOS unchanged, regression-guarded. |
 
 ## Stop conditions per milestone
 
