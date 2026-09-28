@@ -57,8 +57,14 @@ private struct ResonantHost: View {
     @State private var showPicker = false
     /// Hardware screen size backing the M15.1 screen-fixed scale tokens.
     /// Re-derived only when the window moves to another screen — never
-    /// on window resize.
-    @State private var screenSize = CGSize(width: 1440, height: 900)
+    /// on window resize. M16.3: initialized synchronously (was a
+    /// 1440×900 placeholder until `.task` ran) so the tile wall's
+    /// first-layout freeze never sees a stale screen size.
+    @State private var screenSize = NSScreen.main?.frame.size ?? CGSize(width: 1440, height: 900)
+    /// M16.3: the window's top-left corner in screen-local points,
+    /// published live so the tile wall can anchor itself to the hardware
+    /// screen instead of the window.
+    @State private var windowOriginTL: CGPoint = .zero
 
     var body: some View {
         let lighting: LightingAnimator? =
@@ -87,9 +93,11 @@ private struct ResonantHost: View {
             .environment(\.resonantLayout, .mac(screen: screenSize))
             .environment(\.resonantWindowSize, proxy.size)
             .environment(\.resonantScreenSize, screenSize)
+            .environment(\.resonantWindowOrigin, windowOriginTL)
         }
         .background(WindowSizeAccessor(targetSize: Self.initialWindowTarget))
         .background(WindowChromeConfigurator())
+        .background(WindowOriginReporter(topLeft: $windowOriginTL))
         .onReceive(NotificationCenter.default.publisher(
             for: NSWindow.didChangeScreenNotification)) { _ in
             updateScreenSize()
@@ -149,6 +157,74 @@ private struct ResonantHost: View {
         }
         #endif
         return nil
+    }
+}
+
+/// M16.3: publishes the window's top-left corner in screen-local points
+/// (origin = the current screen's top-left, y DOWN — SwiftUI-friendly).
+/// The tile wall counter-offsets by this value so tiles and the light
+/// field stay put on the hardware screen while the window moves.
+private struct WindowOriginReporter: NSViewRepresentable {
+    @Binding var topLeft: CGPoint
+
+    func makeCoordinator() -> Coordinator { Coordinator(topLeft: $topLeft) }
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        context.coordinator.start(view: view)
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.report(nsView)
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        private let topLeft: Binding<CGPoint>
+        private var observers: [NSObjectProtocol] = []
+        private var observedWindow: NSWindow?
+
+        init(topLeft: Binding<CGPoint>) { self.topLeft = topLeft }
+
+        func start(view: NSView) {
+            // The view is not in a window yet at makeNSView time.
+            Task { @MainActor [weak self] in
+                self?.attach(to: view.window)
+            }
+        }
+
+        func report(_ view: NSView) {
+            if view.window != observedWindow { attach(to: view.window) }
+            if let window = view.window { update(window) }
+        }
+
+        private func attach(to window: NSWindow?) {
+            guard let window, window !== observedWindow else { return }
+            observers.forEach { NotificationCenter.default.removeObserver($0) }
+            observers = []
+            observedWindow = window
+            update(window)
+            let center = NotificationCenter.default
+            for name in [NSWindow.didMoveNotification, NSWindow.didResizeNotification] {
+                observers.append(center.addObserver(forName: name, object: window, queue: .main) { [weak self] note in
+                    guard let w = note.object as? NSWindow else { return }
+                    Task { @MainActor [weak self] in self?.update(w) }
+                })
+            }
+        }
+
+        private func update(_ window: NSWindow) {
+            guard let screen = window.screen ?? NSScreen.main else { return }
+            let tl = CGPoint(
+                x: window.frame.minX - screen.frame.minX,
+                y: screen.frame.maxY - window.frame.maxY
+            )
+            if tl != topLeft.wrappedValue { topLeft.wrappedValue = tl }
+        }
+        // No deinit cleanup: the block observers hold only a weak self,
+        // so after teardown they fire into nil. Single-window app — the
+        // token leak is one pair of observers at most.
     }
 }
 

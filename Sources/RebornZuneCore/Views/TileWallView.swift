@@ -73,6 +73,12 @@ public struct TileWallView: View {
     /// Hardware screen size, injected at the macOS app root (M16.1).
     @Environment(\.resonantScreenSize) private var screenSize
 
+    /// The window's top-left in screen-local points (M16.3). The frozen
+    /// wall is counter-offset by this so the tiles AND the light field
+    /// stay anchored to the hardware screen: moving/resizing the window
+    /// just moves the viewport over a fixed wall.
+    @Environment(\.resonantWindowOrigin) private var windowOrigin
+
     /// M16.1: the area the frozen arrangement must cover — the larger of
     /// the entry window size and the hardware screen plus one LARGE tile
     /// of margin in each dimension, so even a full-screen window never
@@ -118,6 +124,10 @@ public struct TileWallView: View {
                     .frame(width: panel.width, height: panel.height)
                     .saturation(0)
                     .modifier(OptionalLightingModifier(animator: lightingAnimator))
+                    // M16.3: counter-offset by the window's screen position
+                    // so the wall + light field are anchored to the hardware
+                    // screen, not the window.
+                    .offset(x: -windowOrigin.x, y: -windowOrigin.y)
                     .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
                     .clipped()
                     .onAppear {

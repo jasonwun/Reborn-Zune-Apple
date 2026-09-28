@@ -44,17 +44,10 @@ public struct NowPlayingScreen: View {
                 .blendMode(.multiply)
                 .allowsHitTesting(false)
 
-            // 3. Magenta radial wash (bottom-left)
-            RadialGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 1, green: 0, blue: 0.5).opacity(0.18),
-                    .clear
-                ]),
-                center: UnitPoint(x: 0.3, y: 0.8),
-                startRadius: 0,
-                endRadius: 800
-            )
-            .allowsHitTesting(false)
+            // 3. (removed in M16.3) The magenta radial wash used to be a
+            // static fake light source at bottom-left. With the real
+            // two-light shader now driving the wall, it read as a foggy
+            // extra light blurring the tiles.
 
             // 4. Vignette top + bottom
             LinearGradient(
