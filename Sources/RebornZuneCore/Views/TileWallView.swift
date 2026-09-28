@@ -123,7 +123,7 @@ public struct TileWallView: View {
                     // the tile grid never drifts mid-resize).
                     .frame(width: panel.width, height: panel.height)
                     .saturation(0)
-                    .modifier(OptionalLightingModifier(animator: lightingAnimator))
+                    .modifier(OptionalLightingModifier(animator: lightingAnimator, panelSize: panel))
                     // M16.3: counter-offset by the window's screen position
                     // so the wall + light field are anchored to the hardware
                     // screen, not the window.
@@ -460,10 +460,14 @@ final class TileWallExpansionCache {
 /// the body.
 private struct OptionalLightingModifier: ViewModifier {
     let animator: LightingAnimator?
+    /// M16.4: the frozen wall panel — passed straight through to
+    /// `LightingModifier` so light positions are computed in frozen-panel
+    /// space and never re-scale with the live window size.
+    let panelSize: CGSize
 
     func body(content: Content) -> some View {
         if let animator {
-            content.modifier(LightingModifier(animator: animator))
+            content.modifier(LightingModifier(animator: animator, panelSize: panelSize))
         } else {
             content
         }

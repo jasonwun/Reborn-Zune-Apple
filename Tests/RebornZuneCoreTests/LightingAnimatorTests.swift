@@ -131,12 +131,11 @@ final class LightingAnimatorTests: XCTestCase {
     func testDefaultIntensityAndAmbient() {
         let animator = LightingAnimator()
         let params = animator.parameters(at: 0, panelSize: panel)
-        // M5.10 defaults: intensities stay at 1.8 (peaks bright); ambient
-        // dropped to (0.03, 0.03, 0.03) so non-pool areas are barely
-        // visible — user wanted the dark-room intuition pushed further
-        // than M5.8/M5.9.
-        XCTAssertEqual(params.light1Intensity, 1.5, accuracy: 1e-6)
-        XCTAssertEqual(params.light2Intensity, 1.5, accuracy: 1e-6)
+        // M16.4: intensities raised to 2.2 (from 1.5) — after the falloff
+        // went back to squared the user asked for a brighter pool while
+        // uncovered regions stay dark (ambient pinned at 0.01).
+        XCTAssertEqual(params.light1Intensity, 2.2, accuracy: 1e-6)
+        XCTAssertEqual(params.light2Intensity, 2.2, accuracy: 1e-6)
         XCTAssertEqual(params.ambientColor.x, 0.01, accuracy: 1e-3)
         XCTAssertEqual(params.ambientColor.y, 0.01, accuracy: 1e-3)
         XCTAssertEqual(params.ambientColor.z, 0.01, accuracy: 1e-3)

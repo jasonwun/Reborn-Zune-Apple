@@ -6,13 +6,25 @@ import simd
 /// `TimelineView(.animation)`; per-frame uniforms come from
 /// `LightingAnimator`.
 ///
-/// The modifier reads the panel size via `GeometryReader` so the shader's
-/// keyframe positions (authored in panel-pixel space in the UWP original)
-/// stay anchored regardless of the actual display size. Frame timing comes
-/// from `Date.timeIntervalSinceReferenceDate` so the cycle remains
-/// continuous across view re-creations.
+/// The modifier normally reads the panel size via `GeometryReader` so the
+/// shader's keyframe positions (authored in panel-pixel space in the UWP
+/// original) stay anchored regardless of the actual display size. Callers
+/// with a frozen panel (the tile wall) pass `panelSize:` explicitly —
+/// see the property doc for why the GeometryReader value is wrong there.
+/// Frame timing comes from `Date.timeIntervalSinceReferenceDate` so the
+/// cycle remains continuous across view re-creations.
 public struct LightingModifier: ViewModifier {
     public let animator: LightingAnimator
+
+    /// M16.4: explicit panel size override. The modifier's internal
+    /// `GeometryReader` measures the size *proposed by the parent* — which,
+    /// in `TileWallView`, is the live window size, NOT the frozen wall
+    /// panel. Using it scaled the light positions with every window
+    /// resize. `TileWallView` now passes its frozen panel size here so the
+    /// light field stays anchored to the hardware screen. When nil
+    /// (standalone `.zuneLighting()` usage) the GeometryReader fallback
+    /// keeps the old behavior.
+    public let panelSize: CGSize?
 
     /// M16: cap the lighting frame rate. The light cycle is 120 s — far
     /// too slow for the eye to distinguish 15 fps from the display's
@@ -22,18 +34,29 @@ public struct LightingModifier: ViewModifier {
     /// ~9% at 20 fps; see `reports/M16_baseline.md`).
     public static let frameInterval: TimeInterval = 1.0 / 15
 
-    public init(animator: LightingAnimator = LightingAnimator()) {
+    public init(animator: LightingAnimator = LightingAnimator(), panelSize: CGSize? = nil) {
         self.animator = animator
+        self.panelSize = panelSize
     }
 
     public func body(content: Content) -> some View {
-        GeometryReader { geo in
+        if let panelSize {
             TimelineView(.animation(minimumInterval: Self.frameInterval)) { context in
                 let parameters = animator.parameters(
                     at: context.date.timeIntervalSinceReferenceDate,
-                    panelSize: geo.size
+                    panelSize: panelSize
                 )
                 LightingModifier.applyShader(to: content, parameters: parameters)
+            }
+        } else {
+            GeometryReader { geo in
+                TimelineView(.animation(minimumInterval: Self.frameInterval)) { context in
+                    let parameters = animator.parameters(
+                        at: context.date.timeIntervalSinceReferenceDate,
+                        panelSize: geo.size
+                    )
+                    LightingModifier.applyShader(to: content, parameters: parameters)
+                }
             }
         }
     }

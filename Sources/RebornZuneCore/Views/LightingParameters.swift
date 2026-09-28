@@ -12,11 +12,13 @@ import simd
 /// separate `attenuationScale` parameter is no longer needed and has been
 /// removed from this type and the shader signature.
 ///
-/// Defaults match the UWP `TilePage.xaml.cs` source, with M5.7/M5.8 tweaks:
-/// - `light1Intensity` / `light2Intensity` = 1.8 (raised from 1.3 in M5.7
-///   to broaden the visible wash; UWP source is 1.3 but Lambertian falloff
-///   produces a tighter pool than the UWP composition lighting).
-/// - `ambientColor` = (0.05, 0.05, 0.05) — M5.8 lowered from (0.165,
+/// Defaults match the UWP `TilePage.xaml.cs` source, with M5.7/M5.8/M16.4 tweaks:
+/// - `light1Intensity` / `light2Intensity` = 2.2 (1.3 in the UWP source;
+///   raised to 1.5 in M5.7 because Lambertian falloff produces a tighter
+///   pool than UWP composition lighting, and to 2.2 in M16.4 after the
+///   falloff exponent went back to squared — the user asked for a brighter
+///   pool while keeping uncovered regions dark).
+/// - `ambientColor` = (0.01, 0.01, 0.01) — M5.8 lowered from (0.165,
 ///   0.165, 0.165) so the majority of the wall reads as DARK with only
 ///   the moving light pool visibly bright. The UWP recording's
 ///   `overview_011.png` shows ~70% of the wall near-black; the previous
@@ -38,10 +40,10 @@ public struct LightingParameters: Equatable, Sendable {
         panelSize: CGSize,
         light1Position: SIMD3<Float>,
         light1Color: SIMD3<Float>,
-        light1Intensity: Float = 1.5,
+        light1Intensity: Float = 2.2,
         light2Position: SIMD3<Float>,
         light2Color: SIMD3<Float>,
-        light2Intensity: Float = 1.5,
+        light2Intensity: Float = 2.2,
         ambientColor: SIMD3<Float> = SIMD3<Float>(0.01, 0.01, 0.01)
     ) {
         self.panelSize = panelSize

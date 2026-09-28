@@ -20,14 +20,13 @@ final class LightingShaderTests: XCTestCase {
             light2Color: SIMD3<Float>(0.506, 0.149, 0.545)
         )
 
-        // M5.7: intensities default to 1.8 (raised from M5.6's 1.3 to
-        // broaden the visible wash; Lambertian dot-product falloff
-        // produces a tighter pool than UWP composition lighting at the
-        // source 1.3 value).
-        XCTAssertEqual(params.light1Intensity, 1.5, accuracy: 1e-6)
-        XCTAssertEqual(params.light2Intensity, 1.5, accuracy: 1e-6)
+        // M16.4: intensities default to 2.2 (raised from 1.5 — with the
+        // squared falloff the user asked for a brighter light pool while
+        // keeping uncovered regions dark).
+        XCTAssertEqual(params.light1Intensity, 2.2, accuracy: 1e-6)
+        XCTAssertEqual(params.light2Intensity, 2.2, accuracy: 1e-6)
 
-        // M5.10: ambient lowered to (0.03, 0.03, 0.03) so non-pool areas
+        // M5.10: ambient lowered to (0.01, 0.01, 0.01) so non-pool areas
         // are barely visible — user feedback on M5.9 wanted the dark-room
         // intuition pushed further.
         XCTAssertEqual(params.ambientColor.x, 0.01, accuracy: 1e-3)
