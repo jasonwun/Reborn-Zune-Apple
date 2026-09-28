@@ -52,6 +52,20 @@ public struct ResonantApp: View {
     public var body: some View {
         innerBody
             .preferredColorScheme(.dark)
+            .task { await runAutoNav() }
+    }
+
+    /// DEBUG perf hook: `REBORN_ZUNE_DEBUG_AUTO_NAV=<route>:<delaySeconds>`
+    /// navigates to the route after the delay — used with
+    /// `REBORN_ZUNE_DEBUG_PERF=1` to measure main→tile-wall cold-entry cost
+    /// without Accessibility permissions.
+    private func runAutoNav() async {
+        guard let raw = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_AUTO_NAV"] else { return }
+        let parts = raw.split(separator: ":", maxSplits: 1).map(String.init)
+        let delay = parts.count > 1 ? Double(parts[1]) ?? 3 : 3
+        try? await Task.sleep(nanoseconds: UInt64(max(0, delay) * 1_000_000_000))
+        guard !Task.isCancelled, let route = ResonantRouter.parse(parts[0]) else { return }
+        router.go(route)
     }
 
     @ViewBuilder

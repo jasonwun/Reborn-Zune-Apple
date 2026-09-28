@@ -67,6 +67,7 @@ private struct ResonantHost: View {
     @State private var windowOriginTL: CGPoint = .zero
 
     var body: some View {
+        let _ = PerfProbe.once("app.body")
         let lighting: LightingAnimator? =
             ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_NO_LIGHTING"] == "1"
             ? nil
@@ -120,6 +121,7 @@ private struct ResonantHost: View {
                 state.library = ResonantLibrary.from(tracks: tracks)
                 state.phase = .ready
                 engine.setQueue(tracks)
+                PerfProbe.mark("library.demo.ready")
                 return
             }
             if let override = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_LIBRARY_FOLDER"] {

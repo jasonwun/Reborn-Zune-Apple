@@ -55,6 +55,12 @@ public final class ResonantRouter {
         guard let raw = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_INITIAL_ROUTE"] else {
             return nil
         }
+        return parse(raw)
+    }
+
+    /// Parse a route string in the `envInitialRoute` format. Also used by
+    /// the `REBORN_ZUNE_DEBUG_AUTO_NAV` perf hook.
+    public static func parse(_ raw: String) -> Route? {
         let parts = raw.split(separator: ":", maxSplits: 1).map(String.init)
         switch parts.first {
         case "home":       return .home
@@ -76,6 +82,7 @@ public final class ResonantRouter {
 
     public func go(_ next: Route) {
         guard next != route else { return }
+        PerfProbe.mark("route.go.\(next.label)")
         history.append(route)
         if history.count > historyMax {
             history.removeFirst(history.count - historyMax)

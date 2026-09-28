@@ -150,6 +150,7 @@ public struct TileWallView: View {
             }
         }
         .onAppear {
+            PerfProbe.mark("tilewall.appear")
             flipCoordinator.start(tileCount: tiles.count)
         }
         .onDisappear {
@@ -445,12 +446,14 @@ final class TileWallExpansionCache {
             lastLookupWasHit = true
             return cached.tiles
         }
+        let t = PerfProbe.tic()
         let expanded = TileWallView.expanded(
             source: source,
             forPanelSize: panelSize,
             unitSize: unitSize,
             seed: seed
         )
+        PerfProbe.toc("tilewall.expand", since: t, detail: "tiles=\(expanded.count) panel=\(Int(panelSize.width))x\(Int(panelSize.height))")
         cached = (key, expanded)
         lastLookupWasHit = false
         return expanded

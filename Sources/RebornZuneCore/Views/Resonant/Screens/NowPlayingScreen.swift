@@ -147,6 +147,7 @@ public struct NowPlayingScreen: View {
             }
         }
         .background(Color(red: 14/255, green: 13/255, blue: 10/255))
+        .onAppear { PerfProbe.mark("nowplaying.appear") }
     }
 
     // MARK: - Subviews
