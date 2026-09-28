@@ -56,12 +56,19 @@ half4 zuneLighting(
     // dot=0.2 → 0.20 (was 0.008). Combined with raised ambient and
     // reduced intensity, far pixels still receive meaningful contribution
     // — the "diffused all-over wash" the recording shows.
+    //
+    // M16.1: back to a squared falloff (exponent 2.0). On the real app
+    // window (~1500×950 pt — much smaller than the 2300×1300 reference
+    // panel the keyframes were authored for), linear falloff made the two
+    // pools overlap into a uniform wash. The user's direction: more focused
+    // pools, letting uncovered regions fall dark (ambient stays 0.01).
+    // dot=0.5 → 0.25, dot=0.2 → 0.04.
     float3 light1Dir = normalize(light1Pos - pixelPos);
-    float  diff1     = max(0.0, dot(normal, light1Dir));
+    float  diff1     = pow(max(0.0, dot(normal, light1Dir)), 2.0);
     float3 contrib1  = light1Color * light1Intensity * diff1;
 
     float3 light2Dir = normalize(light2Pos - pixelPos);
-    float  diff2     = max(0.0, dot(normal, light2Dir));
+    float  diff2     = pow(max(0.0, dot(normal, light2Dir)), 2.0);
     float3 contrib2  = light2Color * light2Intensity * diff2;
 
     float3 totalLight = ambientColor + contrib1 + contrib2;

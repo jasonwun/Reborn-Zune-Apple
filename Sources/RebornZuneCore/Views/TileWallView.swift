@@ -70,6 +70,22 @@ public struct TileWallView: View {
     /// page entry (new view identity → fresh @State) recomputes.
     @State private var frozenPanelSize: CGSize?
 
+    /// Hardware screen size, injected at the macOS app root (M16.1).
+    @Environment(\.resonantScreenSize) private var screenSize
+
+    /// M16.1: the area the frozen arrangement must cover — the larger of
+    /// the entry window size and the hardware screen plus one LARGE tile
+    /// of margin in each dimension, so even a full-screen window never
+    /// reveals bare backdrop at its edges.
+    static func frozenPanelSize(entry: CGSize, screen: CGSize?, unitSize: CGFloat) -> CGSize {
+        let margin = unitSize * CGFloat(TileSpan.large.rawValue)
+        guard let screen else { return entry }
+        return CGSize(
+            width: max(entry.width, screen.width + margin),
+            height: max(entry.height, screen.height + margin)
+        )
+    }
+
     public var body: some View {
         ZStack {
             // M5.26: background grey (~0.20 luminance) matches the
@@ -106,7 +122,11 @@ public struct TileWallView: View {
                     .clipped()
                     .onAppear {
                         if frozenPanelSize == nil {
-                            frozenPanelSize = geo.size
+                            frozenPanelSize = Self.frozenPanelSize(
+                                entry: geo.size,
+                                screen: screenSize,
+                                unitSize: unitSize
+                            )
                         }
                     }
             }

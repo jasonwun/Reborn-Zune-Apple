@@ -132,4 +132,34 @@ final class TileWallExpansionTests: XCTestCase {
     func testLightingFrameIntervalIsCappedAt15fps() {
         XCTAssertEqual(LightingModifier.frameInterval, 1.0 / 15, accuracy: 1e-9)
     }
+
+    // MARK: - M16.1 frozen panel coverage
+
+    func testFrozenPanelCoversScreenPlusOneLargeTile() {
+        let out = TileWallView.frozenPanelSize(
+            entry: CGSize(width: 1336, height: 767),
+            screen: CGSize(width: 1512, height: 949),
+            unitSize: 50
+        )
+        XCTAssertEqual(out, CGSize(width: 1512 + 200, height: 949 + 200))
+    }
+
+    func testFrozenPanelFallsBackToEntryWhenScreenUnknown() {
+        let entry = CGSize(width: 1000, height: 700)
+        XCTAssertEqual(
+            TileWallView.frozenPanelSize(entry: entry, screen: nil, unitSize: 50),
+            entry
+        )
+    }
+
+    func testFrozenPanelKeepsEntryWhenEntryExceedsScreen() {
+        // Oversized entry (e.g. window already spanning beyond the screen)
+        // is never shrunk by the coverage rule.
+        let out = TileWallView.frozenPanelSize(
+            entry: CGSize(width: 2000, height: 1300),
+            screen: CGSize(width: 1512, height: 949),
+            unitSize: 50
+        )
+        XCTAssertEqual(out, CGSize(width: 2000, height: 1300))
+    }
 }

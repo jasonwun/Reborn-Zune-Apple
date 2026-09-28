@@ -86,8 +86,10 @@ private struct ResonantHost: View {
             )
             .environment(\.resonantLayout, .mac(screen: screenSize))
             .environment(\.resonantWindowSize, proxy.size)
+            .environment(\.resonantScreenSize, screenSize)
         }
         .background(WindowSizeAccessor(targetSize: Self.initialWindowTarget))
+        .background(WindowChromeConfigurator())
         .onReceive(NotificationCenter.default.publisher(
             for: NSWindow.didChangeScreenNotification)) { _ in
             updateScreenSize()
@@ -147,6 +149,30 @@ private struct ResonantHost: View {
         }
         #endif
         return nil
+    }
+}
+
+/// M16.1: macOS 26+ can still paint a bright titlebar strip even with
+/// `.windowStyle(.hiddenTitleBar)` — force full immersion: hidden title,
+/// transparent titlebar, content extending through the titlebar region,
+/// and drag-anywhere-to-move since there is no visible chrome to grab.
+private struct WindowChromeConfigurator: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { Self.apply(to: view) }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        Self.apply(to: nsView)
+    }
+
+    private static func apply(to view: NSView) {
+        guard let window = view.window else { return }
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.styleMask.insert(.fullSizeContentView)
+        window.isMovableByWindowBackground = true
     }
 }
 

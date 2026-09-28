@@ -122,6 +122,14 @@ private struct ResonantWindowSizeKey: EnvironmentKey {
     static let defaultValue = CGSize(width: 1440, height: 900)
 }
 
+/// Hardware screen size. Injected at the macOS app root (re-derived only
+/// when the window moves to another screen); nil elsewhere. M16.1: the
+/// tile wall reads it to size its frozen arrangement so any window size
+/// up to full-screen stays covered.
+private struct ResonantScreenSizeKey: EnvironmentKey {
+    static let defaultValue: CGSize? = nil
+}
+
 public extension EnvironmentValues {
     var resonantLayout: ResonantLayout {
         get { self[ResonantLayoutKey.self] }
@@ -134,5 +142,12 @@ public extension EnvironmentValues {
     var resonantWindowSize: CGSize {
         get { self[ResonantWindowSizeKey.self] }
         set { self[ResonantWindowSizeKey.self] = newValue }
+    }
+
+    /// Hardware screen size (macOS root injects; nil on iPad/tvOS where
+    /// window == screen anyway).
+    var resonantScreenSize: CGSize? {
+        get { self[ResonantScreenSizeKey.self] }
+        set { self[ResonantScreenSizeKey.self] = newValue }
     }
 }
