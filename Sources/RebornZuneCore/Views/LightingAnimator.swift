@@ -33,12 +33,11 @@ public struct LightingAnimator: Sendable {
     /// `cycleDuration`. For times below `startDelay`, BOTH lights are held
     /// at their `progress=0` keyframes (matching the UWP composition delay).
     ///
-    /// M5.7: the keyframe X/Y values from `TilePage.xaml.cs` were
-    /// calibrated for a ~2300×1300 panel. At smaller panel sizes (iPad
-    /// ~1180 px wide, tvOS 1920 px) much of the orbit ended up off-screen,
-    /// shrinking the visible wash. We scale interpolated XY positions
-    /// proportionally to `panelSize / referencePanelSize`. Z is left
-    /// unscaled — it represents light depth and is panel-independent.
+    /// M16.5: keyframe X/Y are normalized fractions (0...1), multiplied by
+    /// `panelSize` — which callers set to the *light field* size (hardware
+    /// screen on macOS, window elsewhere) so the orbit always stays fully
+    /// on-screen. Z is left unscaled — it represents light depth and is
+    /// field-independent.
     public func parameters(at time: TimeInterval, panelSize: CGSize) -> LightingParameters {
         let warmProgress = Self.clampedProgress(
             time: time - startDelay,
@@ -52,11 +51,10 @@ public struct LightingAnimator: Sendable {
         let warmPos = warm.position(at: warmProgress)
         let coolPos = cool.position(at: coolProgress)
 
-        let scaleX = Float(panelSize.width / Self.referencePanelSize.width)
-        let scaleY = Float(panelSize.height / Self.referencePanelSize.height)
-
-        let scaledWarmPos = SIMD3<Float>(warmPos.x * scaleX, warmPos.y * scaleY, warmPos.z)
-        let scaledCoolPos = SIMD3<Float>(coolPos.x * scaleX, coolPos.y * scaleY, coolPos.z)
+        let w = Float(panelSize.width)
+        let h = Float(panelSize.height)
+        let scaledWarmPos = SIMD3<Float>(warmPos.x * w, warmPos.y * h, warmPos.z)
+        let scaledCoolPos = SIMD3<Float>(coolPos.x * w, coolPos.y * h, coolPos.z)
 
         return LightingParameters(
             panelSize: panelSize,
@@ -92,10 +90,8 @@ public struct LightingAnimator: Sendable {
 }
 
 public extension LightingAnimator {
-    /// The panel dimensions the UWP source's keyframe X/Y coordinates were
-    /// calibrated for (`Reborn-Zune/TilePage.xaml.cs` lines 106–143).
-    /// Light positions are scaled proportionally to the actual panel size
-    /// at render time so the orbit stays inside the visible region on
-    /// smaller displays (iPad ~1180 px wide, tvOS 1920 px).
-    static let referencePanelSize: CGSize = CGSize(width: 2300, height: 1300)
+    /// M16.5: maximum normalized X/Y any palette keyframe may use. Keeps
+    /// light pools fully inside the light field (a pool's visible radius
+    /// extends roughly 10% of the field beyond its center at z=200).
+    static let maxNormalizedCoordinate: Float = 0.9
 }

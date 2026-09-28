@@ -3,21 +3,47 @@ import simd
 @testable import RebornZuneCore
 
 final class LightingAnimatorTests: XCTestCase {
-    /// Reference panel size — keyframe X/Y values live in this coordinate
-    /// space, so passing this size to `parameters(at:panelSize:)` produces
-    /// unscaled positions that match the raw `LightingPalette` data.
-    private let panel = LightingAnimator.referencePanelSize
+    /// A real MacBook screen size — keyframe X/Y are normalized fractions
+    /// (M16.5), so `parameters(at:panelSize:)` multiplies them by this.
+    private let panel = CGSize(width: 1512, height: 982)
+
+    /// Scale a normalized keyframe position into panel points the same way
+    /// `LightingAnimator.parameters(at:panelSize:)` does (Z unscaled).
+    private func scaled(_ p: SIMD3<Float>) -> SIMD3<Float> {
+        SIMD3<Float>(p.x * Float(panel.width), p.y * Float(panel.height), p.z)
+    }
 
     func testParametersAtTimeZero() {
         let animator = LightingAnimator()
         let params = animator.parameters(at: 0, panelSize: panel)
         // Both lights are held at progress=0 because t=0 < startDelay=0.6.
-        // Panel == referencePanelSize, so scale is 1.0 and positions match
-        // the raw keyframe values.
-        XCTAssertEqual(params.light1Position, LightingPalette.warm.positions.first!.position)
+        XCTAssertEqual(params.light1Position, scaled(LightingPalette.warm.positions.first!.position))
         XCTAssertEqual(params.light1Color, LightingPalette.warm.colors.first!.color)
-        XCTAssertEqual(params.light2Position, LightingPalette.cool.positions.first!.position)
+        XCTAssertEqual(params.light2Position, scaled(LightingPalette.cool.positions.first!.position))
         XCTAssertEqual(params.light2Color, LightingPalette.cool.colors.first!.color)
+    }
+
+    /// M16.5: light 1 (warm) starts near the TOP-LEFT corner, light 2
+    /// (cool) near the BOTTOM-RIGHT corner — both slightly inset.
+    func testStartCorners() {
+        let warmStart = LightingPalette.warm.positions.first!.position
+        let coolStart = LightingPalette.cool.positions.first!.position
+        XCTAssertLessThan(warmStart.x, 0.15)
+        XCTAssertLessThan(warmStart.y, 0.15)
+        XCTAssertGreaterThan(coolStart.x, 0.75)
+        XCTAssertGreaterThan(coolStart.y, 0.65)
+    }
+
+    /// M16.5: every keyframe of both lights stays within the normalized
+    /// field bounds so light pools never clip at the screen edges.
+    func testKeyframesStayOnScreen() {
+        let limit = LightingAnimator.maxNormalizedCoordinate
+        for key in LightingPalette.warm.positions + LightingPalette.cool.positions {
+            XCTAssertGreaterThanOrEqual(key.position.x, 0)
+            XCTAssertGreaterThanOrEqual(key.position.y, 0)
+            XCTAssertLessThanOrEqual(key.position.x, limit)
+            XCTAssertLessThanOrEqual(key.position.y, limit)
+        }
     }
 
     func testCyclesAtCycleDuration() {
@@ -26,17 +52,15 @@ final class LightingAnimatorTests: XCTestCase {
         let b = animator.parameters(at: animator.cycleDuration, panelSize: panel)
         // At t=cycleDuration, both lights are at (cycleDuration - startDelay)
         // mod cycleDuration → 119.4s of a 120s cycle, near the wrap point.
-        // panel == referencePanelSize → scale 1.0, so animator output equals
-        // raw keyframe interpolation.
-        let warmEnd = animator.warm.position(at: 119.4 / 120.0)
-        let coolEnd = animator.cool.position(at: 119.4 / 120.0)
+        let warmEnd = scaled(animator.warm.position(at: 119.4 / 120.0))
+        let coolEnd = scaled(animator.cool.position(at: 119.4 / 120.0))
         XCTAssertEqual(b.light1Position, warmEnd)
         XCTAssertEqual(b.light2Position, coolEnd)
         // Sanity: both are close to their respective starts since the keyframes loop.
-        let warmStart = LightingPalette.warm.positions.first!.position
-        let coolStart = LightingPalette.cool.positions.first!.position
-        XCTAssertLessThan(simd_length(b.light1Position - warmStart), 50)
-        XCTAssertLessThan(simd_length(b.light2Position - coolStart), 50)
+        let warmStart = scaled(LightingPalette.warm.positions.first!.position)
+        let coolStart = scaled(LightingPalette.cool.positions.first!.position)
+        XCTAssertLessThan(simd_length(b.light1Position - warmStart), 60)
+        XCTAssertLessThan(simd_length(b.light2Position - coolStart), 60)
         // a is at progress=0 for both lights.
         XCTAssertEqual(a.light1Position, warmStart)
         XCTAssertEqual(a.light2Position, coolStart)
@@ -48,9 +72,9 @@ final class LightingAnimatorTests: XCTestCase {
         let animator = LightingAnimator()
         let earlyT = animator.startDelay / 2.0
         let params = animator.parameters(at: earlyT, panelSize: panel)
-        XCTAssertEqual(params.light1Position, LightingPalette.warm.positions.first!.position)
+        XCTAssertEqual(params.light1Position, scaled(LightingPalette.warm.positions.first!.position))
         XCTAssertEqual(params.light1Color, LightingPalette.warm.colors.first!.color)
-        XCTAssertEqual(params.light2Position, LightingPalette.cool.positions.first!.position)
+        XCTAssertEqual(params.light2Position, scaled(LightingPalette.cool.positions.first!.position))
         XCTAssertEqual(params.light2Color, LightingPalette.cool.colors.first!.color)
     }
 
@@ -58,8 +82,8 @@ final class LightingAnimatorTests: XCTestCase {
     /// t = startDelay + epsilon both have advanced.
     func testParametersAtStartDelayBoundary() {
         let animator = LightingAnimator()
-        let warmStart = LightingPalette.warm.positions.first!.position
-        let coolStart = LightingPalette.cool.positions.first!.position
+        let warmStart = scaled(LightingPalette.warm.positions.first!.position)
+        let coolStart = scaled(LightingPalette.cool.positions.first!.position)
 
         let atBoundary = animator.parameters(at: animator.startDelay, panelSize: panel)
         XCTAssertEqual(atBoundary.light1Position, warmStart)
@@ -80,24 +104,14 @@ final class LightingAnimatorTests: XCTestCase {
         XCTAssertEqual(params.panelSize, custom)
     }
 
-    /// M5.7 §1: the reference panel size is locked at 2300×1300 — the
-    /// dimensions UWP `TilePage.xaml.cs` calibrated keyframe X/Y for.
-    func testReferencePanelSizeConstant() {
-        XCTAssertEqual(LightingAnimator.referencePanelSize, CGSize(width: 2300, height: 1300))
-    }
-
-    /// M5.7 §1: at the same time `t`, halving the panel halves the
-    /// returned light XY positions. Z is panel-independent and stays put.
+    /// M16.5: at the same time `t`, halving the field halves the returned
+    /// light XY positions. Z is field-independent and stays put.
     func testKeyframesScaleWithPanelSize() {
         let animator = LightingAnimator()
         let t: TimeInterval = 25  // mid-cycle, lights well into their orbit
-        let referenceSize = LightingAnimator.referencePanelSize
-        let halfSize = CGSize(
-            width: referenceSize.width / 2,
-            height: referenceSize.height / 2
-        )
+        let halfSize = CGSize(width: panel.width / 2, height: panel.height / 2)
 
-        let full = animator.parameters(at: t, panelSize: referenceSize)
+        let full = animator.parameters(at: t, panelSize: panel)
         let half = animator.parameters(at: t, panelSize: halfSize)
 
         // Light 1 (warm) XY are halved.
@@ -106,10 +120,10 @@ final class LightingAnimatorTests: XCTestCase {
         // Light 2 (cool) XY are halved.
         XCTAssertEqual(half.light2Position.x, full.light2Position.x / 2, accuracy: 0.001)
         XCTAssertEqual(half.light2Position.y, full.light2Position.y / 2, accuracy: 0.001)
-        // Z is NOT scaled — it represents light depth, panel-independent.
+        // Z is NOT scaled — it represents light depth, field-independent.
         XCTAssertEqual(half.light1Position.z, full.light1Position.z, accuracy: 0.001)
         XCTAssertEqual(half.light2Position.z, full.light2Position.z, accuracy: 0.001)
-        // Colors are unaffected by panel scaling.
+        // Colors are unaffected by field scaling.
         XCTAssertEqual(half.light1Color, full.light1Color)
         XCTAssertEqual(half.light2Color, full.light2Color)
     }

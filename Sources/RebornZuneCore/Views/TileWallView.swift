@@ -123,7 +123,15 @@ public struct TileWallView: View {
                     // the tile grid never drifts mid-resize).
                     .frame(width: panel.width, height: panel.height)
                     .saturation(0)
-                    .modifier(OptionalLightingModifier(animator: lightingAnimator, panelSize: panel))
+                    // M16.5: light field = hardware screen (fall back to
+                    // the frozen panel when no screen is injected, e.g.
+                    // iPad/tvOS where window == screen anyway). The wall is
+                    // screen-anchored, so screen-space light coordinates
+                    // line up with wall pixels 1:1.
+                    .modifier(OptionalLightingModifier(
+                        animator: lightingAnimator,
+                        fieldSize: screenSize ?? panel
+                    ))
                     // M16.3: counter-offset by the window's screen position
                     // so the wall + light field are anchored to the hardware
                     // screen, not the window.
@@ -460,14 +468,16 @@ final class TileWallExpansionCache {
 /// the body.
 private struct OptionalLightingModifier: ViewModifier {
     let animator: LightingAnimator?
-    /// M16.4: the frozen wall panel — passed straight through to
-    /// `LightingModifier` so light positions are computed in frozen-panel
-    /// space and never re-scale with the live window size.
-    let panelSize: CGSize
+    /// M16.4/16.5: the light-field size — the hardware screen on macOS,
+    /// falling back to the frozen panel elsewhere. Passed straight through
+    /// to `LightingModifier` so normalized light positions land in screen
+    /// space (which the screen-anchored wall shares), stay put across
+    /// window resizes, and never leave the screen.
+    let fieldSize: CGSize
 
     func body(content: Content) -> some View {
         if let animator {
-            content.modifier(LightingModifier(animator: animator, panelSize: panelSize))
+            content.modifier(LightingModifier(animator: animator, fieldSize: fieldSize))
         } else {
             content
         }

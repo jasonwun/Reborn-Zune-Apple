@@ -16,15 +16,15 @@ import simd
 public struct LightingModifier: ViewModifier {
     public let animator: LightingAnimator
 
-    /// M16.4: explicit panel size override. The modifier's internal
+    /// M16.4: explicit light-field size override. The modifier's internal
     /// `GeometryReader` measures the size *proposed by the parent* — which,
     /// in `TileWallView`, is the live window size, NOT the frozen wall
     /// panel. Using it scaled the light positions with every window
-    /// resize. `TileWallView` now passes its frozen panel size here so the
-    /// light field stays anchored to the hardware screen. When nil
-    /// (standalone `.zuneLighting()` usage) the GeometryReader fallback
-    /// keeps the old behavior.
-    public let panelSize: CGSize?
+    /// resize. `TileWallView` now passes the light-field size (hardware
+    /// screen) here so the light field stays anchored to the screen.
+    /// When nil (standalone `.zuneLighting()` usage) the GeometryReader
+    /// fallback keeps the old behavior.
+    public let fieldSize: CGSize?
 
     /// M16: cap the lighting frame rate. The light cycle is 120 s — far
     /// too slow for the eye to distinguish 15 fps from the display's
@@ -34,17 +34,17 @@ public struct LightingModifier: ViewModifier {
     /// ~9% at 20 fps; see `reports/M16_baseline.md`).
     public static let frameInterval: TimeInterval = 1.0 / 15
 
-    public init(animator: LightingAnimator = LightingAnimator(), panelSize: CGSize? = nil) {
+    public init(animator: LightingAnimator = LightingAnimator(), fieldSize: CGSize? = nil) {
         self.animator = animator
-        self.panelSize = panelSize
+        self.fieldSize = fieldSize
     }
 
     public func body(content: Content) -> some View {
-        if let panelSize {
+        if let fieldSize {
             TimelineView(.animation(minimumInterval: Self.frameInterval)) { context in
                 let parameters = animator.parameters(
                     at: context.date.timeIntervalSinceReferenceDate,
-                    panelSize: panelSize
+                    panelSize: fieldSize
                 )
                 LightingModifier.applyShader(to: content, parameters: parameters)
             }

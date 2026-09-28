@@ -111,22 +111,32 @@ public extension LightKeyframes {
 
 /// The two light palettes used by the original `TilePage`.
 ///
-/// Position values come from `TilePage.xaml.cs → TileRoot_Loaded` verbatim,
-/// using `lightDepth = 200` for the Z component. Color values are converted
-/// from hex to `SIMD3<Float>` using `component / 255` and rounded to three
-/// decimal places to keep test assertions deterministic.
+/// M16.5: position values are **normalized fractions of the light field**
+/// (0...1 of its width/height), no longer the UWP pixel values. The field
+/// is the hardware screen on macOS (the window elsewhere), so the orbit
+/// always stays fully on-screen at any display size — previously the
+/// 2300×1300-calibrated pixel values ran off-screen on smaller panels
+/// (e.g. warm hit x=1563pt on a 1512pt screen, clipping the pool at the
+/// edge, which read as "a bright band at the top/right").
+///
+/// Both schedules are the UWP loop, phase-shifted so light 1 (warm)
+/// STARTS near the top-left corner and light 2 (cool) STARTS near the
+/// bottom-right corner (user direction, M16.5), and clamped to ≤0.88 so
+/// the pools never touch the edges. Z stays 200 (light depth). Color
+/// values are converted from the UWP hex values as before.
 public enum LightingPalette {
-    /// First light — warm orange/green/rust. Animates with a 600ms start
-    /// delay in the UWP original.
+    /// First light — warm orange/green/rust. Loops: top-left → left-middle
+    /// → top-center-left → top-right → top-center-left → left-middle →
+    /// top-left.
     public static let warm = LightKeyframes(
         positions: [
-            .init(progress: 0.00, position: SIMD3<Float>(200,  700, 200)),
-            .init(progress: 0.16, position: SIMD3<Float>(825,   70, 200)),
-            .init(progress: 0.32, position: SIMD3<Float>(2100,  40, 200)),
-            .init(progress: 0.48, position: SIMD3<Float>(825,   70, 200)),
-            .init(progress: 0.64, position: SIMD3<Float>(200,  700, 200)),
-            .init(progress: 0.80, position: SIMD3<Float>(200,  100, 200)),
-            .init(progress: 1.00, position: SIMD3<Float>(200,  700, 200)),
+            .init(progress: 0.00, position: SIMD3<Float>(0.08, 0.08, 200)),
+            .init(progress: 0.20, position: SIMD3<Float>(0.08, 0.54, 200)),
+            .init(progress: 0.36, position: SIMD3<Float>(0.36, 0.05, 200)),
+            .init(progress: 0.52, position: SIMD3<Float>(0.85, 0.04, 200)),
+            .init(progress: 0.68, position: SIMD3<Float>(0.36, 0.05, 200)),
+            .init(progress: 0.84, position: SIMD3<Float>(0.08, 0.54, 200)),
+            .init(progress: 1.00, position: SIMD3<Float>(0.08, 0.08, 200)),
         ],
         colors: [
             // #865c2a
@@ -144,17 +154,18 @@ public enum LightingPalette {
         ]
     )
 
-    /// Second light — purple/blue/green. Starts immediately (no delay) in
-    /// the UWP original.
+    /// Second light — purple/blue/green. Loops: bottom-right → bottom-left
+    /// → bottom-right → right-middle → top-right → right-middle →
+    /// bottom-right.
     public static let cool = LightKeyframes(
         positions: [
-            .init(progress: 0.00, position: SIMD3<Float>(2300, 700, 200)),
-            .init(progress: 0.16, position: SIMD3<Float>(1800, 900, 200)),
-            .init(progress: 0.32, position: SIMD3<Float>(400, 1200, 200)),
-            .init(progress: 0.48, position: SIMD3<Float>(1800, 900, 200)),
-            .init(progress: 0.64, position: SIMD3<Float>(2300, 700, 200)),
-            .init(progress: 0.80, position: SIMD3<Float>(2300, 100, 200)),
-            .init(progress: 1.00, position: SIMD3<Float>(2300, 700, 200)),
+            .init(progress: 0.00, position: SIMD3<Float>(0.82, 0.74, 200)),
+            .init(progress: 0.16, position: SIMD3<Float>(0.17, 0.85, 200)),
+            .init(progress: 0.32, position: SIMD3<Float>(0.82, 0.74, 200)),
+            .init(progress: 0.48, position: SIMD3<Float>(0.88, 0.54, 200)),
+            .init(progress: 0.64, position: SIMD3<Float>(0.88, 0.08, 200)),
+            .init(progress: 0.80, position: SIMD3<Float>(0.88, 0.54, 200)),
+            .init(progress: 1.00, position: SIMD3<Float>(0.82, 0.74, 200)),
         ],
         colors: [
             // #81268b

@@ -44,19 +44,22 @@ final class LightKeyframesTests: XCTestCase {
         XCTAssertEqual(midColor.z, 0.263, accuracy: 0.01)
     }
 
-    func testWarmPalettePositionsMatchUWP() {
+    func testWarmPalettePositionsNormalized() {
+        // M16.5: positions are normalized field fractions; warm starts
+        // near the top-left corner and loops back there.
         let positions = LightingPalette.warm.positions.map(\.position)
-        XCTAssertEqual(positions[0], SIMD3<Float>(200, 700, 200))
-        XCTAssertEqual(positions[1], SIMD3<Float>(825, 70, 200))
-        XCTAssertEqual(positions[2], SIMD3<Float>(2100, 40, 200))
-        XCTAssertEqual(positions[6], SIMD3<Float>(200, 700, 200))
+        XCTAssertEqual(positions[0], SIMD3<Float>(0.08, 0.08, 200))
+        XCTAssertEqual(positions[1], SIMD3<Float>(0.08, 0.54, 200))
+        XCTAssertEqual(positions[2], SIMD3<Float>(0.36, 0.05, 200))
+        XCTAssertEqual(positions[6], SIMD3<Float>(0.08, 0.08, 200))
     }
 
-    func testCoolPalettePositionsMatchUWP() {
+    func testCoolPalettePositionsNormalized() {
+        // M16.5: cool starts near the bottom-right corner.
         let positions = LightingPalette.cool.positions.map(\.position)
-        XCTAssertEqual(positions[0], SIMD3<Float>(2300, 700, 200))
-        XCTAssertEqual(positions[2], SIMD3<Float>(400, 1200, 200))
-        XCTAssertEqual(positions[5], SIMD3<Float>(2300, 100, 200))
+        XCTAssertEqual(positions[0], SIMD3<Float>(0.82, 0.74, 200))
+        XCTAssertEqual(positions[2], SIMD3<Float>(0.82, 0.74, 200))
+        XCTAssertEqual(positions[5], SIMD3<Float>(0.88, 0.54, 200))
     }
 
     // MARK: - Interpolation behavior
@@ -121,10 +124,10 @@ final class LightKeyframesTests: XCTestCase {
     }
 
     func testWarmPalettePositionAtSecondKeyframe() {
-        // 0.16 is exactly a key — interpolation should hit it exactly.
-        let p = LightingPalette.warm.position(at: 0.16)
-        XCTAssertEqual(p.x, 825, accuracy: 0.01)
-        XCTAssertEqual(p.y, 70, accuracy: 0.01)
+        // 0.20 is exactly a key — interpolation should hit it exactly.
+        let p = LightingPalette.warm.position(at: 0.20)
+        XCTAssertEqual(p.x, 0.08, accuracy: 0.0001)
+        XCTAssertEqual(p.y, 0.54, accuracy: 0.0001)
         XCTAssertEqual(p.z, 200, accuracy: 0.01)
     }
 }
