@@ -14,13 +14,21 @@ import simd
 public struct LightingModifier: ViewModifier {
     public let animator: LightingAnimator
 
+    /// M16: cap the lighting frame rate. The light cycle is 120 s — far
+    /// too slow for the eye to distinguish 15 fps from the display's
+    /// native 60/120 Hz — while every `TimelineView(.animation)` tick
+    /// re-applies a full-screen Metal `colorEffect` over the whole tile
+    /// wall (measured: 22.6% idle CPU at native rate, ~13% at 30 fps,
+    /// ~9% at 20 fps; see `reports/M16_baseline.md`).
+    public static let frameInterval: TimeInterval = 1.0 / 15
+
     public init(animator: LightingAnimator = LightingAnimator()) {
         self.animator = animator
     }
 
     public func body(content: Content) -> some View {
         GeometryReader { geo in
-            TimelineView(.animation) { context in
+            TimelineView(.animation(minimumInterval: Self.frameInterval)) { context in
                 let parameters = animator.parameters(
                     at: context.date.timeIntervalSinceReferenceDate,
                     panelSize: geo.size

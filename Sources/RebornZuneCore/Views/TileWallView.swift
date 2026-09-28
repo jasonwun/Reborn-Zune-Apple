@@ -54,6 +54,14 @@ public struct TileWallView: View {
     /// but does not reshuffle on window resize.
     @State private var expansionSeed: UInt64 = .random(in: 0..<UInt64.max)
 
+    /// M16: memoizes the expanded tile array. Without it, every body
+    /// re-evaluation (flip pulses every 5 s, per-point resize drags)
+    /// re-ran `expanded(...)` and — because synthesized entries used
+    /// fresh random UUIDs — destroyed and rebuilt the entire wall,
+    /// replaying every entry animation. The cache returns the same
+    /// array instance while the panel's cell grid is unchanged.
+    @State private var expansionCache = TileWallExpansionCache()
+
     public var body: some View {
         ZStack {
             // M5.26: background grey (~0.20 luminance) matches the
@@ -70,7 +78,7 @@ public struct TileWallView: View {
             // it. Without this the wall ends after the source tiles run out
             // and leaves visible empty area below.
             GeometryReader { geo in
-                let renderTiles = Self.expanded(
+                let renderTiles = expansionCache.tiles(
                     source: tiles,
                     forPanelSize: geo.size,
                     unitSize: unitSize,
@@ -143,9 +151,41 @@ public struct TileWallView: View {
                 }
                 return primary
             }()
-            out.append(TileWallEntry(images: [primary, flip], span: span))
+            // M16: deterministic id derived from (seed, index). Regenerating
+            // the expansion (e.g. the window grew and the target rose)
+            // reproduces the identical prefix — existing tiles keep their
+            // identities and only the appended tail is new.
+            out.append(TileWallEntry(
+                id: expansionID(seed: seed, index: out.count),
+                images: [primary, flip],
+                span: span
+            ))
         }
         return out
+    }
+
+    /// M16: deterministic UUID for a synthesized expansion tile. Same
+    /// (seed, index) always yields the same UUID; different seeds or
+    /// indices practically never collide within one wall. SplitMix64-style
+    /// mixing — not cryptographic, just stable and well-distributed.
+    static func expansionID(seed: UInt64, index: Int) -> UUID {
+        func mix(_ x: UInt64) -> UInt64 {
+            var z = x &+ 0x9E3779B97F4A7C15
+            z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
+            z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
+            return z ^ (z >> 31)
+        }
+        let a = mix(seed)
+        let b = mix(seed ^ mix(UInt64(truncatingIfNeeded: index) &+ 1))
+        var bytes = [UInt8](repeating: 0, count: 16)
+        withUnsafeBytes(of: a.bigEndian) { bytes.replaceSubrange(0..<8, with: $0) }
+        withUnsafeBytes(of: b.bigEndian) { bytes.replaceSubrange(8..<16, with: $0) }
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
     }
 
     @ViewBuilder
@@ -299,6 +339,65 @@ private struct TileEntryWrapper<Content: View>: View {
                 }
             }
     }
+}
+
+// MARK: - Expansion cache
+
+/// M16: memoizes `TileWallView.expanded(...)`. Held as `@State` in the
+/// wall view; being a reference type, cache hits don't mutate view state
+/// during body evaluation.
+///
+/// The key is the panel's *cell grid* (cellsW × cellsH at the current
+/// `unitSize`), not the pixel size — so a resize drag only recomputes
+/// when the window crosses a 50pt cell boundary, and flip pulses /
+/// unrelated re-evaluations are pure cache hits returning the same
+/// array instance (stable identities → no view churn).
+final class TileWallExpansionCache {
+    struct Key: Equatable {
+        var cellsW: Int
+        var cellsH: Int
+        var unitSize: CGFloat
+        var seed: UInt64
+        var sourceCount: Int
+        var sourceFirstID: UUID?
+        var sourceLastID: UUID?
+    }
+
+    private var cached: (key: Key, tiles: [TileWallEntry])?
+
+    func tiles(
+        source: [TileWallEntry],
+        forPanelSize panelSize: CGSize,
+        unitSize: CGFloat,
+        seed: UInt64
+    ) -> [TileWallEntry] {
+        guard !source.isEmpty, unitSize > 0 else { return source }
+        let key = Key(
+            cellsW: max(1, Int((panelSize.width / unitSize).rounded(.up))),
+            cellsH: max(1, Int((panelSize.height / unitSize).rounded(.up))),
+            unitSize: unitSize,
+            seed: seed,
+            sourceCount: source.count,
+            sourceFirstID: source.first?.id,
+            sourceLastID: source.last?.id
+        )
+        if let cached, cached.key == key {
+            lastLookupWasHit = true
+            return cached.tiles
+        }
+        let expanded = TileWallView.expanded(
+            source: source,
+            forPanelSize: panelSize,
+            unitSize: unitSize,
+            seed: seed
+        )
+        cached = (key, expanded)
+        lastLookupWasHit = false
+        return expanded
+    }
+
+    /// Test hook: whether the last lookup hit the cache.
+    private(set) var lastLookupWasHit = false
 }
 
 // MARK: - Optional lighting modifier
