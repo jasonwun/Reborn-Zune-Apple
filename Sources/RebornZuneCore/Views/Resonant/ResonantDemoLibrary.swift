@@ -1,4 +1,8 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+import ImageIO
+#endif
 
 /// Demo library mirroring the prototype's `data.js` catalog so the
 /// Resonant UI can render with content during development / screenshot
@@ -42,7 +46,13 @@ public enum ResonantDemoLibrary {
 
     public static func makeMusic() -> [Music] {
         var out: [Music] = []
-        for seed in seeds {
+        for (albumIndex, seed) in seeds.enumerated() {
+            // M16 follow-up: every album gets a synthesized cover so the
+            // demo library exercises the real artwork path. Previously
+            // `artworkData` was nil for all 129 tracks — the Now Playing
+            // tile wall rendered solid black, hiding both the tiles and
+            // the lighting effect over them.
+            let artwork = synthesizedArtwork(albumIndex: albumIndex)
             let perTrack = seed.runtimeSec / Double(seed.trackCount)
             for n in 0..<seed.trackCount {
                 let titleIdx = (abs(seed.id.hashValue) &+ n * 31) % trackPool.count
@@ -57,10 +67,71 @@ public enum ResonantDemoLibrary {
                     albumTitle: seed.title,
                     year: seed.year,
                     duration: perTrack,
-                    artworkData: nil
+                    artworkData: artwork
                 ))
             }
         }
         return out
+    }
+
+    /// Synthesize one album cover: a diagonal two-tone gradient with a
+    /// golden-angle-scattered hue, so each of the 12 demo albums has a
+    /// distinct identity and the (desaturating) tile wall gets covers
+    /// with real luminance structure for the lighting shader to play on.
+    static func synthesizedArtwork(albumIndex: Int) -> Data? {
+        let side = 512
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(
+            data: nil,
+            width: side,
+            height: side,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+
+        let hue = (Double(albumIndex) * 0.618033988749895).truncatingRemainder(dividingBy: 1)
+        let bright = hsb(hue: hue, saturation: 0.55, brightness: 0.85)
+        let dark = hsb(hue: (hue + 0.13).truncatingRemainder(dividingBy: 1), saturation: 0.65, brightness: 0.22)
+        let colors = [
+            CGColor(red: bright.0, green: bright.1, blue: bright.2, alpha: 1),
+            CGColor(red: dark.0, green: dark.1, blue: dark.2, alpha: 1),
+        ] as CFArray
+        if let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: [0, 1]) {
+            // Vary the gradient angle per album.
+            let angle = Double(albumIndex) * .pi / 6
+            let s = Double(side)
+            context.drawLinearGradient(
+                gradient,
+                start: CGPoint(x: s / 2 - cos(angle) * s, y: s / 2 - sin(angle) * s),
+                end: CGPoint(x: s / 2 + cos(angle) * s, y: s / 2 + sin(angle) * s),
+                options: [.drawsBeforeStartLocation, .drawsAfterEndLocation]
+            )
+        }
+        guard let image = context.makeImage() else { return nil }
+        let data = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(data, "public.png" as CFString, 1, nil),
+              ({
+                  CGImageDestinationAddImage(destination, image, nil)
+                  return CGImageDestinationFinalize(destination)
+              }()) else { return nil }
+        return data as Data
+    }
+
+    private static func hsb(hue h: Double, saturation s: Double, brightness v: Double) -> (Double, Double, Double) {
+        let i = Int(floor(h * 6))
+        let f = h * 6 - floor(h * 6)
+        let p = v * (1 - s)
+        let q = v * (1 - f * s)
+        let t = v * (1 - (1 - f) * s)
+        switch ((i % 6) + 6) % 6 {
+        case 0: return (v, t, p)
+        case 1: return (q, v, p)
+        case 2: return (p, v, t)
+        case 3: return (p, q, v)
+        case 4: return (t, p, v)
+        default: return (v, p, q)
+        }
     }
 }
