@@ -74,41 +74,32 @@ public enum ResonantDemoLibrary {
         return out
     }
 
-    /// Synthesize one album cover: a diagonal two-tone gradient with a
-    /// golden-angle-scattered hue, so each of the 12 demo albums has a
-    /// distinct identity and the (desaturating) tile wall gets covers
-    /// with real luminance structure for the lighting shader to play on.
+    /// Synthesize one album cover: a FLAT per-album color. M5.20's lesson
+    /// (re-learned the hard way in M16): any internal gradient survives
+    /// desaturation as a luminance gradient, which reads as "each tile has
+    /// its own highlight and shadow" and destroys the illusion of one wall
+    /// under unified global lighting. Flat fills let the wall-level
+    /// lighting shader own all shading. Brightness/saturation vary per
+    /// album so the desaturated wall still has luminance variety.
     static func synthesizedArtwork(albumIndex: Int) -> Data? {
         let side = 512
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
         guard let context = CGContext(
             data: nil,
             width: side,
             height: side,
             bitsPerComponent: 8,
             bytesPerRow: 0,
-            space: colorSpace,
+            space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return nil }
 
         let hue = (Double(albumIndex) * 0.618033988749895).truncatingRemainder(dividingBy: 1)
-        let bright = hsb(hue: hue, saturation: 0.55, brightness: 0.85)
-        let dark = hsb(hue: (hue + 0.13).truncatingRemainder(dividingBy: 1), saturation: 0.65, brightness: 0.22)
-        let colors = [
-            CGColor(red: bright.0, green: bright.1, blue: bright.2, alpha: 1),
-            CGColor(red: dark.0, green: dark.1, blue: dark.2, alpha: 1),
-        ] as CFArray
-        if let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: [0, 1]) {
-            // Vary the gradient angle per album.
-            let angle = Double(albumIndex) * .pi / 6
-            let s = Double(side)
-            context.drawLinearGradient(
-                gradient,
-                start: CGPoint(x: s / 2 - cos(angle) * s, y: s / 2 - sin(angle) * s),
-                end: CGPoint(x: s / 2 + cos(angle) * s, y: s / 2 + sin(angle) * s),
-                options: [.drawsBeforeStartLocation, .drawsAfterEndLocation]
-            )
-        }
+        let brightness = 0.30 + 0.30 * (Double((albumIndex * 7) % 5) / 4) // 0.30…0.60
+        let saturation = 0.45 + 0.25 * (Double((albumIndex * 3) % 3) / 2) // 0.45…0.70
+        let rgb = hsb(hue: hue, saturation: saturation, brightness: brightness)
+        context.setFillColor(red: rgb.0, green: rgb.1, blue: rgb.2, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: side, height: side))
+
         guard let image = context.makeImage() else { return nil }
         let data = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(data, "public.png" as CFString, 1, nil),

@@ -62,6 +62,14 @@ public struct TileWallView: View {
     /// array instance while the panel's cell grid is unchanged.
     @State private var expansionCache = TileWallExpansionCache()
 
+    /// M16.1: the wall's arrangement is computed ONCE, the first time the
+    /// view lays out after entering the page, and frozen afterwards.
+    /// Window resizes must never re-flow the tiles — the wall is a fixed
+    /// backdrop that the window reveals more or less of (clipped at the
+    /// edges), matching the user's model of the UWP original. A fresh
+    /// page entry (new view identity → fresh @State) recomputes.
+    @State private var frozenPanelSize: CGSize?
+
     public var body: some View {
         ZStack {
             // M5.26: background grey (~0.20 luminance) matches the
@@ -78,15 +86,29 @@ public struct TileWallView: View {
             // it. Without this the wall ends after the source tiles run out
             // and leaves visible empty area below.
             GeometryReader { geo in
+                let panel = frozenPanelSize ?? geo.size
                 let renderTiles = expansionCache.tiles(
                     source: tiles,
-                    forPanelSize: geo.size,
+                    forPanelSize: panel,
                     unitSize: unitSize,
                     seed: expansionSeed
                 )
                 tileLayout(tiles: renderTiles)
+                    // M16.1: pin the laid-out wall to the frozen panel so a
+                    // later window resize cannot re-flow the arrangement;
+                    // the outer frame + clip decide how much of the wall
+                    // the current window reveals (anchored top-leading, so
+                    // the tile grid never drifts mid-resize).
+                    .frame(width: panel.width, height: panel.height)
                     .saturation(0)
                     .modifier(OptionalLightingModifier(animator: lightingAnimator))
+                    .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+                    .clipped()
+                    .onAppear {
+                        if frozenPanelSize == nil {
+                            frozenPanelSize = geo.size
+                        }
+                    }
             }
         }
         .onAppear {
