@@ -27,7 +27,7 @@ import Observation
 /// "first 80% of all tiles" rule concentrated every flip in the wall's
 /// top-left band — a region the window frequently does not cover, which
 /// made the wall look dead. The provider is evaluated at each tick
-/// (cheap: ~1k rect-intersection tests every 5 s) and never touches
+/// (cheap: ~1k rect-intersection tests per tick) and never touches
 /// SwiftUI state, so window drags stay out of the update loop. Returning
 /// nil falls back to the default first-80%-of-all pool.
 @MainActor
@@ -48,8 +48,10 @@ public final class TileFlipCoordinator {
     public init() {}
 
     /// Start the flip scheduler. Picks one random tile every `period`
-    /// seconds from the pool (default: the first 80% of `tileCount`,
-    /// matching UWP behavior) and increments its slot in `flipPulses`.
+    /// seconds (± `jitter`, resampled per tick — M17.6: the user wanted
+    /// the cadence to feel organic rather than metronomic) from the pool
+    /// (default: the first 80% of `tileCount`, matching UWP behavior) and
+    /// increments its slot in `flipPulses`.
     ///
     /// Idempotent: calling `start` while another schedule is running
     /// cancels the previous task and resets `flipPulses` to all-zero of
@@ -57,6 +59,7 @@ public final class TileFlipCoordinator {
     public func start(
         tileCount: Int,
         period: TimeInterval = 5.0,
+        jitter: TimeInterval = 0,
         pool: (@MainActor () -> [Int]?)? = nil
     ) {
         task?.cancel()
@@ -67,10 +70,14 @@ public final class TileFlipCoordinator {
             return
         }
         let eligibleCount = max(1, Int(Double(tileCount) * 0.8))
-        let nanos = UInt64(period * 1_000_000_000)
         task = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: nanos)
+                var wait = period
+                if jitter > 0 {
+                    wait += Double.random(in: -jitter...jitter)
+                }
+                let tickNanos = UInt64(max(0.05, wait) * 1_000_000_000)
+                try? await Task.sleep(nanoseconds: tickNanos)
                 if Task.isCancelled { return }
                 guard let self else { return }
                 // Snapshot the current slate; a `start` reentry between

@@ -18,9 +18,9 @@ final class CanvasTileWallTests: XCTestCase {
     }
 
     func testFlipMidwayOpacityAndScale() {
-        // p = 0.45: fade progress (0.45-0.25)/0.2 = 1 → fully faded out;
-        // rotation progress 0.45/0.4 clamped to 1 → scaleX = 0 (edge-on).
-        let s = TileFlipModel.state(at: 0.45, imageCount: 3, baseIndex: 0)
+        // p = 0.495: fade progress (0.495-0.275)/0.22 = 1 → fully faded out;
+        // rotation progress 0.495/0.44 clamped to 1 → scaleX = 0 (edge-on).
+        let s = TileFlipModel.state(at: 0.495, imageCount: 3, baseIndex: 0)
         XCTAssertEqual(s.opacity, 0, accuracy: 1e-9)
         XCTAssertEqual(s.scaleX, 0, accuracy: 1e-9)
         XCTAssertEqual(s.imageIndex, 0)
@@ -29,8 +29,8 @@ final class CanvasTileWallTests: XCTestCase {
 
     func testFlipScaleXDecreasesMonotonicallyToZero() {
         var prev: Double = 1.1
-        for step in 0...40 {
-            let p = Double(step) * 0.01  // 0 … 0.4
+        for step in 0...44 {
+            let p = Double(step) * 0.01  // 0 … 0.44
             let s = TileFlipModel.state(at: p, imageCount: 2, baseIndex: 0)
             XCTAssertLessThanOrEqual(s.scaleX, prev, "p=\(p)")
             prev = s.scaleX
@@ -39,8 +39,8 @@ final class CanvasTileWallTests: XCTestCase {
     }
 
     func testFlipSwapsImageAtHalfSecond() {
-        let before = TileFlipModel.state(at: 0.49, imageCount: 4, baseIndex: 2)
-        let after = TileFlipModel.state(at: 0.51, imageCount: 4, baseIndex: 2)
+        let before = TileFlipModel.state(at: 0.54, imageCount: 4, baseIndex: 2)
+        let after = TileFlipModel.state(at: 0.56, imageCount: 4, baseIndex: 2)
         XCTAssertEqual(before.imageIndex, 2)
         XCTAssertEqual(after.imageIndex, 3)
         // After the swap the tile fades back in from zero at full width.
@@ -55,8 +55,8 @@ final class CanvasTileWallTests: XCTestCase {
     }
 
     func testFlipCompletesAtTotalDuration() {
-        let notYet = TileFlipModel.state(at: 1.59, imageCount: 2, baseIndex: 0)
-        let doneNow = TileFlipModel.state(at: 1.6, imageCount: 2, baseIndex: 0)
+        let notYet = TileFlipModel.state(at: 1.75, imageCount: 2, baseIndex: 0)
+        let doneNow = TileFlipModel.state(at: 1.76, imageCount: 2, baseIndex: 0)
         XCTAssertFalse(notYet.done)
         XCTAssertTrue(doneNow.done)
         XCTAssertEqual(doneNow.opacity, 1, accuracy: 1e-9)

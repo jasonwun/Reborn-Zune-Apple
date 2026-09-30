@@ -36,11 +36,13 @@ import AppKit
 /// - Same grayscale input (`GrayscaleImage` inside `expanded(...)`)
 ///   and the same `zuneLighting` Metal shader with the same per-frame
 ///   `LightingAnimator` parameters.
-/// - Same flip choreography as `TileView.runFlip`: 0.4 s rotate-out to
-///   -90° (drawn as a horizontal squash), fade-out 1→0 over 0.2 s after
-///   a 0.25 s delay, image swap at 0.5 s, 1.1 s linear fade-in. Driven by
-///   the same `TileFlipCoordinator` (viewport-aware pool, UWP 5 s cadence,
-///   first-80%-of-visible rule).
+/// - Same flip choreography as `TileView.runFlip`: 0.44 s rotate-out to
+///   -90° (drawn as a horizontal squash), fade-out 1→0 over 0.22 s after
+///   a 0.275 s delay, image swap at 0.55 s, 1.21 s linear fade-in (M17.5:
+///   all timings ×1.1, ~10% slower at the user's request). Driven by
+///   the same `TileFlipCoordinator` (viewport-aware pool, 12 s ± 2.5 s
+///   jittered cadence — M17.6, and flips are suppressed until the entry
+///   wave completes, first-80%-of-visible rule).
 /// - Same entry waves: 30 batches × 50 ms step, opacity 0→1 easeOut over
 ///   0.45 s, scale 0.7→1 easeOut over 0.6 s, around the tile center.
 /// - Same border quirk: `TileView` applies its `.overlay(border)` AFTER
@@ -340,6 +342,17 @@ public struct CanvasTileWallView: View {
                 )
                 guard entryOpacity > 0.001 else { continue }
 
+                // M17.5: a flipping tile reads as a black tile with the
+                // picture mounted on it — the picture rotates/fades while
+                // the black body stays put. Without this the squash/fade
+                // revealed the bare wall (the static layer skips flipping
+                // tiles), reading as a hole showing the background.
+                if activeFlips[index] != nil {
+                    var backing = ctx
+                    backing.opacity = entryOpacity
+                    backing.fill(Path(rect), with: .color(.black))
+                }
+
                 // Image + flip state.
                 let entry = renderTiles[index]
                 let imageCount = entry.images.count
@@ -435,12 +448,16 @@ public struct CanvasTileWallView: View {
     }
 
     private func triggerFlip(index: Int, renderTiles: [TileWallEntry]) {
+        // M17.6: no flips until the entry wave has finished — the wall
+        // settles first, then starts breathing (user request).
+        guard !entryAnimating else { return }
         guard index < renderTiles.count else { return }
         let imageCount = renderTiles[index].images.count
         // Static tiles (≤1 image) skip — there is nothing to swap to.
         guard imageCount > 1 else { return }
         // A tile already mid-flip ignores re-triggers (the old per-view
-        // model cancelled and restarted; with pulses 5 s apart and a 1.6 s
+        // model cancelled and restarted; with pulses ~12 s apart and a
+        // 1.76 s
         // flip this practically never happens).
         guard activeFlips[index] == nil else { return }
         let base = (completedFlips[index] ?? 0) % imageCount
@@ -469,15 +486,18 @@ public struct CanvasTileWallView: View {
     @MainActor
     private func startFlipCoordinator(totalTiles: Int) {
         // Debug override: REBORN_ZUNE_DEBUG_FLIP_PERIOD=<seconds>.
+        // M17.6: default cadence 5 s → 12 s with ±2.5 s uniform jitter —
+        // user asked for 30% fewer flips, then settled on a slower,
+        // non-metronomic rhythm.
         let period: TimeInterval = {
             if let s = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_FLIP_PERIOD"],
                let v = Double(s), v > 0 { return v }
-            return 5.0
+            return 12.0
         }()
         #if os(macOS)
         let cache = expansionCache
         let unit = unitSize
-        flipCoordinator.start(tileCount: totalTiles, period: period) {
+        flipCoordinator.start(tileCount: totalTiles, period: period, jitter: 2.5) {
             guard let viewport = WallViewport.current() else { return nil }
             let visible = TileWallView.visibleTileIndices(
                 placements: cache.placements,
@@ -489,7 +509,7 @@ public struct CanvasTileWallView: View {
             return Array(visible.prefix(eligible))
         }
         #else
-        flipCoordinator.start(tileCount: totalTiles, period: period)
+        flipCoordinator.start(tileCount: totalTiles, period: period, jitter: 2.5)
         #endif
     }
 }
@@ -553,13 +573,14 @@ struct StaticWallLayer: View, Equatable {
 // MARK: - Pure animation models (unit-tested)
 
 /// Flip choreography, mirroring `TileView.runFlip` timing exactly.
+/// M17.5: all durations ×1.1 — user asked for a ~10% slower flip.
 enum TileFlipModel {
-    static let rotateOutDuration: TimeInterval = 0.4
-    static let fadeOutDelay: TimeInterval = 0.25
-    static let fadeOutDuration: TimeInterval = 0.2
-    static let swapAt: TimeInterval = 0.5
-    static let fadeInDuration: TimeInterval = 1.1
-    static let total: TimeInterval = 1.6
+    static let rotateOutDuration: TimeInterval = 0.44
+    static let fadeOutDelay: TimeInterval = 0.275
+    static let fadeOutDuration: TimeInterval = 0.22
+    static let swapAt: TimeInterval = 0.55
+    static let fadeInDuration: TimeInterval = 1.21
+    static let total: TimeInterval = 1.76
 
     /// Progress `p` is seconds since the flip started. Returns the image
     /// opacity multiplier, horizontal squash (rotation about the Y axis
@@ -574,14 +595,14 @@ enum TileFlipModel {
             return (1, 1, baseIndex, true)
         }
         if p < Self.swapAt {
-            // OUT: rotate 0 → -90° over 0.4 s; opacity 1 → 0 over 0.2 s
-            // after a 0.25 s delay.
+            // OUT: rotate 0 → -90° over 0.44 s; opacity 1 → 0 over 0.22 s
+            // after a 0.275 s delay.
             let rotProgress = min(max(p / Self.rotateOutDuration, 0), 1)
             let scaleX = max(0, cos(rotProgress * .pi / 2))
             let fadeProgress = min(max((p - Self.fadeOutDelay) / Self.fadeOutDuration, 0), 1)
             return (1 - fadeProgress, scaleX, baseIndex, false)
         }
-        // SWAP happened at 0.5 s (invisible): new image fades in over 1.1 s.
+        // SWAP happened at 0.55 s (invisible): new image fades in over 1.21 s.
         let next = (baseIndex + 1) % imageCount
         let fadeIn = min(max((p - Self.swapAt) / Self.fadeInDuration, 0), 1)
         return (fadeIn, 1, next, p >= Self.total)
@@ -736,7 +757,7 @@ final class DisplayClock: NSObject {
         // The vended link is NOT scheduled — it must be added to a run
         // loop explicitly or it never fires.
         if let link {
-            // 40 fps cap (user preference): tile flips are a 0.4 s squash
+            // 40 fps cap (user preference): tile flips are a 0.44 s squash
             // + fade and the entry wave a slow ease-out — 40 fps reads as
             // smooth for both while still cutting the per-frame
             // re-eval/shader cost vs 60.

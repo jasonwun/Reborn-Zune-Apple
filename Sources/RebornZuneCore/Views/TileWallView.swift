@@ -285,16 +285,17 @@ public struct TileWallView: View {
     @MainActor
     private func startFlipCoordinator(totalTiles: Int) {
         // Debug override: REBORN_ZUNE_DEBUG_FLIP_PERIOD=<seconds> shortens
-        // the UWP 5 s flip cadence so flip behavior is easy to verify by eye.
+        // the flip cadence so flip behavior is easy to verify by eye.
+        // M17.6: default 5 s → 12 s with ±2.5 s jitter (user request).
         let period: TimeInterval = {
             if let s = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_FLIP_PERIOD"],
                let v = Double(s), v > 0 { return v }
-            return 5.0
+            return 12.0
         }()
         #if os(macOS)
         let cache = expansionCache
         let unit = unitSize
-        flipCoordinator.start(tileCount: totalTiles, period: period) {
+        flipCoordinator.start(tileCount: totalTiles, period: period, jitter: 2.5) {
             guard let viewport = WallViewport.current() else { return nil }
             let visible = TileWallView.visibleTileIndices(
                 placements: cache.placements,
@@ -307,7 +308,7 @@ public struct TileWallView: View {
             return Array(visible.prefix(eligible))
         }
         #else
-        flipCoordinator.start(tileCount: totalTiles, period: period)
+        flipCoordinator.start(tileCount: totalTiles, period: period, jitter: 2.5)
         #endif
     }
 

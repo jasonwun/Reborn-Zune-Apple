@@ -54,6 +54,9 @@ public struct TileView: View {
         // overlap (Bug 2 reported on macOS narrow window).
         GeometryReader { geo in
             ZStack {
+                // M17.5: the black tile body stays put while the picture
+                // flips — the squash/fade reveals the tile, not the wall
+                // behind it (matches CanvasTileWallView's backing fill).
                 Color.black
                 if let image = currentImage {
                     Image(decorative: image, scale: 1)
@@ -61,13 +64,13 @@ public struct TileView: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(width: geo.size.width, height: geo.size.height)
                         .clipped()
+                        .opacity(opacity)
+                        .rotation3DEffect(.degrees(rotationDegrees), axis: (x: 0, y: 1, z: 0))
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .clipped()
         }
-        .opacity(opacity)
-        .rotation3DEffect(.degrees(rotationDegrees), axis: (x: 0, y: 1, z: 0))
         .overlay(
             // M5.26: thicker border (2 px) and grey color matches the
             // Zune-original recording's visible inter-tile gridlines.
@@ -110,16 +113,18 @@ public struct TileView: View {
         //   SWAP (invisible): image to next, rotation jumps to 0, opacity stays 0
         //   IN:  opacity 0→1 over 1300ms (no rotation animation)
         // Total: 1800 ms.
+        // M17.5: all durations ×1.1 — user asked for a ~10% slower flip
+        // (440/220@275/550ms wait; 1210ms fade-in; total 1760ms).
 
         // OUT PHASE — rotate the opposite direction (0 → -90°) so the tile
         // appears to flip away from the viewer in the reversed sense.
-        withAnimation(.linear(duration: 0.4)) {
+        withAnimation(.linear(duration: 0.44)) {
             rotationDegrees = -90
         }
-        withAnimation(.linear(duration: 0.2).delay(0.25)) {
+        withAnimation(.linear(duration: 0.22).delay(0.275)) {
             opacity = 0
         }
-        try? await Task.sleep(nanoseconds: 500_000_000)
+        try? await Task.sleep(nanoseconds: 550_000_000)
         if Task.isCancelled { return }
 
         // SWAP — at this point opacity == 0 so the rotation reset is invisible.
@@ -140,9 +145,9 @@ public struct TileView: View {
         }
 
         // IN PHASE — pure opacity fade.
-        withAnimation(.linear(duration: 1.1)) {
+        withAnimation(.linear(duration: 1.21)) {
             opacity = 1
         }
-        try? await Task.sleep(nanoseconds: 1_100_000_000)
+        try? await Task.sleep(nanoseconds: 1_210_000_000)
     }
 }
