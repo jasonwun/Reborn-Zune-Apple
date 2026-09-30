@@ -118,4 +118,45 @@ final class CanvasTileWallTests: XCTestCase {
         XCTAssertGreaterThan(s.opacity, 0.3)
         XCTAssertLessThan(s.opacity, 1)
     }
+
+    // MARK: - WallMembershipModel (M17.1 layer split)
+
+    func testMembershipBeforeWaveIsHidden() {
+        let m = WallMembershipModel.classify(
+            entryElapsed: 0.2, delay: 0.3, entryDuration: 0.6, flipping: false
+        )
+        XCTAssertEqual(m, .hidden)
+    }
+
+    func testMembershipDuringEntryIsAnimated() {
+        let m = WallMembershipModel.classify(
+            entryElapsed: 0.5, delay: 0.3, entryDuration: 0.6, flipping: false
+        )
+        XCTAssertEqual(m, .animated)
+    }
+
+    func testMembershipAfterEntryIsSettled() {
+        let m = WallMembershipModel.classify(
+            entryElapsed: 1.0, delay: 0.3, entryDuration: 0.6, flipping: false
+        )
+        XCTAssertEqual(m, .settled)
+    }
+
+    func testMembershipFlippingOverridesSettled() {
+        // A settled tile mid-flip must move to the animated layer (the
+        // static layer hides it so the flip draws over empty space).
+        let m = WallMembershipModel.classify(
+            entryElapsed: 5.0, delay: 0.3, entryDuration: 0.6, flipping: true
+        )
+        XCTAssertEqual(m, .animated)
+    }
+
+    func testMembershipFlippingBeforeEntryIsNotSettled() {
+        // Degenerate case: a flip reaching a tile before its wave — the
+        // tile must not pop into the static layer.
+        let m = WallMembershipModel.classify(
+            entryElapsed: 0.1, delay: 0.3, entryDuration: 0.6, flipping: true
+        )
+        XCTAssertEqual(m, .animated)
+    }
 }

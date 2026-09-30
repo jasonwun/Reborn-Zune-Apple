@@ -180,7 +180,22 @@ private struct WindowChromeConfigurator: NSViewRepresentable {
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.styleMask.insert(.fullSizeContentView)
-        window.isMovableByWindowBackground = true
+        // M17.2: no background dragging — it forced the legacy AppKit
+        // drag path (main thread per mouse event, ~20 effective fps)
+        // and drag-anywhere was the wrong UX anyway. The invisible
+        // titlebar strip still drags (WindowServer session); the tile
+        // wall drags via AnchorNSView's performDrag (M17.2).
+        window.isMovableByWindowBackground = false
+        // M17.2: the UI paints every pixel (no materials/vibrancy
+        // anywhere), so the window may be opaque. This is a ~2x window-
+        // move throughput win (measured 27% → 64% of 60 Hz slots with
+        // visible motion): a non-opaque window forces WindowServer to
+        // re-blend it against the desktop on EVERY frame of a drag,
+        // while an opaque one can be blitted. The background color only
+        // shows through if content fails to paint a sliver — match the
+        // tile wall's backdrop grey (M5.26).
+        window.isOpaque = true
+        window.backgroundColor = NSColor(calibratedWhite: 0.10, alpha: 1)
     }
 }
 

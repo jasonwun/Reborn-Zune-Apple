@@ -11,8 +11,9 @@ import simd
 /// original) stay anchored regardless of the actual display size. Callers
 /// with a frozen panel (the tile wall) pass `panelSize:` explicitly —
 /// see the property doc for why the GeometryReader value is wrong there.
-/// Frame timing comes from `Date.timeIntervalSinceReferenceDate` so the
-/// cycle remains continuous across view re-creations.
+/// Frame timing comes from `WallTime` so the cycle remains continuous
+/// across view re-creations AND across macOS window-drag suspensions
+/// (M17.2 — the raw clock jumped forward by the drag duration on resume).
 public struct LightingModifier: ViewModifier {
     public let animator: LightingAnimator
 
@@ -51,18 +52,18 @@ public struct LightingModifier: ViewModifier {
         let suspended = false
         #endif
         if let fieldSize {
-            TimelineView(.animation(minimumInterval: Self.frameInterval, paused: suspended)) { context in
+            TimelineView(.animation(minimumInterval: Self.frameInterval, paused: suspended)) { _ in
                 let parameters = animator.parameters(
-                    at: context.date.timeIntervalSinceReferenceDate,
+                    at: WallTime.now,
                     panelSize: fieldSize
                 )
                 LightingModifier.applyShader(to: content, parameters: parameters)
             }
         } else {
             GeometryReader { geo in
-                TimelineView(.animation(minimumInterval: Self.frameInterval, paused: suspended)) { context in
+                TimelineView(.animation(minimumInterval: Self.frameInterval, paused: suspended)) { _ in
                     let parameters = animator.parameters(
-                        at: context.date.timeIntervalSinceReferenceDate,
+                        at: WallTime.now,
                         panelSize: geo.size
                     )
                     LightingModifier.applyShader(to: content, parameters: parameters)
