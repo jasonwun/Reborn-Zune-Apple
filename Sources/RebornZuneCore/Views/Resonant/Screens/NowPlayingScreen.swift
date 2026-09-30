@@ -15,6 +15,7 @@ public struct NowPlayingScreen: View {
     @State private var backHover = false
     @Environment(\.resonantLayout) private var layout
     @Environment(\.resonantWindowSize) private var windowSize
+    @Environment(\.resonantScreenSize) private var screenSize
 
     enum RepeatMode { case off, all, one }
 
@@ -35,32 +36,47 @@ public struct NowPlayingScreen: View {
     public var body: some View {
         ZStack {
             // 1. Existing tile wall + ambient lighting — preserved from M5.
+            #if os(macOS)
+            // M16.8: the wall is hosted in an AppKit container that
+            // repositions the wall's layer directly on window move/resize
+            // (screen-anchored viewport model) — SwiftUI's update loop is
+            // no longer involved in window drags, which restores the
+            // wall's frame rate during manual title-bar drags.
+            ScreenAnchorContainer(
+                wallSize: TileWallView.frozenPanelSize(
+                    entry: windowSize,
+                    screen: screenSize,
+                    unitSize: 50   // tile wall's default unit size
+                ),
+                screenSize: screenSize
+            ) {
+                // M17: single-Canvas wall — no ~965-view subtree, adaptive
+                // frame rate, wall-clock driven animations. Debug fallback:
+                // REBORN_ZUNE_DEBUG_VIEW_WALL=1 restores the view-tree wall
+                // for A/B comparison.
+                if ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_VIEW_WALL"] == "1" {
+                    TileWallView(tiles: tiles, lightingAnimator: lightingAnimator)
+                } else {
+                    CanvasTileWallView(tiles: tiles, lightingAnimator: lightingAnimator)
+                }
+            }
+            .ignoresSafeArea()
+            #else
             TileWallView(tiles: tiles, lightingAnimator: lightingAnimator)
                 .ignoresSafeArea()
+            #endif
 
-            // 2. Sepia/olive multiply tint
-            Color(red: 40/255, green: 36/255, blue: 8/255)
-                .opacity(0.78)
-                .blendMode(.multiply)
-                .allowsHitTesting(false)
+            // 2. (removed M16.10) Sepia/olive multiply tint — user
+            // evaluated both looks side by side and preferred the raw lit
+            // grayscale wall; the layer is gone for good, not flagged.
 
             // 3. (removed in M16.3) The magenta radial wash used to be a
             // static fake light source at bottom-left. With the real
             // two-light shader now driving the wall, it read as a foggy
             // extra light blurring the tiles.
 
-            // 4. Vignette top + bottom
-            LinearGradient(
-                gradient: Gradient(stops: [
-                    .init(color: .black.opacity(0.25), location: 0),
-                    .init(color: .clear, location: 0.3),
-                    .init(color: .clear, location: 0.6),
-                    .init(color: .black.opacity(0.5), location: 1)
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .allowsHitTesting(false)
+            // 4. (removed M16.10) Vignette top + bottom — same evaluation
+            // as the sepia layer.
 
             // 5. Oversized off-canvas back button (top-left)
             VStack {

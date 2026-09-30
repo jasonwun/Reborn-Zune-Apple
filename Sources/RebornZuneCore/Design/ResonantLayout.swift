@@ -130,10 +130,6 @@ private struct ResonantScreenSizeKey: EnvironmentKey {
     static let defaultValue: CGSize? = nil
 }
 
-private struct ResonantWindowOriginKey: EnvironmentKey {
-    static let defaultValue: CGPoint = .zero
-}
-
 public extension EnvironmentValues {
     var resonantLayout: ResonantLayout {
         get { self[ResonantLayoutKey.self] }
@@ -153,14 +149,5 @@ public extension EnvironmentValues {
     var resonantScreenSize: CGSize? {
         get { self[ResonantScreenSizeKey.self] }
         set { self[ResonantScreenSizeKey.self] = newValue }
-    }
-
-    /// The window's top-left corner in screen-local points (origin at the
-    /// screen's top-left). Injected live at the macOS root (M16.3) so the
-    /// frozen tile wall can counter-offset itself and stay anchored to the
-    /// hardware screen while the window moves over it. Zero elsewhere.
-    var resonantWindowOrigin: CGPoint {
-        get { self[ResonantWindowOriginKey.self] }
-        set { self[ResonantWindowOriginKey.self] = newValue }
     }
 }

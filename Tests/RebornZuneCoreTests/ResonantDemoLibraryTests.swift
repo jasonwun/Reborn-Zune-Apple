@@ -5,6 +5,7 @@ import XCTest
 /// Before this, every demo track had `artworkData = nil`, which made the
 /// Now Playing tile wall render solid black and hid the lighting effect.
 final class ResonantDemoLibraryTests: XCTestCase {
+    @MainActor
     func testEveryDemoTrackHasDecodableArtwork() {
         let tracks = ResonantDemoLibrary.makeMusic()
         XCTAssertEqual(tracks.count, 129)
@@ -17,6 +18,7 @@ final class ResonantDemoLibraryTests: XCTestCase {
         }
     }
 
+    @MainActor
     func testDemoLibraryProducesNoBlackTiles() {
         let tiles = MusicTileBuilder.tiles(from: ResonantDemoLibrary.makeMusic())
         XCTAssertFalse(tiles.isEmpty)

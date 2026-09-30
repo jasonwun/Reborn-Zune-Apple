@@ -20,6 +20,16 @@ import Observation
 /// pool — a UWP design choice we preserve for parity. With 250 tiles this
 /// produces 0.2 flips/sec, against the M5–M5.7 per-tile-timer model's
 /// ~50 flips/sec.
+///
+/// M16.10: an optional `pool` provider narrows the eligible indices to
+/// the tiles currently inside the window viewport. The wall is
+/// screen-anchored and larger than the window (M16.1/M16.8), so the old
+/// "first 80% of all tiles" rule concentrated every flip in the wall's
+/// top-left band — a region the window frequently does not cover, which
+/// made the wall look dead. The provider is evaluated at each tick
+/// (cheap: ~1k rect-intersection tests every 5 s) and never touches
+/// SwiftUI state, so window drags stay out of the update loop. Returning
+/// nil falls back to the default first-80%-of-all pool.
 @MainActor
 @Observable
 public final class TileFlipCoordinator {
@@ -31,18 +41,27 @@ public final class TileFlipCoordinator {
     /// or `stop` calls can cancel it.
     private var task: Task<Void, Never>? = nil
 
+    /// Optional viewport-aware pool provider (M16.10). Called on the main
+    /// actor at each tick; nil return means "use the default pool".
+    private var poolProvider: (@MainActor () -> [Int]?)? = nil
+
     public init() {}
 
     /// Start the flip scheduler. Picks one random tile every `period`
-    /// seconds from the first 80% of `tileCount` (matching UWP behavior)
-    /// and increments its slot in `flipPulses`.
+    /// seconds from the pool (default: the first 80% of `tileCount`,
+    /// matching UWP behavior) and increments its slot in `flipPulses`.
     ///
     /// Idempotent: calling `start` while another schedule is running
     /// cancels the previous task and resets `flipPulses` to all-zero of
     /// the new size.
-    public func start(tileCount: Int, period: TimeInterval = 5.0) {
+    public func start(
+        tileCount: Int,
+        period: TimeInterval = 5.0,
+        pool: (@MainActor () -> [Int]?)? = nil
+    ) {
         task?.cancel()
         flipPulses = Array(repeating: 0, count: max(0, tileCount))
+        poolProvider = pool
         guard tileCount > 0, period > 0 else {
             task = nil
             return
@@ -58,8 +77,17 @@ public final class TileFlipCoordinator {
                 // ticks would have replaced the array.
                 guard self.flipPulses.count >= eligibleCount,
                       eligibleCount > 0 else { continue }
+                // M16.10: ask the pool provider (viewport-aware) first;
+                // nil → the UWP default of the first 80% of all tiles.
+                var candidates: [Int]? = nil
+                if let provider = self.poolProvider {
+                    candidates = provider()
+                }
+                let pool = (candidates ?? Array(0..<eligibleCount))
+                    .filter { $0 >= 0 && $0 < self.flipPulses.count }
+                guard !pool.isEmpty else { continue }
                 var rng = SystemRandomNumberGenerator()
-                let idx = Int(rng.next(upperBound: UInt(eligibleCount)))
+                let idx = pool[Int(rng.next(upperBound: UInt(pool.count)))]
                 self.flipPulses[idx] &+= 1
             }
         }
@@ -70,5 +98,6 @@ public final class TileFlipCoordinator {
     public func stop() {
         task?.cancel()
         task = nil
+        poolProvider = nil
     }
 }

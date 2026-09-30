@@ -12,17 +12,17 @@ import simd
 /// separate `attenuationScale` parameter is no longer needed and has been
 /// removed from this type and the shader signature.
 ///
-/// Defaults match the UWP `TilePage.xaml.cs` source, with M5.7/M5.8/M16.4 tweaks:
-/// - `light1Intensity` / `light2Intensity` = 2.2 (1.3 in the UWP source;
-///   raised to 1.5 in M5.7 because Lambertian falloff produces a tighter
-///   pool than UWP composition lighting, and to 2.2 in M16.4 after the
-///   falloff exponent went back to squared — the user asked for a brighter
-///   pool while keeping uncovered regions dark).
-/// - `ambientColor` = (0.01, 0.01, 0.01) — M5.8 lowered from (0.165,
-///   0.165, 0.165) so the majority of the wall reads as DARK with only
-///   the moving light pool visibly bright. The UWP recording's
-///   `overview_011.png` shows ~70% of the wall near-black; the previous
-///   ambient bled the whole wall to a uniform mid-grey wash.
+/// Defaults match the UWP `TilePage.xaml.cs` source, tuned against the
+/// user's screen recording of the real client (M16.6) and the user's
+/// direct feedback on the calibrated build (M16.8):
+/// - `light1Intensity` / `light2Intensity` = 1.8 — M16.6's 0.9 matched the
+///   recording's measured quadrant ratio (~1.5–2.7x) but read too dim on
+///   the user's display; doubled at their request. (History: 1.3 UWP
+///   source → 1.5 in M5.7 → 2.2 in M16.4 under squared falloff → 0.9 in
+///   M16.6 with linear falloff.)
+/// - `ambientColor` = (0.06, 0.06, 0.06) — the recording keeps every tile
+///   readable at all times; M5.8's near-zero ambient (0.01) blacked out
+///   everything outside the pools, which the recording contradicts.
 ///
 /// `ambientColor` is the ambient RGB **already multiplied by the ambient
 /// intensity** — the shader does not re-scale it.
@@ -40,11 +40,11 @@ public struct LightingParameters: Equatable, Sendable {
         panelSize: CGSize,
         light1Position: SIMD3<Float>,
         light1Color: SIMD3<Float>,
-        light1Intensity: Float = 2.2,
+        light1Intensity: Float = 1.8,
         light2Position: SIMD3<Float>,
         light2Color: SIMD3<Float>,
-        light2Intensity: Float = 2.2,
-        ambientColor: SIMD3<Float> = SIMD3<Float>(0.01, 0.01, 0.01)
+        light2Intensity: Float = 1.8,
+        ambientColor: SIMD3<Float> = SIMD3<Float>(0.06, 0.06, 0.06)
     ) {
         self.panelSize = panelSize
         self.light1Position = light1Position

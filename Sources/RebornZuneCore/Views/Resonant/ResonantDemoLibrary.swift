@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 #if canImport(CoreGraphics)
 import CoreGraphics
 import ImageIO
@@ -44,7 +45,9 @@ public enum ResonantDemoLibrary {
         "Marquee","Cadence","Glass House","Slow Burn","Mile Marker","Heliotrope"
     ]
 
+    @MainActor
     public static func makeMusic() -> [Music] {
+        let flatCovers = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_FLAT_COVERS"] == "1"
         var out: [Music] = []
         for (albumIndex, seed) in seeds.enumerated() {
             // M16 follow-up: every album gets a synthesized cover so the
@@ -52,7 +55,18 @@ public enum ResonantDemoLibrary {
             // `artworkData` was nil for all 129 tracks — the Now Playing
             // tile wall rendered solid black, hiding both the tiles and
             // the lighting effect over them.
-            let artwork = synthesizedArtwork(albumIndex: albumIndex)
+            //
+            // M16.9 follow-up: default artwork is now the REAL `CoverArt`
+            // design rendered to a bitmap (same seed/palette/monogram as
+            // the library pages), so the wall previews lighting and the
+            // sepia/vignette overlays over structured mock covers. Set
+            // REBORN_ZUNE_DEBUG_FLAT_COVERS=1 for the old flat fills
+            // (pure lighting evaluation without per-tile luminance
+            // structure).
+            let artwork = flatCovers
+                ? synthesizedArtwork(albumIndex: albumIndex)
+                : renderedArtwork(title: seed.title, artist: seed.artist)
+                    ?? synthesizedArtwork(albumIndex: albumIndex)
             let perTrack = seed.runtimeSec / Double(seed.trackCount)
             for n in 0..<seed.trackCount {
                 let titleIdx = (abs(seed.id.hashValue) &+ n * 31) % trackPool.count
@@ -72,6 +86,36 @@ public enum ResonantDemoLibrary {
             }
         }
         return out
+    }
+
+    /// Render the album's real `CoverArt` design — the exact same view the
+    /// library/Home pages draw (same seed, palette, monogram, catalog tag)
+    /// — into a 512×512 PNG, so the tile wall and the library pages show
+    /// identical covers. Returns nil if the offscreen render fails.
+    @MainActor
+    static func renderedArtwork(title: String, artist: String) -> Data? {
+        // Same derivation chain as `Album.coverEntry`: id → palette + tag,
+        // title → monogram.
+        let id = Album.makeID(title: title, albumArtist: artist)
+        let entry = CoverArt.Entry(
+            seed: id,
+            palette: ResonantSynth.palette(for: id),
+            monogram: ResonantSynth.monogram(for: title),
+            catalogTag: "[ALB-\(String(id.suffix(3)).uppercased())]"
+        )
+        let renderer = ImageRenderer(content:
+            CoverArt(entry: entry, bordered: false)
+                .frame(width: 512, height: 512)
+        )
+        renderer.scale = 1
+        guard let image = renderer.cgImage else { return nil }
+        let data = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(data, "public.png" as CFString, 1, nil),
+              ({
+                  CGImageDestinationAddImage(destination, image, nil)
+                  return CGImageDestinationFinalize(destination)
+              }()) else { return nil }
+        return data as Data
     }
 
     /// Synthesize one album cover: a FLAT per-album color. M5.20's lesson

@@ -8,15 +8,14 @@ using namespace metal;
 //
 // M5.6: Lambertian diffuse model. The tile wall is treated as the z=0
 // plane with surface normal (0, 0, 1). Each pixel's lit contribution from
-// a light is `lightColor * lightIntensity * pow(max(0, dot(N, L)), 2)`,
+// a light is `lightColor * lightIntensity * max(0, dot(N, L))`,
 // where L is the unit vector from the pixel to the light.
 //
-// M5.9: squared the dot product (Phong-style spotlight narrowing) to match
-// the user's "soft spotlight in a dark room" intuition. With linear
-// Lambertian, the visible pool was too wide — center pixels between the
-// two lights still received meaningful contribution from both. Squaring
-// drops the off-axis falloff steeply (dot=0.5 → 0.25 contribution, dot=0.3
-// → 0.09), so only pixels within ~30° of a light's normal are visibly lit.
+// Falloff history: squared in M5.9 ("soft spotlight"), linear in M5.26
+// (matching a user-supplied recording), squared again in M16.1, and
+// linear again in M16.6 — the definitive Zune client recording shows a
+// broad wall-wide wash (quadrant brightness varies only 1.5–2.7x), so the
+// linear Lambertian term is the reference behavior.
 //
 // Tiles are pre-desaturated by SwiftUI's `.saturation(0)` modifier in
 // `TileWallView`, so `currentColor` here is grayscale; multiplying by the
@@ -63,12 +62,21 @@ half4 zuneLighting(
     // pools overlap into a uniform wash. The user's direction: more focused
     // pools, letting uncovered regions fall dark (ambient stays 0.01).
     // dot=0.5 → 0.25, dot=0.2 → 0.04.
+    //
+    // M16.6: linear falloff RESTORED (exponent 1.0) — the user supplied a
+    // screen recording of the real Zune client, and its lighting is a
+    // broad, wall-wide wash: quadrant-mean brightness varies only 1.5–2.7x
+    // and every tile stays readable at all times. Squared falloff produced
+    // tight pools surrounded by black — the opposite look. Paired with
+    // intensity 0.9 / ambient 0.06 (LightingParameters), the simulated
+    // multiplier field lands at mean ≈ 0.26–0.31 with gentle gradients,
+    // matching the recording's measured stats.
     float3 light1Dir = normalize(light1Pos - pixelPos);
-    float  diff1     = pow(max(0.0, dot(normal, light1Dir)), 2.0);
+    float  diff1     = max(0.0, dot(normal, light1Dir));
     float3 contrib1  = light1Color * light1Intensity * diff1;
 
     float3 light2Dir = normalize(light2Pos - pixelPos);
-    float  diff2     = pow(max(0.0, dot(normal, light2Dir)), 2.0);
+    float  diff2     = max(0.0, dot(normal, light2Dir));
     float3 contrib2  = light2Color * light2Intensity * diff2;
 
     float3 totalLight = ambientColor + contrib1 + contrib2;

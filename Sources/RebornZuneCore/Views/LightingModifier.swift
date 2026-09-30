@@ -40,8 +40,18 @@ public struct LightingModifier: ViewModifier {
     }
 
     public func body(content: Content) -> some View {
+        // M16.9: suspend the animation clock while the window is being
+        // dragged/resized (macOS). The screen-anchored wall is static
+        // relative to the screen during a drag, so the frozen light frame
+        // is visually correct — and skipping the 15 fps full-wall Metal
+        // re-render leaves WindowServer/GPU headroom for move compositing.
+        #if os(macOS)
+        let suspended = WindowActivityMonitor.shared.isActive
+        #else
+        let suspended = false
+        #endif
         if let fieldSize {
-            TimelineView(.animation(minimumInterval: Self.frameInterval)) { context in
+            TimelineView(.animation(minimumInterval: Self.frameInterval, paused: suspended)) { context in
                 let parameters = animator.parameters(
                     at: context.date.timeIntervalSinceReferenceDate,
                     panelSize: fieldSize
@@ -50,7 +60,7 @@ public struct LightingModifier: ViewModifier {
             }
         } else {
             GeometryReader { geo in
-                TimelineView(.animation(minimumInterval: Self.frameInterval)) { context in
+                TimelineView(.animation(minimumInterval: Self.frameInterval, paused: suspended)) { context in
                     let parameters = animator.parameters(
                         at: context.date.timeIntervalSinceReferenceDate,
                         panelSize: geo.size

@@ -130,6 +130,15 @@ public struct TileView: View {
             rotationDegrees = 0
         }
 
+        // Debug: REBORN_ZUNE_DEBUG_FLIP_HOLD=<seconds> holds the tile at
+        // opacity 0 before fading back in, so verification screenshots can
+        // reliably catch the blacked-out tile.
+        if let s = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_FLIP_HOLD"],
+           let hold = Double(s), hold > 0 {
+            try? await Task.sleep(nanoseconds: UInt64(hold * 1_000_000_000))
+            if Task.isCancelled { return }
+        }
+
         // IN PHASE — pure opacity fade.
         withAnimation(.linear(duration: 1.1)) {
             opacity = 1

@@ -145,13 +145,15 @@ final class LightingAnimatorTests: XCTestCase {
     func testDefaultIntensityAndAmbient() {
         let animator = LightingAnimator()
         let params = animator.parameters(at: 0, panelSize: panel)
-        // M16.4: intensities raised to 2.2 (from 1.5) — after the falloff
-        // went back to squared the user asked for a brighter pool while
-        // uncovered regions stay dark (ambient pinned at 0.01).
-        XCTAssertEqual(params.light1Intensity, 2.2, accuracy: 1e-6)
-        XCTAssertEqual(params.light2Intensity, 2.2, accuracy: 1e-6)
-        XCTAssertEqual(params.ambientColor.x, 0.01, accuracy: 1e-3)
-        XCTAssertEqual(params.ambientColor.y, 0.01, accuracy: 1e-3)
-        XCTAssertEqual(params.ambientColor.z, 0.01, accuracy: 1e-3)
+        // M16.6: intensity 0.9 / ambient 0.06 — calibrated against the
+        // user's recording of the real Zune client (broad wall-wide wash,
+        // quadrant ratio 1.5–2.7x, all tiles readable).
+        // M16.8: intensity doubled to 1.8 at the user's request — the
+        // calibrated 0.9 read too dim on their display.
+        XCTAssertEqual(params.light1Intensity, 1.8, accuracy: 1e-6)
+        XCTAssertEqual(params.light2Intensity, 1.8, accuracy: 1e-6)
+        XCTAssertEqual(params.ambientColor.x, 0.06, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.y, 0.06, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.z, 0.06, accuracy: 1e-3)
     }
 }

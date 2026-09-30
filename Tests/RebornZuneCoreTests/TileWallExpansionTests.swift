@@ -162,4 +162,44 @@ final class TileWallExpansionTests: XCTestCase {
         )
         XCTAssertEqual(out, CGSize(width: 2000, height: 1300))
     }
+
+    // MARK: - M16.10 viewport-aware flip pool
+
+    /// Placements: tile 0 at (0,0) 50×50, tile 1 at (50,0) 50×50,
+    /// tile 2 at (200,100) 200×200 (large = 4 cells at unitSize 50).
+    private let poolPlacements: [(row: Int, col: Int, span: TileSpan)] = [
+        (row: 0, col: 0, span: .unit),
+        (row: 0, col: 1, span: .unit),
+        (row: 2, col: 4, span: .large),
+    ]
+
+    func testVisibleTileIndicesReturnsIntersectingTilesInOrder() {
+        // Viewport over the top-left corner hits both unit tiles.
+        let v = CGRect(x: 0, y: 0, width: 60, height: 60)
+        XCTAssertEqual(
+            TileWallView.visibleTileIndices(placements: poolPlacements, unitSize: 50, viewport: v),
+            [0, 1]
+        )
+    }
+
+    func testVisibleTileIndicesHitsLargeTileOnly() {
+        let v = CGRect(x: 250, y: 150, width: 100, height: 100)
+        XCTAssertEqual(
+            TileWallView.visibleTileIndices(placements: poolPlacements, unitSize: 50, viewport: v),
+            [2]
+        )
+    }
+
+    func testVisibleTileIndicesEmptyWhenViewportMissesWall() {
+        let v = CGRect(x: 1000, y: 1000, width: 100, height: 100)
+        XCTAssertEqual(
+            TileWallView.visibleTileIndices(placements: poolPlacements, unitSize: 50, viewport: v),
+            []
+        )
+        // Degenerate viewport → empty (caller falls back to default pool).
+        XCTAssertEqual(
+            TileWallView.visibleTileIndices(placements: poolPlacements, unitSize: 50, viewport: .zero),
+            []
+        )
+    }
 }

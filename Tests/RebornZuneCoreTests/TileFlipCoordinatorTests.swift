@@ -82,4 +82,47 @@ final class TileFlipCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.flipPulses, [])
         coordinator.stop()
     }
+
+    // MARK: - M16.10 viewport-aware pool
+
+    /// A pool provider narrows the eligible indices: pulses must land
+    /// ONLY inside the provided pool, no matter how long it runs.
+    func testPoolProviderNarrowsEligibleIndices() async throws {
+        let coordinator = TileFlipCoordinator()
+        let allowed: Set<Int> = [5, 7, 42]
+        coordinator.start(tileCount: 100, period: 0.03, pool: { [5, 7, 42] })
+        try await Task.sleep(nanoseconds: 600_000_000)  // ~20 ticks
+        coordinator.stop()
+        for (i, pulses) in coordinator.flipPulses.enumerated() {
+            if allowed.contains(i) { continue }
+            XCTAssertEqual(pulses, 0, "index \(i) pulsed outside the provider's pool")
+        }
+        let poolPulses = allowed.map { coordinator.flipPulses[$0] }.reduce(0, +)
+        XCTAssertGreaterThan(poolPulses, 0, "Scheduler never fired inside the pool.")
+    }
+
+    /// An empty pool (viewport covers no tile) skips the tick silently —
+    /// no out-of-bounds writes, no crash, no pulses.
+    func testEmptyPoolSkipsTicks() async throws {
+        let coordinator = TileFlipCoordinator()
+        coordinator.start(tileCount: 10, period: 0.03, pool: { [] })
+        try await Task.sleep(nanoseconds: 200_000_000)
+        coordinator.stop()
+        XCTAssertTrue(coordinator.flipPulses.allSatisfy { $0 == 0 })
+    }
+
+    /// A nil pool from the provider falls back to the UWP default
+    /// (first 80% of all tiles), so a transient "viewport unknown" at
+    /// launch can never silence the wall.
+    func testNilPoolFallsBackToDefaultPool() async throws {
+        let coordinator = TileFlipCoordinator()
+        coordinator.start(tileCount: 10, period: 0.03, pool: { nil })
+        try await Task.sleep(nanoseconds: 300_000_000)
+        coordinator.stop()
+        XCTAssertGreaterThan(coordinator.flipPulses.reduce(0, +), 0,
+                             "nil pool should fall back to the default pool, not go quiet.")
+        // Default pool is the first 80% — tail stays quiet.
+        XCTAssertEqual(coordinator.flipPulses[8], 0)
+        XCTAssertEqual(coordinator.flipPulses[9], 0)
+    }
 }

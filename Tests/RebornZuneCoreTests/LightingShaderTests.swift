@@ -20,18 +20,17 @@ final class LightingShaderTests: XCTestCase {
             light2Color: SIMD3<Float>(0.506, 0.149, 0.545)
         )
 
-        // M16.4: intensities default to 2.2 (raised from 1.5 — with the
-        // squared falloff the user asked for a brighter light pool while
-        // keeping uncovered regions dark).
-        XCTAssertEqual(params.light1Intensity, 2.2, accuracy: 1e-6)
-        XCTAssertEqual(params.light2Intensity, 2.2, accuracy: 1e-6)
+        // M16.6: intensities default to 0.9 — calibrated against the
+        // user's Zune client recording (broad wash, not tight pools).
+        // M16.8: doubled to 1.8 at the user's request (0.9 read too dim).
+        XCTAssertEqual(params.light1Intensity, 1.8, accuracy: 1e-6)
+        XCTAssertEqual(params.light2Intensity, 1.8, accuracy: 1e-6)
 
-        // M5.10: ambient lowered to (0.01, 0.01, 0.01) so non-pool areas
-        // are barely visible — user feedback on M5.9 wanted the dark-room
-        // intuition pushed further.
-        XCTAssertEqual(params.ambientColor.x, 0.01, accuracy: 1e-3)
-        XCTAssertEqual(params.ambientColor.y, 0.01, accuracy: 1e-3)
-        XCTAssertEqual(params.ambientColor.z, 0.01, accuracy: 1e-3)
+        // M16.6: ambient (0.06, 0.06, 0.06) — the recording keeps every
+        // tile readable; near-zero ambient blacked out non-pool regions.
+        XCTAssertEqual(params.ambientColor.x, 0.06, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.y, 0.06, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.z, 0.06, accuracy: 1e-3)
     }
 
     func testParametersStoredFieldCount() {

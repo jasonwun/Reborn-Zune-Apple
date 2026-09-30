@@ -38,7 +38,13 @@ public struct TileWallView: View {
     ) {
         self.tiles = tiles
         self.unitSize = unitSize
-        self.lightingAnimator = lightingAnimator
+        // Debug: REBORN_ZUNE_DEBUG_NO_LIGHTING=1 renders the wall without
+        // the lighting shader (A/B isolation for rendering issues).
+        if ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_NO_LIGHTING"] == "1" {
+            self.lightingAnimator = nil
+        } else {
+            self.lightingAnimator = lightingAnimator
+        }
         self.entryAnimation = entryAnimation
         self.entrySeed = entrySeed
     }
@@ -73,12 +79,6 @@ public struct TileWallView: View {
     /// Hardware screen size, injected at the macOS app root (M16.1).
     @Environment(\.resonantScreenSize) private var screenSize
 
-    /// The window's top-left in screen-local points (M16.3). The frozen
-    /// wall is counter-offset by this so the tiles AND the light field
-    /// stay anchored to the hardware screen: moving/resizing the window
-    /// just moves the viewport over a fixed wall.
-    @Environment(\.resonantWindowOrigin) private var windowOrigin
-
     /// M16.1: the area the frozen arrangement must cover — the larger of
     /// the entry window size and the hardware screen plus one LARGE tile
     /// of margin in each dimension, so even a full-screen window never
@@ -98,10 +98,11 @@ public struct TileWallView: View {
             // Zune-original recording — the gaps between tiles and the
             // window frame are visibly grey, not black.
             Color(white: 0.10).ignoresSafeArea()
-            // M5.6: `.saturation(0)` matches the UWP `BackdropSaturationBrush(Saturation=0)`
-            // overlay — tiles are converted to grayscale BEFORE the lighting
-            // shader tints them. Applied to the layout (parent) so the cost is
-            // paid once for the whole wall, not per-tile.
+            // M5.6/M16.11: tiles are grayscaled at the image level
+            // (GrayscaleImage, applied in `expanded(...)`) — equivalent to
+            // the UWP `BackdropSaturationBrush(Saturation=0)`, but without
+            // a wall-level `.saturation(0)` filter, whose cached
+            // rasterization silently froze every flip animation (M16.11).
             //
             // Bug-1 fix: read the panel size from GeometryReader and repeat
             // the source `tiles` array until we have enough cells to cover
@@ -122,7 +123,6 @@ public struct TileWallView: View {
                     // the current window reveals (anchored top-leading, so
                     // the tile grid never drifts mid-resize).
                     .frame(width: panel.width, height: panel.height)
-                    .saturation(0)
                     // M16.5: light field = hardware screen (fall back to
                     // the frozen panel when no screen is injected, e.g.
                     // iPad/tvOS where window == screen anyway). The wall is
@@ -132,10 +132,12 @@ public struct TileWallView: View {
                         animator: lightingAnimator,
                         fieldSize: screenSize ?? panel
                     ))
-                    // M16.3: counter-offset by the window's screen position
-                    // so the wall + light field are anchored to the hardware
-                    // screen, not the window.
-                    .offset(x: -windowOrigin.x, y: -windowOrigin.y)
+                    // M16.3 introduced a SwiftUI `.offset` here to
+                    // counter-position the wall against window moves;
+                    // M16.8 moved that job to `ScreenAnchorContainer`,
+                    // which repositions the wall's NSView directly at the
+                    // Core Animation level — the SwiftUI update loop no
+                    // longer participates in window drags at all.
                     .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
                     .clipped()
                     .onAppear {
@@ -147,11 +149,21 @@ public struct TileWallView: View {
                             )
                         }
                     }
+                    // M16.10: (re)start the flip scheduler with the FINAL
+                    // expanded tile count. The first body evaluation runs
+                    // against the pre-freeze panel (window-sized); the
+                    // freeze then grows the wall — so starting in the outer
+                    // onAppear with `tiles.count` (the SOURCE count) sized
+                    // flipPulses for the wrong wall entirely. `initial:
+                    // true` covers the first appear; the idempotent start
+                    // makes the immediate double-start harmless.
+                    .onChange(of: renderTiles.count, initial: true) { _, newCount in
+                        startFlipCoordinator(totalTiles: newCount)
+                    }
             }
         }
         .onAppear {
             PerfProbe.mark("tilewall.appear")
-            flipCoordinator.start(tileCount: tiles.count)
         }
         .onDisappear {
             flipCoordinator.stop()
@@ -183,7 +195,18 @@ public struct TileWallView: View {
         // matching the user's "exceed the screen a little is fine" preference.
         let target = Int((Double(maxCells) / 2.175) * 2.5)
 
-        if source.count >= target { return source }
+        if source.count >= target {
+            // Large-library path: tiles are used verbatim, but their
+            // artwork still needs the M5.6 grayscale treatment (see
+            // GrayscaleImage for why this isn't a `.saturation(0)`).
+            return source.map { entry in
+                TileWallEntry(
+                    id: entry.id,
+                    images: entry.images.map { $0.map(GrayscaleImage.process) },
+                    span: entry.span
+                )
+            }
+        }
 
         // Small-library path: cycling the source verbatim produces visible
         // stripes — the same span sequence repeats every `source.count`
@@ -191,8 +214,12 @@ public struct TileWallView: View {
         // partner. Instead, treat source as an image pool and synthesize
         // fresh entries so the run-cap / no-adjacent-non-units rules hold
         // across the *whole* expanded wall.
+        // M16.11: pool images are grayscaled once at the image level
+        // (shared cache), replacing the wall-level `.saturation(0)`.
         let primaryPool: [CGImage] = source.compactMap { $0.images.first ?? nil }
+            .map(GrayscaleImage.process)
         let allPool: [CGImage] = source.flatMap { $0.images }.compactMap { $0 }
+            .map(GrayscaleImage.process)
         let imagePool: [CGImage] = primaryPool.isEmpty ? allPool : primaryPool
 
         var rng = ZuneSeededRNG(seed: seed)
@@ -223,6 +250,65 @@ public struct TileWallView: View {
             ))
         }
         return out
+    }
+
+    /// M16.10: indices of tiles whose packed frames intersect `viewport`
+    /// (both in wall points, origin = wall top-left, y down), in wall
+    /// order. Pure + deterministic — unit-tested. An empty result means
+    /// the viewport covers no tile (callers fall back to the default
+    /// pool rather than going quiet).
+    static func visibleTileIndices(
+        placements: [(row: Int, col: Int, span: TileSpan)],
+        unitSize: CGFloat,
+        viewport: CGRect
+    ) -> [Int] {
+        guard unitSize > 0, !viewport.isEmpty else { return [] }
+        var out: [Int] = []
+        out.reserveCapacity(placements.count)
+        for (index, p) in placements.enumerated() {
+            let side = CGFloat(p.span.rawValue) * unitSize
+            let rect = CGRect(
+                x: CGFloat(p.col) * unitSize,
+                y: CGFloat(p.row) * unitSize,
+                width: side,
+                height: side
+            )
+            if rect.intersects(viewport) { out.append(index) }
+        }
+        return out
+    }
+
+    /// M16.10: start the flip scheduler for the fully-expanded wall.
+    /// On macOS the pool is viewport-aware (see TileFlipCoordinator);
+    /// elsewhere the window is the wall's viewport anyway, so the UWP
+    /// default pool (first 80% of all tiles) is already correct.
+    @MainActor
+    private func startFlipCoordinator(totalTiles: Int) {
+        // Debug override: REBORN_ZUNE_DEBUG_FLIP_PERIOD=<seconds> shortens
+        // the UWP 5 s flip cadence so flip behavior is easy to verify by eye.
+        let period: TimeInterval = {
+            if let s = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_FLIP_PERIOD"],
+               let v = Double(s), v > 0 { return v }
+            return 5.0
+        }()
+        #if os(macOS)
+        let cache = expansionCache
+        let unit = unitSize
+        flipCoordinator.start(tileCount: totalTiles, period: period) {
+            guard let viewport = WallViewport.current() else { return nil }
+            let visible = TileWallView.visibleTileIndices(
+                placements: cache.placements,
+                unitSize: unit,
+                viewport: viewport
+            )
+            guard !visible.isEmpty else { return nil }
+            // UWP parity: the trailing 20% of the pool stays quiet.
+            let eligible = max(1, Int(Double(visible.count) * 0.8))
+            return Array(visible.prefix(eligible))
+        }
+        #else
+        flipCoordinator.start(tileCount: totalTiles, period: period)
+        #endif
     }
 
     /// M16: deterministic UUID for a synthesized expansion tile. Same
@@ -424,7 +510,14 @@ final class TileWallExpansionCache {
         var sourceLastID: UUID?
     }
 
-    private var cached: (key: Key, tiles: [TileWallEntry])?
+    private var cached: (key: Key, tiles: [TileWallEntry], placements: [(row: Int, col: Int, span: TileSpan)])?
+
+    /// M16.10: grid placements for the currently cached tiles, computed
+    /// with the same deterministic packing the live layout uses
+    /// (`VariableSpanLayout.pack`). The flip coordinator's viewport pool
+    /// intersects these frames with the window rect — it never triggers
+    /// a SwiftUI layout pass of its own.
+    private(set) var placements: [(row: Int, col: Int, span: TileSpan)] = []
 
     func tiles(
         source: [TileWallEntry],
@@ -444,6 +537,7 @@ final class TileWallExpansionCache {
         )
         if let cached, cached.key == key {
             lastLookupWasHit = true
+            placements = cached.placements
             return cached.tiles
         }
         let t = PerfProbe.tic()
@@ -454,7 +548,12 @@ final class TileWallExpansionCache {
             seed: seed
         )
         PerfProbe.toc("tilewall.expand", since: t, detail: "tiles=\(expanded.count) panel=\(Int(panelSize.width))x\(Int(panelSize.height))")
-        cached = (key, expanded)
+        let packed = VariableSpanLayout.pack(
+            spans: expanded.map(\.span),
+            cellsPerRow: key.cellsW
+        )
+        cached = (key, expanded, packed)
+        placements = packed
         lastLookupWasHit = false
         return expanded
     }
