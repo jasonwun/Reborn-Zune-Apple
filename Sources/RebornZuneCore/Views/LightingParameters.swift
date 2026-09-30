@@ -7,7 +7,7 @@ import simd
 /// to a pre-desaturated (via SwiftUI `.saturation(0)`) tile-wall pixel.
 ///
 /// M5.6 update: switched the shader to Lambertian diffuse against a
-/// surface normal of (0, 0, 1). The light's Z-component (200, baked into
+/// surface normal of (0, 0, 1). The light's Z-component (80, baked into
 /// the keyframe positions) provides the natural pool falloff, so a
 /// separate `attenuationScale` parameter is no longer needed and has been
 /// removed from this type and the shader signature.
@@ -15,14 +15,18 @@ import simd
 /// Defaults match the UWP `TilePage.xaml.cs` source, tuned against the
 /// user's screen recording of the real client (M16.6) and the user's
 /// direct feedback on the calibrated build (M16.8):
-/// - `light1Intensity` / `light2Intensity` = 1.8 — M16.6's 0.9 matched the
-///   recording's measured quadrant ratio (~1.5–2.7x) but read too dim on
-///   the user's display; doubled at their request. (History: 1.3 UWP
-///   source → 1.5 in M5.7 → 2.2 in M16.4 under squared falloff → 0.9 in
-///   M16.6 with linear falloff.)
-/// - `ambientColor` = (0.06, 0.06, 0.06) — the recording keeps every tile
-///   readable at all times; M5.8's near-zero ambient (0.01) blacked out
-///   everything outside the pools, which the recording contradicts.
+/// - `light1Intensity` / `light2Intensity` = 1.5 — M17.3: user settled on
+///   1.5 (from 1.8 via 1.4) paired with ambient 0.02 and Z=80, calibrated
+///   against real Zune screenshots for a direct-spotlight look.
+///   (History: 1.3 UWP source → 1.5 in M5.7 → 2.2 in M16.4 under squared
+///   falloff → 0.9 in M16.6 with linear falloff → 1.8 in M16.8 at the
+///   user's request.)
+/// - `ambientColor` = (0.02, 0.02, 0.02) — M17.3: lowered from 0.06 (via
+///   0.04) at the user's request; combined with intensity 1.5 and Z=80
+///   this reads as a direct spotlight hitting the wall (bright pools,
+///   near-dark surround). The M16.6 recording keeps every tile readable
+///   at all times; M5.8's near-zero ambient (0.01) blacked out everything
+///   outside the pools.
 ///
 /// `ambientColor` is the ambient RGB **already multiplied by the ambient
 /// intensity** — the shader does not re-scale it.
@@ -40,11 +44,11 @@ public struct LightingParameters: Equatable, Sendable {
         panelSize: CGSize,
         light1Position: SIMD3<Float>,
         light1Color: SIMD3<Float>,
-        light1Intensity: Float = 1.8,
+        light1Intensity: Float = 1.5,
         light2Position: SIMD3<Float>,
         light2Color: SIMD3<Float>,
-        light2Intensity: Float = 1.8,
-        ambientColor: SIMD3<Float> = SIMD3<Float>(0.06, 0.06, 0.06)
+        light2Intensity: Float = 1.5,
+        ambientColor: SIMD3<Float> = SIMD3<Float>(0.02, 0.02, 0.02)
     ) {
         self.panelSize = panelSize
         self.light1Position = light1Position

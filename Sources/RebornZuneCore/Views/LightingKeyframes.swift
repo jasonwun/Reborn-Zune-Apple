@@ -122,21 +122,23 @@ public extension LightKeyframes {
 /// Both schedules are the UWP loop, phase-shifted so light 1 (warm)
 /// STARTS near the top-left corner and light 2 (cool) STARTS near the
 /// bottom-right corner (user direction, M16.5), and clamped to ≤0.88 so
-/// the pools never touch the edges. Z stays 200 (light depth). Color
-/// values are converted from the UWP hex values as before.
+/// the pools never touch the edges. Z is 80 (light depth) — M17.3: pulled
+/// in from 200 (via 180, 140) to tighten the pools for a direct-spotlight
+/// look at the user's request. Color values are converted from the UWP hex
+/// values as before.
 public enum LightingPalette {
     /// First light — warm orange/green/rust. Loops: top-left → left-middle
     /// → top-center-left → top-right → top-center-left → left-middle →
     /// top-left.
     public static let warm = LightKeyframes(
         positions: [
-            .init(progress: 0.00, position: SIMD3<Float>(0.08, 0.08, 200)),
-            .init(progress: 0.20, position: SIMD3<Float>(0.08, 0.54, 200)),
-            .init(progress: 0.36, position: SIMD3<Float>(0.36, 0.05, 200)),
-            .init(progress: 0.52, position: SIMD3<Float>(0.85, 0.04, 200)),
-            .init(progress: 0.68, position: SIMD3<Float>(0.36, 0.05, 200)),
-            .init(progress: 0.84, position: SIMD3<Float>(0.08, 0.54, 200)),
-            .init(progress: 1.00, position: SIMD3<Float>(0.08, 0.08, 200)),
+            .init(progress: 0.00, position: SIMD3<Float>(0.08, 0.08, 80)),
+            .init(progress: 0.20, position: SIMD3<Float>(0.08, 0.54, 80)),
+            .init(progress: 0.36, position: SIMD3<Float>(0.36, 0.05, 80)),
+            .init(progress: 0.52, position: SIMD3<Float>(0.85, 0.04, 80)),
+            .init(progress: 0.68, position: SIMD3<Float>(0.36, 0.05, 80)),
+            .init(progress: 0.84, position: SIMD3<Float>(0.08, 0.54, 80)),
+            .init(progress: 1.00, position: SIMD3<Float>(0.08, 0.08, 80)),
         ],
         colors: [
             // #865c2a
@@ -159,13 +161,13 @@ public enum LightingPalette {
     /// bottom-right.
     public static let cool = LightKeyframes(
         positions: [
-            .init(progress: 0.00, position: SIMD3<Float>(0.82, 0.74, 200)),
-            .init(progress: 0.16, position: SIMD3<Float>(0.17, 0.85, 200)),
-            .init(progress: 0.32, position: SIMD3<Float>(0.82, 0.74, 200)),
-            .init(progress: 0.48, position: SIMD3<Float>(0.88, 0.54, 200)),
-            .init(progress: 0.64, position: SIMD3<Float>(0.88, 0.08, 200)),
-            .init(progress: 0.80, position: SIMD3<Float>(0.88, 0.54, 200)),
-            .init(progress: 1.00, position: SIMD3<Float>(0.82, 0.74, 200)),
+            .init(progress: 0.00, position: SIMD3<Float>(0.82, 0.74, 80)),
+            .init(progress: 0.16, position: SIMD3<Float>(0.17, 0.85, 80)),
+            .init(progress: 0.32, position: SIMD3<Float>(0.82, 0.74, 80)),
+            .init(progress: 0.48, position: SIMD3<Float>(0.88, 0.54, 80)),
+            .init(progress: 0.64, position: SIMD3<Float>(0.88, 0.08, 80)),
+            .init(progress: 0.80, position: SIMD3<Float>(0.88, 0.54, 80)),
+            .init(progress: 1.00, position: SIMD3<Float>(0.82, 0.74, 80)),
         ],
         colors: [
             // #81268b

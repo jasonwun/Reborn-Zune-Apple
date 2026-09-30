@@ -47,19 +47,20 @@ final class LightKeyframesTests: XCTestCase {
     func testWarmPalettePositionsNormalized() {
         // M16.5: positions are normalized field fractions; warm starts
         // near the top-left corner and loops back there.
+        // M17.3: Z 200 → 80 tightens the pools (user request).
         let positions = LightingPalette.warm.positions.map(\.position)
-        XCTAssertEqual(positions[0], SIMD3<Float>(0.08, 0.08, 200))
-        XCTAssertEqual(positions[1], SIMD3<Float>(0.08, 0.54, 200))
-        XCTAssertEqual(positions[2], SIMD3<Float>(0.36, 0.05, 200))
-        XCTAssertEqual(positions[6], SIMD3<Float>(0.08, 0.08, 200))
+        XCTAssertEqual(positions[0], SIMD3<Float>(0.08, 0.08, 80))
+        XCTAssertEqual(positions[1], SIMD3<Float>(0.08, 0.54, 80))
+        XCTAssertEqual(positions[2], SIMD3<Float>(0.36, 0.05, 80))
+        XCTAssertEqual(positions[6], SIMD3<Float>(0.08, 0.08, 80))
     }
 
     func testCoolPalettePositionsNormalized() {
         // M16.5: cool starts near the bottom-right corner.
         let positions = LightingPalette.cool.positions.map(\.position)
-        XCTAssertEqual(positions[0], SIMD3<Float>(0.82, 0.74, 200))
-        XCTAssertEqual(positions[2], SIMD3<Float>(0.82, 0.74, 200))
-        XCTAssertEqual(positions[5], SIMD3<Float>(0.88, 0.54, 200))
+        XCTAssertEqual(positions[0], SIMD3<Float>(0.82, 0.74, 80))
+        XCTAssertEqual(positions[2], SIMD3<Float>(0.82, 0.74, 80))
+        XCTAssertEqual(positions[5], SIMD3<Float>(0.88, 0.54, 80))
     }
 
     // MARK: - Interpolation behavior
@@ -128,6 +129,6 @@ final class LightKeyframesTests: XCTestCase {
         let p = LightingPalette.warm.position(at: 0.20)
         XCTAssertEqual(p.x, 0.08, accuracy: 0.0001)
         XCTAssertEqual(p.y, 0.54, accuracy: 0.0001)
-        XCTAssertEqual(p.z, 200, accuracy: 0.01)
+        XCTAssertEqual(p.z, 80, accuracy: 0.01)
     }
 }

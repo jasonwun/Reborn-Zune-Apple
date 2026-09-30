@@ -150,10 +150,12 @@ final class LightingAnimatorTests: XCTestCase {
         // quadrant ratio 1.5–2.7x, all tiles readable).
         // M16.8: intensity doubled to 1.8 at the user's request — the
         // calibrated 0.9 read too dim on their display.
-        XCTAssertEqual(params.light1Intensity, 1.8, accuracy: 1e-6)
-        XCTAssertEqual(params.light2Intensity, 1.8, accuracy: 1e-6)
-        XCTAssertEqual(params.ambientColor.x, 0.06, accuracy: 1e-3)
-        XCTAssertEqual(params.ambientColor.y, 0.06, accuracy: 1e-3)
-        XCTAssertEqual(params.ambientColor.z, 0.06, accuracy: 1e-3)
+        // M17.3: user settled on 1.5 (from 1.8 via 1.4) with ambient 0.02
+        // and Z=80, calibrated against real Zune screenshots.
+        XCTAssertEqual(params.light1Intensity, 1.5, accuracy: 1e-6)
+        XCTAssertEqual(params.light2Intensity, 1.5, accuracy: 1e-6)
+        XCTAssertEqual(params.ambientColor.x, 0.02, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.y, 0.02, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.z, 0.02, accuracy: 1e-3)
     }
 }

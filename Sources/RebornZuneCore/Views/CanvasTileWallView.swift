@@ -388,6 +388,14 @@ public struct CanvasTileWallView: View {
     /// Aspect-fill (center-crop) draw. Square images (the common case —
     /// album art, synthetic tiles) draw straight into the rect with no
     /// clipping; only genuinely non-square images pay for a clip pass.
+    ///
+    /// M17.4: the clip runs on a COPY of the caller's context. Clips are
+    /// cumulative for the life of a `GraphicsContext` — when
+    /// `StaticWallLayer` passed its main canvas context here, the first
+    /// non-square cover (real libraries have plenty; the synthetic demo
+    /// art is always square) permanently clipped every later tile AND the
+    /// border stroke pass to that one tile's rect, so the settled wall
+    /// collapsed to the rows drawn before it.
     static func drawAspectFill(
         _ cg: CGImage,
         in rect: CGRect,
@@ -398,11 +406,12 @@ public struct CanvasTileWallView: View {
             ctx.draw(Image(decorative: cg, scale: 1), in: rect)
             return
         }
-        ctx.clip(to: Path(rect))
+        var clipped = ctx
+        clipped.clip(to: Path(rect))
         let s = max(side / CGFloat(cg.width), side / CGFloat(cg.height))
         let drawW = CGFloat(cg.width) * s
         let drawH = CGFloat(cg.height) * s
-        ctx.draw(
+        clipped.draw(
             Image(decorative: cg, scale: 1),
             in: CGRect(
                 x: rect.midX - drawW / 2,

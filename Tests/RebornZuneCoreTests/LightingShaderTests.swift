@@ -23,14 +23,17 @@ final class LightingShaderTests: XCTestCase {
         // M16.6: intensities default to 0.9 — calibrated against the
         // user's Zune client recording (broad wash, not tight pools).
         // M16.8: doubled to 1.8 at the user's request (0.9 read too dim).
-        XCTAssertEqual(params.light1Intensity, 1.8, accuracy: 1e-6)
-        XCTAssertEqual(params.light2Intensity, 1.8, accuracy: 1e-6)
+        // M17.3: user settled on 1.5 (from 1.8 via 1.4); ambient 0.06 →
+        // 0.02 for a direct-spotlight look.
+        XCTAssertEqual(params.light1Intensity, 1.5, accuracy: 1e-6)
+        XCTAssertEqual(params.light2Intensity, 1.5, accuracy: 1e-6)
 
-        // M16.6: ambient (0.06, 0.06, 0.06) — the recording keeps every
-        // tile readable; near-zero ambient blacked out non-pool regions.
-        XCTAssertEqual(params.ambientColor.x, 0.06, accuracy: 1e-3)
-        XCTAssertEqual(params.ambientColor.y, 0.06, accuracy: 1e-3)
-        XCTAssertEqual(params.ambientColor.z, 0.06, accuracy: 1e-3)
+        // M17.3: ambient (0.02, 0.02, 0.02) — near-dark surround so the
+        // pools read as direct spotlights; M5.8's near-zero (0.01) blacked
+        // out non-pool regions entirely.
+        XCTAssertEqual(params.ambientColor.x, 0.02, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.y, 0.02, accuracy: 1e-3)
+        XCTAssertEqual(params.ambientColor.z, 0.02, accuracy: 1e-3)
     }
 
     func testParametersStoredFieldCount() {
