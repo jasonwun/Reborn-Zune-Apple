@@ -1,5 +1,9 @@
 # Milestones
 
+> **Status: historical.** Milestones M1–M16 were built under the old
+> executor/evaluator loop. New work is ticketed on GitHub via the
+> engineering-skill flow (see `AGENTS.md → Workflow`).
+
 Each milestone has its own spec file (`specs/M{N}.md`) with deliverables and
 acceptance criteria. Each runs through the executor → evaluator loop until
 approved before the next one starts.

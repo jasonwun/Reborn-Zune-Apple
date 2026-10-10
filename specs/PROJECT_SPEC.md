@@ -1,5 +1,11 @@
 # Reborn-Zune (Apple) — Project Specification
 
+> **Status: historical.** New work is specified and ticketed through the
+> engineering-skill flow (`/grill-with-docs` → `/to-spec` → `/to-tickets` →
+> `/implement`; see `AGENTS.md → Workflow`). The "Decisions locked in" table
+> below now lives as ADRs in `docs/adr/`, and the build commands of record in
+> `CODING_STANDARDS.md`; this file remains as the original record.
+
 A native Swift/SwiftUI port of the original UWP "Reborn-Zune" music player, recreating
 the Zune-style animated tile wall with **pixel-perfect parity** on the composition
 lighting effects, deployed to macOS, iPadOS, and tvOS.
@@ -60,9 +66,8 @@ Reborn-Zune-Apple/
 │   ├─ iPadOS/RebornZune-iPadOS/          # iPad app target sources
 │   └─ tvOS/RebornZune-tvOS/              # tvOS app target sources + bundled music
 ├─ project.yml                            # xcodegen spec for the three app targets
-├─ specs/                                 # PROJECT_SPEC, MILESTONES, M1.md, M2.md, …
-├─ agents/                                # Executor + Evaluator role docs
-└─ reports/                               # Per-milestone executor + evaluator reports
+├─ specs/                                 # PROJECT_SPEC, MILESTONES, M1.md, M2.md, … (historical)
+└─ reports/                               # Per-milestone executor + evaluator reports (historical)
 ```
 
 ## Build commands of record
@@ -81,4 +86,5 @@ xcodebuild -project RebornZune.xcodeproj -scheme RebornZune-iPadOS -destination 
 xcodebuild -project RebornZune.xcodeproj -scheme RebornZune-tvOS -destination 'generic/platform=tvOS Simulator' build
 ```
 
-These are the canonical commands every milestone's evaluator must run as part of QA.
+The canonical commands now live in `CODING_STANDARDS.md` (kept in sync with the
+list above), where they are enforced on every change, not per milestone.
