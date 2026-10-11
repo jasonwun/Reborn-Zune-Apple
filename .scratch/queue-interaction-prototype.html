@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>显式队列交互原型（一次性）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0B0B0E;
+    --panel: #141419;
+    --panel2: #1C1C24;
+    --line: #2A2A34;
+    --text: #EDEDF0;
+    --muted: #8B8B97;
+    --accent: #E8112D;
+  }
+  html { background: var(--bg); }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif;
+    line-height: 1.6;
+    padding: 28px 24px 140px;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .proto-banner {
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    margin-bottom: 28px;
+    font-size: 14px;
+  }
+  h1 { font-size: 26px; font-weight: 700; margin-bottom: 10px; }
+  h2 { font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+  .questions { color: var(--muted); font-size: 14px; margin-bottom: 26px; }
+  .questions ol { margin: 8px 0 8px 22px; color: var(--text); }
+  .questions .map { margin-top: 8px; }
+
+  /* ---- Tabs ---- */
+  .tabs { display: flex; gap: 10px; margin-bottom: 24px; }
+  .tab-btn {
+    background: var(--panel);
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 10px 22px;
+    border-radius: 999px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .tab-btn.active { color: #fff; border-color: var(--accent); background: var(--panel2); }
+
+  /* ---- Mock window chrome ---- */
+  .mock {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--panel);
+    min-height: 560px;
+    display: flex;
+    flex-direction: column;
+  }
+  .mock-head { display: flex; gap: 16px; align-items: center; padding: 22px 24px 14px; }
+  .art {
+    width: 92px; height: 92px; border-radius: 10px; flex: none;
+    background: linear-gradient(135deg, #3A0A12 0%, #E8112D 55%, #FF7A9E 100%);
+  }
+  .np-title { font-size: 20px; font-weight: 700; }
+  .np-artist { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .np-album { color: var(--muted); font-size: 13px; }
+
+  .tracklist { flex: 1; padding: 6px 12px 12px; }
+  .row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 12px; border-radius: 8px; cursor: default;
+  }
+  .row:hover { background: var(--panel2); }
+  .row.playing { color: var(--accent); }
+  .row .idx { width: 22px; color: var(--muted); font-size: 13px; text-align: right; }
+  .row.playing .idx { color: var(--accent); }
+  .row .name { flex: 1; font-size: 14px; }
+  .row .dur { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .row .row-actions { display: flex; gap: 6px; opacity: 0; }
+  .row:hover .row-actions { opacity: 1; }
+  .icon-btn {
+    background: none; border: 1px solid var(--line); color: var(--text);
+    width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .transport {
+    display: flex; align-items: center; gap: 18px;
+    padding: 14px 20px; border-top: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .t-controls { display: flex; gap: 16px; align-items: center; font-size: 18px; }
+  .t-controls span { cursor: pointer; color: var(--text); }
+  .t-controls .play { font-size: 24px; }
+  .progress-wrap { flex: 1; display: flex; align-items: center; gap: 10px; }
+  .ptime { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .progress { flex: 1; height: 4px; background: var(--line); border-radius: 2px; }
+  .progress-fill { width: 42%; height: 100%; background: var(--accent); border-radius: 2px; }
+  .t-right { display: flex; gap: 12px; align-items: center; color: var(--muted); font-size: 16px; }
+  .queue-btn {
+    background: none; border: 1px solid var(--line); color: var(--text);
+    width: 34px; height: 34px; border-radius: 8px; cursor: pointer; font-size: 16px;
+  }
+  .queue-btn.on { border-color: var(--accent); color: var(--accent); }
+
+  /* ---- Context menu ---- */
+  .ctxmenu {
+    position: fixed; z-index: 1300; min-width: 210px;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 6px; display: none;
+    box-shadow: 0 12px 32px rgba(0,0,0,.55);
+  }
+  .ctxmenu.open { display: block; }
+  .ctxmenu button {
+    display: block; width: 100%; text-align: left;
+    background: none; border: none; color: var(--text);
+    padding: 8px 12px; border-radius: 6px; font-size: 14px; cursor: pointer;
+  }
+  .ctxmenu button:hover:not(:disabled) { background: var(--accent); color: #fff; }
+  .ctxmenu button:disabled { color: #55555f; cursor: default; }
+  .ctxmenu .divider { height: 1px; background: var(--line); margin: 6px 4px; }
+
+  /* ---- Up Next surfaces ---- */
+  .upnext-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 10px;
+  }
+  .upnext-head .ttl { font-size: 13px; font-weight: 700; letter-spacing: 3px; color: var(--muted); }
+  .clear-btn {
+    background: none; border: 1px solid var(--line); color: var(--muted);
+    font-size: 12px; padding: 4px 12px; border-radius: 999px; cursor: pointer;
+  }
+  .clear-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .upnext-list { overflow-y: auto; flex: 1; padding: 0 8px 12px; }
+  .upnext-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 8px; cursor: grab;
+  }
+  .upnext-row:hover { background: var(--panel2); }
+  .upnext-row .n { width: 20px; text-align: right; color: var(--muted); font-size: 12px; }
+  .upnext-row .nm { flex: 1; font-size: 13px; }
+  .upnext-row .rm {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 15px; opacity: 0; padding: 2px 6px;
+  }
+  .upnext-row:hover .rm { opacity: 1; }
+  .upnext-row .rm:hover { color: var(--accent); }
+  .upnext-row.drop-before { box-shadow: 0 -2px 0 var(--accent); }
+  .upnext-row.drop-after { box-shadow: 0 2px 0 var(--accent); }
+  .upnext-empty { color: var(--muted); font-size: 13px; padding: 18px 14px; }
+
+  /* Variant A: full-height right panel */
+  .panelA {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 290px;
+    background: #101016; border-left: 1px solid var(--line);
+    display: none; flex-direction: column; z-index: 20;
+  }
+  .panelA.open { display: flex; }
+
+  /* Variant B: bottom drawer */
+  .drawerB {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 54%;
+    background: #101016; border-top: 1px solid var(--line);
+    display: none; flex-direction: column; z-index: 20;
+  }
+  .drawerB.open { display: flex; }
+  .drawerB .upnext-row { padding: 6px 10px; }
+
+  /* Variant C: floating popover */
+  .popoverC {
+    position: absolute; right: 16px; bottom: 66px; width: 300px; max-height: 360px;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 12px;
+    display: none; flex-direction: column; z-index: 20;
+    box-shadow: 0 14px 40px rgba(0,0,0,.55);
+  }
+  .popoverC.open { display: flex; }
+  .popoverC .upnext-row { cursor: default; }
+  .move-btns { display: flex; gap: 4px; }
+  .move-btns button {
+    background: none; border: 1px solid var(--line); color: var(--muted);
+    width: 22px; height: 22px; border-radius: 5px; font-size: 11px; cursor: pointer;
+  }
+  .move-btns button:hover { border-color: var(--accent); color: var(--accent); }
+  .popoverC .foot { padding: 10px 14px; border-top: 1px solid var(--line); text-align: right; }
+
+  /* ---- Variant pill switcher ---- */
+  .variant-pill {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 14px;
+    background: #1E1E28; border: 2px solid var(--accent); border-radius: 999px;
+    padding: 9px 16px; z-index: 1100;
+    box-shadow: 0 8px 30px rgba(0,0,0,.6);
+    font-size: 14px;
+  }
+  .variant-pill button {
+    background: var(--accent); color: #fff; border: none;
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 13px;
+  }
+  .variant-pill .vlabel { min-width: 220px; text-align: center; font-weight: 600; }
+
+  /* ---- Tab 2: shuffle demo ---- */
+  .qpara {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 18px; font-size: 14px; margin-bottom: 22px;
+  }
+  .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 860px) { .demo-grid { grid-template-columns: 1fr; } }
+  .state-panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px; min-height: 380px; display: flex; flex-direction: column;
+  }
+  .now-line { font-size: 15px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .now-line b { color: var(--accent); }
+  .badge {
+    font-size: 11px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line);
+    color: var(--muted);
+  }
+  .badge.on { border-color: var(--accent); color: var(--accent); }
+  .upnext-ttl { font-size: 12px; letter-spacing: 3px; color: var(--muted); margin: 14px 0 6px; }
+  .state-panel .upnext-list { border: 1px solid var(--line); border-radius: 8px; min-height: 120px; flex: none; }
+  .orig-line { color: var(--muted); font-size: 12px; margin-top: 12px; word-break: break-all; }
+  .note-line {
+    margin-top: 12px; font-size: 13px; color: var(--text);
+    border-left: 3px solid var(--accent); padding-left: 10px; min-height: 20px;
+  }
+  .ctrl-panel h3 { font-size: 13px; letter-spacing: 2px; color: var(--muted); margin: 18px 0 8px; }
+  .ctrl-panel h3:first-child { margin-top: 0; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .act-btn {
+    background: var(--panel2); border: 1px solid var(--line); color: var(--text);
+    padding: 7px 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  }
+  .act-btn:hover { border-color: var(--accent); }
+  .wt-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .wt-tab {
+    background: none; border: 1px solid var(--line); color: var(--muted);
+    padding: 6px 14px; border-radius: 999px; font-size: 13px; cursor: pointer;
+  }
+  .wt-tab.active { color: #fff; border-color: var(--accent); background: var(--panel2); }
+  .wt-steps { list-style: none; }
+  .wt-step {
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px;
+    color: var(--muted); font-size: 13px;
+  }
+  .wt-step.current { border-color: var(--accent); color: var(--text); }
+  .wt-step.done { opacity: .45; }
+  .wt-step .sdesc { margin: 4px 0 8px; }
+  .wt-done-msg { color: var(--accent); font-size: 13px; margin-top: 6px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="proto-banner">PROTOTYPE — 一次性，用完即弃</div>
+
+<header>
+  <h1>显式队列（Play Next / Up Next）交互原型</h1>
+  <div class="questions">
+    <p>本原型用于回答三个设计问题：</p>
+    <ol>
+      <li>Q1：Play Next / Play Later 的入口形式（右键菜单？hover 按钮？）</li>
+      <li>Q2：Up Next 面板的位置与编辑方式</li>
+      <li>Q5：Shuffle 与显式队列的关系（双序列语义）</li>
+    </ol>
+    <p class="map">对应关系：页签「界面样例」回答 Q1 / Q2（三个差异巨大的方案 A/B/C 可切换）；页签「Shuffle 行为演练」回答 Q5。</p>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" id="tabBtnUi">界面样例</button>
+  <button class="tab-btn" id="tabBtnShuffle">Shuffle 行为演练</button>
+</div>
+
+<!-- ============ TAB 1: 界面样例 ============ -->
+<section id="tabUi">
+
+  <!-- 方案 A：右键菜单 + hover ⋯ + 右侧全高面板（推荐） -->
+  <div class="mock variant-block" id="mockA">
+    <div class="mock-head">
+      <div class="art"></div>
+      <div>
+        <div class="np-title">午夜电台</div>
+        <div class="np-artist">白噪音乐队</div>
+        <div class="np-album">专辑《城市之光》</div>
+      </div>
+    </div>
+    <div class="tracklist" id="listA"></div>
+    <div class="transport">
+      <div class="t-controls"><span>◂</span><span class="play">▶</span><span>▸</span></div>
+      <div class="progress-wrap">
+        <span class="ptime">1:31</span>
+        <div class="progress"><div class="progress-fill"></div></div>
+        <span class="ptime">3:37</span>
+      </div>
+      <div class="t-right">
+        <span>⇄</span><span>↻</span>
+        <button class="queue-btn" id="qBtnA" title="Up Next">☰</button>
+      </div>
+    </div>
+    <aside class="panelA" id="panelA">
+      <div class="upnext-head"><span class="ttl">UP NEXT</span><button class="clear-btn" id="clearA">清除</button></div>
+      <div class="upnext-list" id="upnextA"></div>
+    </aside>
+  </div>
+
+  <!-- 方案 B：行内 hover 快捷按钮 + 底部抽屉 -->
+  <div class="mock variant-block hidden" id="mockB">
+    <div class="mock-head">
+      <div class="art"></div>
+      <div>
+        <div class="np-title">午夜电台</div>
+        <div class="np-artist">白噪音乐队</div>
+        <div class="np-album">专辑《城市之光》</div>
+      </div>
+    </div>
+    <div class="tracklist" id="listB"></div>
+    <div class="transport">
+      <div class="t-controls"><span>◂</span><span class="play">▶</span><span>▸</span></div>
+      <div class="progress-wrap">
+        <span class="ptime">1:31</span>
+        <div class="progress"><div class="progress-fill"></div></div>
+        <span class="ptime">3:37</span>
+      </div>
+      <div class="t-right">
+        <span>⇄</span><span>↻</span>
+        <button class="queue-btn" id="qBtnB" title="Up Next">☰</button>
+      </div>
+    </div>
+    <aside class="drawerB" id="drawerB">
+      <div class="upnext-head"><span class="ttl">UP NEXT</span><button class="clear-btn" id="clearB">清除</button></div>
+      <div class="upnext-list" id="upnextB"></div>
+    </aside>
+  </div>
+
+  <!-- 方案 C：仅右键菜单 + 浮动 Popover -->
+  <div class="mock variant-block hidden" id="mockC">
+    <div class="mock-head">
+      <div class="art"></div>
+      <div>
+        <div class="np-title">午夜电台</div>
+        <div class="np-artist">白噪音乐队</div>
+        <div class="np-album">专辑《城市之光》</div>
+      </div>
+    </div>
+    <div class="tracklist" id="listC"></div>
+    <div class="transport">
+      <div class="t-controls"><span>◂</span><span class="play">▶</span><span>▸</span></div>
+      <div class="progress-wrap">
+        <span class="ptime">1:31</span>
+        <div class="progress"><div class="progress-fill"></div></div>
+        <span class="ptime">3:37</span>
+      </div>
+      <div class="t-right">
+        <span>⇄</span><span>↻</span>
+        <button class="queue-btn" id="qBtnC" title="Up Next">☰</button>
+      </div>
+    </div>
+    <aside class="popoverC" id="popoverC">
+      <div class="upnext-head"><span class="ttl">UP NEXT</span></div>
+      <div class="upnext-list" id="upnextC"></div>
+      <div class="foot"><button class="clear-btn" id="clearC">清除</button></div>
+    </aside>
+  </div>
+
+  <!-- 右键菜单（方案 A 与 C 共用同一组菜单项） -->
+  <div class="ctxmenu" id="ctxMenu">
+    <button data-act="next">下一首播放</button>
+    <button data-act="later">最后播放</button>
+    <div class="divider"></div>
+    <button disabled>添加到播放列表…（本原型不涉及）</button>
+  </div>
+
+  <!-- 方案切换 pill -->
+  <div class="variant-pill" id="variantPill">
+    <button id="varPrev" title="上一个方案">◀</button>
+    <span class="vlabel" id="varLabel"></span>
+    <button id="varNext" title="下一个方案">▶</button>
+  </div>
+</section>
+
+<!-- ============ TAB 2: Shuffle 行为演练 ============ -->
+<section id="tabShuffle" class="hidden">
+  <p class="qpara">
+    要回答的问题：shuffle 开启时 Up Next 显示什么？手动添加的曲目参与打乱吗？打乱中手动排序后关闭 shuffle 会怎样？
+    这里采用「双序列」模型：<b>原始顺序</b>（original）与<b>实际播放顺序</b>（active）分开保存，下方状态面板会同时显示两者。
+  </p>
+  <div class="demo-grid">
+    <div class="state-panel">
+      <div class="now-line">
+        当前播放：<b id="stCurrent"></b>
+        <span class="badge" id="stBadge"></span>
+      </div>
+      <div class="upnext-ttl">UP NEXT（实际播放顺序）</div>
+      <div class="upnext-list" id="stUpnext"></div>
+      <div class="orig-line" id="stOriginal"></div>
+      <div class="note-line" id="stNote"></div>
+    </div>
+    <div class="ctrl-panel">
+      <h3>自由操作</h3>
+      <div class="btn-row" id="freeBtns"></div>
+      <h3>引导演练（点击场景即重置到：正在播放 T2，shuffle 关）</h3>
+      <div class="wt-tabs" id="wtTabs"></div>
+      <ol class="wt-steps" id="wtSteps"></ol>
+      <div class="wt-done-msg" id="wtDone"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* =====================================================
+   公共数据 + 页签切换
+   ===================================================== */
+const TRACKS = {
+  T1:  { name: '曙光序曲', dur: '2:48' },
+  T2:  { name: '午夜电台', dur: '3:37' },
+  T3:  { name: '玻璃之城', dur: '4:05' },
+  T4:  { name: '逆流而上', dur: '3:21' },
+  T5:  { name: '星尘漫步', dur: '5:02' },
+  T6:  { name: '落日余晖', dur: '3:56' },
+  T7:  { name: '荒原列车', dur: '3:44' },
+  T8:  { name: '潮湿的梦', dur: '4:18' },
+  T9:  { name: '铁皮月亮', dur: '3:09' },
+  T10: { name: '无人知晓', dur: '4:41' },
+  N1:  { name: '风滚草',   dur: '3:02' },
+  N2:  { name: '长途车站', dur: '3:58' },
+  N3:  { name: '沙丘',     dur: '4:27' },
+  N4:  { name: '篝火',     dur: '3:33' },
+  N5:  { name: '银河渡口', dur: '5:14' },
+  N6:  { name: '归途',     dur: '4:06' },
+};
+const ALBUM1 = ['T1','T2','T3','T4','T5','T6'];
+const NEW_ALBUM = ['N1','N2','N3','N4','N5','N6'];
+function tLabel(id) { return id + ' · ' + (TRACKS[id] ? TRACKS[id].name : id); }
+
+const tabUi = document.getElementById('tabUi');
+const tabShuffle = document.getElementById('tabShuffle');
+const tabBtnUi = document.getElementById('tabBtnUi');
+const tabBtnShuffle = document.getElementById('tabBtnShuffle');
+const variantPill = document.getElementById('variantPill');
+
+function switchTab(which) {
+  const ui = which === 'ui';
+  tabUi.classList.toggle('hidden', !ui);
+  tabShuffle.classList.toggle('hidden', ui);
+  tabBtnUi.classList.toggle('active', ui);
+  tabBtnShuffle.classList.toggle('active', !ui);
+  variantPill.classList.toggle('hidden', !ui);
+}
+tabBtnUi.addEventListener('click', () => switchTab('ui'));
+tabBtnShuffle.addEventListener('click', () => switchTab('shuffle'));
+
+/* =====================================================
+   TAB 1 —— 共享内存队列状态（三个方案都读写它）
+   ===================================================== */
+const queue = { currentId: 'T2', upcoming: ['T3', 'T4', 'T5'] };
+
+function qPlayNext(id)  { queue.upcoming.unshift(id); renderTab1(); }
+function qPlayLater(id) { queue.upcoming.push(id);    renderTab1(); }
+function qRemoveAt(i)   { queue.upcoming.splice(i, 1); renderTab1(); }
+function qClear()       { queue.upcoming = []; renderTab1(); }
+function qReorder(from, to) {
+  if (from === to || from < 0 || to < 0 || from >= queue.upcoming.length || to >= queue.upcoming.length) return;
+  const item = queue.upcoming.splice(from, 1)[0];
+  queue.upcoming.splice(to, 0, item);
+  renderTab1();
+}
+
+/* ---------- 通用拖拽排序 helper（供 A/B 面板与 TAB 2 复用） ---------- */
+function makeDragList(el, getCount, onReorder) {
+  let dragIdx = null;
+  function clearMarks() {
+    el.querySelectorAll('.upnext-row').forEach(r => r.classList.remove('drop-before', 'drop-after'));
+  }
+  el.addEventListener('dragstart', e => {
+    const row = e.target.closest('.upnext-row');
+    if (!row) return;
+    dragIdx = +row.dataset.idx;
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  el.addEventListener('dragover', e => {
+    e.preventDefault();
+    clearMarks();
+    const row = e.target.closest('.upnext-row');
+    if (!row) return;
+    const rect = row.getBoundingClientRect();
+    const after = (e.clientY - rect.top) > rect.height / 2;
+    row.classList.add(after ? 'drop-after' : 'drop-before');
+  });
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    clearMarks();
+    if (dragIdx === null) return;
+    const row = e.target.closest('.upnext-row');
+    let to;
+    if (row) {
+      const rect = row.getBoundingClientRect();
+      const after = (e.clientY - rect.top) > rect.height / 2;
+      to = +row.dataset.idx + (after ? 1 : 0);
+    } else {
+      to = getCount();
+    }
+    if (dragIdx < to) to -= 1;
+    onReorder(dragIdx, to);
+    dragIdx = null;
+  });
+  el.addEventListener('dragend', () => { clearMarks(); dragIdx = null; });
+}
+
+/* ---------- 右键菜单（方案 A：⋯ 按钮或右键；方案 C：仅右键） ---------- */
+const ctxMenu = document.getElementById('ctxMenu');
+let ctxTrackId = null;
+
+function openCtxMenu(x, y, trackId) {
+  ctxTrackId = trackId;
+  ctxMenu.classList.add('open');
+  const w = 220, h = 140;
+  ctxMenu.style.left = Math.min(x, window.innerWidth - w - 8) + 'px';
+  ctxMenu.style.top = Math.min(y, window.innerHeight - h - 8) + 'px';
+}
+function closeCtxMenu() { ctxMenu.classList.remove('open'); ctxTrackId = null; }
+
+ctxMenu.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn || !ctxTrackId) return;
+  if (btn.dataset.act === 'next') qPlayNext(ctxTrackId);
+  if (btn.dataset.act === 'later') qPlayLater(ctxTrackId);
+  closeCtxMenu();
+});
+document.addEventListener('click', e => { if (!e.target.closest('.ctxmenu')) closeCtxMenu(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCtxMenu(); });
+
+/* ---------- 方案 A：hover ⋯ + 右键菜单 + 右侧全高面板 ---------- */
+function renderListA() {
+  const el = document.getElementById('listA');
+  el.innerHTML = '';
+  ALBUM1.forEach((id, i) => {
+    const row = document.createElement('div');
+    row.className = 'row' + (id === queue.currentId ? ' playing' : '');
+    row.innerHTML =
+      '<span class="idx">' + (i + 1) + '</span>' +
+      '<span class="name">' + TRACKS[id].name + '</span>' +
+      '<span class="row-actions"><button class="icon-btn" title="更多操作">⋯</button></span>' +
+      '<span class="dur">' + TRACKS[id].dur + '</span>';
+    row.querySelector('.icon-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      openCtxMenu(e.clientX, e.clientY, id);
+    });
+    row.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      openCtxMenu(e.clientX, e.clientY, id);
+    });
+    el.appendChild(row);
+  });
+}
+function renderUpnextA() {
+  const el = document.getElementById('upnextA');
+  el.innerHTML = '';
+  if (queue.upcoming.length === 0) {
+    el.innerHTML = '<div class="upnext-empty">Up Next 为空。右键任意曲目，选择「下一首播放」或「最后播放」。</div>';
+    return;
+  }
+  queue.upcoming.forEach((id, i) => {
+    const row = document.createElement('div');
+    row.className = 'upnext-row';
+    row.draggable = true;
+    row.dataset.idx = i;
+    row.innerHTML =
+      '<span class="n">' + (i + 1) + '</span>' +
+      '<span class="nm">' + tLabel(id) + '</span>' +
+      '<button class="rm" title="从 Up Next 移除">×</button>';
+    row.querySelector('.rm').addEventListener('click', () => qRemoveAt(i));
+    el.appendChild(row);
+  });
+}
+makeDragList(document.getElementById('upnextA'), () => queue.upcoming.length, qReorder);
+document.getElementById('qBtnA').addEventListener('click', () => {
+  const p = document.getElementById('panelA');
+  p.classList.toggle('open');
+  document.getElementById('qBtnA').classList.toggle('on', p.classList.contains('open'));
+});
+document.getElementById('clearA').addEventListener('click', qClear);
+
+/* ---------- 方案 B：行内 ⇥ / ＋ + 底部抽屉 ---------- */
+function renderListB() {
+  const el = document.getElementById('listB');
+  el.innerHTML = '';
+  ALBUM1.forEach((id, i) => {
+    const row = document.createElement('div');
+    row.className = 'row' + (id === queue.currentId ? ' playing' : '');
+    row.innerHTML =
+      '<span class="idx">' + (i + 1) + '</span>' +
+      '<span class="name">' + TRACKS[id].name + '</span>' +
+      '<span class="row-actions">' +
+        '<button class="icon-btn act-next" title="下一首播放">⇥</button>' +
+        '<button class="icon-btn act-later" title="最后播放">＋</button>' +
+      '</span>' +
+      '<span class="dur">' + TRACKS[id].dur + '</span>';
+    row.querySelector('.act-next').addEventListener('click', () => qPlayNext(id));
+    row.querySelector('.act-later').addEventListener('click', () => qPlayLater(id));
+    el.appendChild(row);
+  });
+}
+function renderUpnextB() {
+  const el = document.getElementById('upnextB');
+  el.innerHTML = '';
+  if (queue.upcoming.length === 0) {
+    el.innerHTML = '<div class="upnext-empty">Up Next 为空。hover 曲目行，点 ⇥ 或 ＋ 加入。</div>';
+    return;
+  }
+  queue.upcoming.forEach((id, i) => {
+    const row = document.createElement('div');
+    row.className = 'upnext-row';
+    row.draggable = true;
+    row.dataset.idx = i;
+    row.innerHTML =
+      '<span class="n">' + (i + 1) + '</span>' +
+      '<span class="nm">' + tLabel(id) + '</span>' +
+      '<button class="rm" title="从 Up Next 移除">×</button>';
+    row.querySelector('.rm').addEventListener('click', () => qRemoveAt(i));
+    el.appendChild(row);
+  });
+}
+makeDragList(document.getElementById('upnextB'), () => queue.upcoming.length, qReorder);
+document.getElementById('qBtnB').addEventListener('click', () => {
+  const d = document.getElementById('drawerB');
+  d.classList.toggle('open');
+  document.getElementById('qBtnB').classList.toggle('on', d.classList.contains('open'));
+});
+document.getElementById('clearB').addEventListener('click', qClear);
+
+/* ---------- 方案 C：仅右键菜单 + 浮动 Popover（↑↓ 排序） ---------- */
+function renderListC() {
+  const el = document.getElementById('listC');
+  el.innerHTML = '';
+  ALBUM1.forEach((id, i) => {
+    const row = document.createElement('div');
+    row.className = 'row' + (id === queue.currentId ? ' playing' : '');
+    row.innerHTML =
+      '<span class="idx">' + (i + 1) + '</span>' +
+      '<span class="name">' + TRACKS[id].name + '</span>' +
+      '<span class="dur">' + TRACKS[id].dur + '</span>';
+    row.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      openCtxMenu(e.clientX, e.clientY, id);
+    });
+    el.appendChild(row);
+  });
+}
+function renderUpnextC() {
+  const el = document.getElementById('upnextC');
+  el.innerHTML = '';
+  if (queue.upcoming.length === 0) {
+    el.innerHTML = '<div class="upnext-empty">Up Next 为空。右键任意曲目加入。</div>';
+    return;
+  }
+  queue.upcoming.forEach((id, i) => {
+    const row = document.createElement('div');
+    row.className = 'upnext-row';
+    row.innerHTML =
+      '<span class="n">' + (i + 1) + '</span>' +
+      '<span class="nm">' + tLabel(id) + '</span>' +
+      '<span class="move-btns">' +
+        '<button class="mv-up" title="上移">↑</button>' +
+        '<button class="mv-dn" title="下移">↓</button>' +
+      '</span>' +
+      '<button class="rm" title="从 Up Next 移除">×</button>';
+    row.querySelector('.mv-up').addEventListener('click', () => qReorder(i, i - 1));
+    row.querySelector('.mv-dn').addEventListener('click', () => qReorder(i, i + 1));
+    row.querySelector('.rm').addEventListener('click', () => qRemoveAt(i));
+    el.appendChild(row);
+  });
+}
+document.getElementById('qBtnC').addEventListener('click', () => {
+  const p = document.getElementById('popoverC');
+  p.classList.toggle('open');
+  document.getElementById('qBtnC').classList.toggle('on', p.classList.contains('open'));
+});
+document.getElementById('clearC').addEventListener('click', qClear);
+
+/* ---------- 三个方案整体渲染 ---------- */
+function renderTab1() {
+  renderListA(); renderUpnextA();
+  renderListB(); renderUpnextB();
+  renderListC(); renderUpnextC();
+}
+
+/* ---------- 方案切换（pill + 方向键 + URL ?variant=） ---------- */
+const VARIANTS = [
+  { key: 'A', label: 'A（右键菜单 + 侧滑面板）', el: document.getElementById('mockA') },
+  { key: 'B', label: 'B（行内按钮 + 底部抽屉）', el: document.getElementById('mockB') },
+  { key: 'C', label: 'C（仅右键 + 浮动 Popover）', el: document.getElementById('mockC') },
+];
+let variantIdx = 0;
+
+function setVariant(idx, updateUrl) {
+  variantIdx = ((idx % VARIANTS.length) + VARIANTS.length) % VARIANTS.length;
+  VARIANTS.forEach((v, i) => v.el.classList.toggle('hidden', i !== variantIdx));
+  document.getElementById('varLabel').textContent = VARIANTS[variantIdx].label;
+  if (updateUrl !== false) {
+    const url = new URL(location.href);
+    url.searchParams.set('variant', VARIANTS[variantIdx].key);
+    history.replaceState(null, '', url);
+  }
+}
+document.getElementById('varPrev').addEventListener('click', () => setVariant(variantIdx - 1));
+document.getElementById('varNext').addEventListener('click', () => setVariant(variantIdx + 1));
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (t && (t.closest('input') || t.closest('textarea') || t.closest('select') || t.isContentEditable)) return;
+  if (e.key === 'ArrowLeft') setVariant(variantIdx - 1);
+  if (e.key === 'ArrowRight') setVariant(variantIdx + 1);
+});
+
+(function initVariantFromUrl() {
+  const v = new URLSearchParams(location.search).get('variant');
+  const idx = VARIANTS.findIndex(x => x.key === v);
+  setVariant(idx >= 0 ? idx : 0);
+})();
+
+renderTab1();
+
+/* =====================================================
+   TAB 2 —— 纯逻辑模块（无 DOM，可单独抽取测试）
+   状态形状: { original: [ids], active: [ids], currentId, shuffled }
+   ===================================================== */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+const QueueModel = {
+  create(ids, currentId) {
+    return { original: ids.slice(), active: ids.slice(), currentId: currentId, shuffled: false };
+  },
+  _clone(s) {
+    return { original: s.original.slice(), active: s.active.slice(), currentId: s.currentId, shuffled: s.shuffled };
+  },
+  playNext(state, id) {
+    const s = this._clone(state);
+    s.active.splice(s.active.indexOf(s.currentId) + 1, 0, id);
+    s.original.splice(s.original.indexOf(s.currentId) + 1, 0, id);
+    return s;
+  },
+  playLater(state, id) {
+    const s = this._clone(state);
+    s.active.push(id);
+    s.original.push(id);
+    return s;
+  },
+  toggleShuffle(state, rng) {
+    const s = this._clone(state);
+    if (!s.shuffled) {
+      // 开启：当前曲目不动，之后的部分 Fisher–Yates 打乱
+      const ci = s.active.indexOf(s.currentId);
+      const rest = s.active.splice(ci + 1);
+      for (let i = rest.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const tmp = rest[i]; rest[i] = rest[j]; rest[j] = tmp;
+      }
+      s.active = s.active.concat(rest);
+      s.shuffled = true;
+    } else {
+      // 关闭：以 currentId 为锚，从 original 恢复整条 active
+      s.active = s.original.slice();
+      s.shuffled = false;
+    }
+    return s;
+  },
+  reorder(state, from, to) {
+    // 只改 active（Up Next 内的下标），original 不动
+    const s = this._clone(state);
+    const ci = s.active.indexOf(s.currentId);
+    const n = s.active.length - ci - 1;
+    if (from < 0 || to < 0 || from >= n || to >= n || from === to) return s;
+    const item = s.active.splice(ci + 1 + from, 1)[0];
+    s.active.splice(ci + 1 + to, 0, item);
+    return s;
+  },
+  remove(state, id) {
+    if (id === state.currentId) return state;
+    const s = this._clone(state);
+    s.active = s.active.filter(x => x !== id);
+    s.original = s.original.filter(x => x !== id);
+    return s;
+  },
+  clearUpcoming(state) {
+    const s = this._clone(state);
+    const ci = s.active.indexOf(s.currentId);
+    const drop = new Set(s.active.slice(ci + 1));
+    s.active = s.active.slice(0, ci + 1);
+    s.original = s.original.filter(id => !drop.has(id));
+    return s;
+  },
+  replaceQueue(state, ids) {
+    return { original: ids.slice(), active: ids.slice(), currentId: ids[0], shuffled: false };
+  },
+};
+
+/* =====================================================
+   TAB 2 —— UI 驱动
+   ===================================================== */
+const WT_SEED = 42;
+let rng = mulberry32(WT_SEED);
+let st = QueueModel.create(ALBUM1, 'T2');
+let note = '初始状态：正在播放 T2，shuffle 关。';
+let activeWt = null;   // { def, step }
+
+const stCurrent = document.getElementById('stCurrent');
+const stBadge = document.getElementById('stBadge');
+const stUpnext = document.getElementById('stUpnext');
+const stOriginal = document.getElementById('stOriginal');
+const stNote = document.getElementById('stNote');
+
+function upcomingIds() {
+  return st.active.slice(st.active.indexOf(st.currentId) + 1);
+}
+
+function renderTab2() {
+  stCurrent.textContent = tLabel(st.currentId);
+  stBadge.textContent = st.shuffled ? 'Shuffle 开' : 'Shuffle 关';
+  stBadge.classList.toggle('on', st.shuffled);
+
+  stUpnext.innerHTML = '';
+  const up = upcomingIds();
+  if (up.length === 0) {
+    stUpnext.innerHTML = '<div class="upnext-empty">Up Next 为空。</div>';
+  } else {
+    up.forEach((id, i) => {
+      const row = document.createElement('div');
+      row.className = 'upnext-row';
+      row.draggable = true;
+      row.dataset.idx = i;
+      row.innerHTML = '<span class="n">' + (i + 1) + '</span><span class="nm">' + tLabel(id) + '</span>';
+      stUpnext.appendChild(row);
+    });
+  }
+  stOriginal.textContent = '原始顺序（original）：' + st.original.join(' ');
+  stNote.textContent = '刚才发生了什么：' + note;
+}
+
+function applyAction(newState, noteText) {
+  st = newState;
+  note = noteText;
+  renderTab2();
+}
+
+/* 自由操作按钮：任意自由操作会退出当前引导演练 */
+function cancelWt() { activeWt = null; renderWt(); }
+
+const FREE_ACTIONS = [
+  { label: '下一首播放 T9', run: () => applyAction(QueueModel.playNext(st, 'T9'), 'T9 插到当前曲目之后（active 与 original 同步插入）。') },
+  { label: '最后播放 T9',  run: () => applyAction(QueueModel.playLater(st, 'T9'), 'T9 追加到队尾（active 与 original 同步追加）。') },
+  { label: '最后播放 T10', run: () => applyAction(QueueModel.playLater(st, 'T10'), 'T10 追加到队尾。') },
+  { label: '开关 Shuffle', run: () => {
+      const next = QueueModel.toggleShuffle(st, rng);
+      applyAction(next, next.shuffled
+        ? 'Shuffle 打开：当前曲目不动，之后的 Up Next 被随机打乱（original 不变）。'
+        : 'Shuffle 关闭：active 从 original 恢复——打乱期间对 Up Next 的手动排序被丢弃。');
+    } },
+  { label: '删除 Up Next 第一首', run: () => {
+      const up = upcomingIds();
+      if (up.length === 0) { note = 'Up Next 已空，没有可删除的曲目。'; renderTab2(); return; }
+      applyAction(QueueModel.remove(st, up[0]), up[0] + ' 已从 active 与 original 中同时删除。');
+    } },
+  { label: '清空 Up Next', run: () => applyAction(QueueModel.clearUpcoming(st), '当前曲目之后全部清空（两条序列同步），当前曲目保留。') },
+  { label: '替换为新专辑（6首）', run: () => applyAction(QueueModel.replaceQueue(st, NEW_ALBUM), '队列替换为新专辑《旷野回声》N1–N6，从 N1 开始播放，shuffle 重置为关。') },
+];
+
+const freeBtns = document.getElementById('freeBtns');
+FREE_ACTIONS.forEach(a => {
+  const b = document.createElement('button');
+  b.className = 'act-btn';
+  b.textContent = a.label;
+  b.addEventListener('click', () => { cancelWt(); a.run(); });
+  freeBtns.appendChild(b);
+});
+
+/* 状态面板 Up Next 直接拖拽排序 */
+makeDragList(stUpnext, () => upcomingIds().length, (from, to) => {
+  cancelWt();
+  const id = upcomingIds()[from];
+  applyAction(QueueModel.reorder(st, from, to),
+    st.shuffled
+      ? '把 ' + id + ' 从第 ' + (from + 1) + ' 位拖到第 ' + (to + 1) + ' 位：只改了 active，original 未动（关闭 shuffle 后这次排序会丢失）。'
+      : '把 ' + id + ' 从第 ' + (from + 1) + ' 位拖到第 ' + (to + 1) + ' 位。');
+});
+
+/* ---------- 引导演练 ---------- */
+const WALKTHROUGHS = [
+  {
+    title: '① 打乱与恢复',
+    steps: [
+      { label: '打开 Shuffle', desc: '看点：Up Next 被打乱，当前播放的 T2 原地不动。',
+        act: () => QueueModel.toggleShuffle(st, rng),
+        doneNote: 'Shuffle 已打开：T2 保持不动，T3–T6 的顺序被洗乱。' },
+      { label: '关闭 Shuffle', desc: '看点：Up Next 恢复为 T3 T4 T5 T6 的原始顺序。',
+        act: () => QueueModel.toggleShuffle(st, rng),
+        doneNote: 'Shuffle 已关闭：active 从 original 恢复，Up Next 回到 T3 T4 T5 T6。' },
+    ],
+    doneMsg: '演练完成：开/关 shuffle 只影响 active，original 始终完好，所以能无损恢复。',
+  },
+  {
+    title: '② 手动添加的曲目也参与打乱',
+    steps: [
+      { label: '最后播放 T9', desc: '看点：T9（来自另一张专辑）追加到队尾。',
+        act: () => QueueModel.playLater(st, 'T9'),
+        doneNote: 'T9 已追加到队尾（两条序列同步）。' },
+      { label: '最后播放 T10', desc: '看点：T10 追加到队尾。',
+        act: () => QueueModel.playLater(st, 'T10'),
+        doneNote: 'T10 已追加到队尾。' },
+      { label: '打开 Shuffle', desc: '看点：T9 / T10 和专辑剩余曲目 T3–T6 一起被洗乱——手动添加的曲目同样参与打乱。',
+        act: () => QueueModel.toggleShuffle(st, rng),
+        doneNote: 'Shuffle 已打开：T3–T6 与手动添加的 T9、T10 混在一起被洗乱。' },
+      { label: '关闭 Shuffle', desc: '看点：恢复原始顺序，T9 T10 回到队尾。',
+        act: () => QueueModel.toggleShuffle(st, rng),
+        doneNote: 'Shuffle 已关闭：恢复为 T3 T4 T5 T6 T9 T10——T9 T10 回到队尾。' },
+    ],
+    doneMsg: '演练完成：手动添加的曲目写入了 original，所以参与打乱、也能随恢复回到原位。',
+  },
+  {
+    title: '③ 打乱中手动排序，关闭后丢失',
+    steps: [
+      { label: '打开 Shuffle', desc: '看点：Up Next 被打乱。',
+        act: () => QueueModel.toggleShuffle(st, rng),
+        doneNote: 'Shuffle 已打开：Up Next 顺序已洗乱。' },
+      { label: '把 Up Next 第一首移到末尾（代为执行拖拽）', desc: '看点：手动排序生效——但注意下方 original 一行没有变化。',
+        act: () => QueueModel.reorder(st, 0, upcomingIds().length - 1),
+        doneNote: '已把 Up Next 第一首移到末尾：只改了 active，original 保持不动。' },
+      { label: '关闭 Shuffle', desc: '看点：刚才的手动排序被丢弃，恢复原始顺序——这就是双序列模型的代价。',
+        act: () => QueueModel.toggleShuffle(st, rng),
+        doneNote: 'Shuffle 已关闭：active 从 original 整体恢复，打乱期间的手动排序被丢弃。' },
+    ],
+    doneMsg: '演练完成：shuffle 期间的手动排序只落在 active 上，关闭 shuffle 即丢失。这是双序列模型最尖锐的边界情况。',
+  },
+  {
+    title: '④ Play Next 插到当前之后',
+    steps: [
+      { label: '下一首播放 T9', desc: '看点：T9 插到 Up Next 第一位（当前曲目之后），而不是队尾。',
+        act: () => QueueModel.playNext(st, 'T9'),
+        doneNote: 'T9 已插到 Up Next 第一位：紧随当前播放的 T2。' },
+    ],
+    doneMsg: '演练完成：Play Next = 插到当前曲目之后；Play Later = 追加到队尾。',
+  },
+];
+
+const wtTabs = document.getElementById('wtTabs');
+const wtSteps = document.getElementById('wtSteps');
+const wtDone = document.getElementById('wtDone');
+
+function resetDemo() {
+  rng = mulberry32(WT_SEED);
+  st = QueueModel.create(ALBUM1, 'T2');
+}
+
+function startWt(idx) {
+  resetDemo();
+  activeWt = { def: WALKTHROUGHS[idx], step: 0 };
+  note = '已重置：正在播放 T2（专辑 T1–T6），shuffle 关。';
+  renderTab2();
+  renderWt();
+}
+
+function renderWt() {
+  wtTabs.innerHTML = '';
+  WALKTHROUGHS.forEach((w, i) => {
+    const b = document.createElement('button');
+    b.className = 'wt-tab' + (activeWt && activeWt.def === w ? ' active' : '');
+    b.textContent = w.title;
+    b.addEventListener('click', () => startWt(i));
+    wtTabs.appendChild(b);
+  });
+
+  wtSteps.innerHTML = '';
+  wtDone.textContent = '';
+  if (!activeWt) return;
+
+  activeWt.def.steps.forEach((s, i) => {
+    const li = document.createElement('li');
+    const isCurrent = i === activeWt.step;
+    li.className = 'wt-step' + (isCurrent ? ' current' : '') + (i < activeWt.step ? ' done' : '');
+    li.innerHTML = '<b>第 ' + (i + 1) + ' 步：' + s.label + '</b><div class="sdesc">' + s.desc + '</div>';
+    if (isCurrent) {
+      const b = document.createElement('button');
+      b.className = 'act-btn';
+      b.textContent = '执行：' + s.label;
+      b.addEventListener('click', () => {
+        applyAction(s.act(), s.doneNote);
+        activeWt.step += 1;
+        renderWt();
+      });
+      li.appendChild(b);
+    }
+    wtSteps.appendChild(li);
+  });
+
+  if (activeWt.step >= activeWt.def.steps.length) {
+    wtDone.textContent = activeWt.def.doneMsg;
+  }
+}
+
+renderTab2();
+renderWt();
+</script>
+</body>
+</html>
