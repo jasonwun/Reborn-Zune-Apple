@@ -18,8 +18,13 @@ public struct ResonantApp: View {
     let needsLibraryFolder: Bool
     let onPickFolder: () -> Void
 
-    @State private var router = ResonantRouter(initial: ResonantRouter.envInitialRoute())
+    // PROTOTYPE (throwaway): `REBORN_ZUNE_PROTO_NOWPLAYING=1` opens Now
+    // Playing at launch; inert unless REBORN_ZUNE_PROTO_PLAYER=1 too.
+    @State private var router = ResonantRouter(initial: PrototypeLaunch.initialRoute
+                                               ?? ResonantRouter.envInitialRoute())
     @State private var showCreatePlaylist = false
+    // PROTOTYPE (throwaway): inert unless REBORN_ZUNE_PROTO_PLAYER=1.
+    @ObservedObject private var proto = PlaybackPrototypeModel.shared
     @Environment(\.modelContext) private var modelContext
 
     public init(engine: PlaybackEngine,
@@ -52,6 +57,16 @@ public struct ResonantApp: View {
     public var body: some View {
         innerBody
             .preferredColorScheme(.dark)
+            // PROTOTYPE (throwaway): floating variant switcher pill.
+            .overlay(alignment: .bottom) {
+                if proto.isEnabled {
+                    PrototypeVariantSwitcher()
+                        // Clear of the MiniPlayer bar on browse pages and
+                        // of the transport row (bottom 28 + 52pt play ring)
+                        // on Now Playing.
+                        .padding(.bottom, router.route == .nowPlaying ? 130 : 84)
+                }
+            }
             .task { await runAutoNav() }
     }
 

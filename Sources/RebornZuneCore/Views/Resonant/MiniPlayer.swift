@@ -10,6 +10,9 @@ public struct MiniPlayer: View {
     @State private var mode: RotatorMode = .now
     @State private var exiting: RotatorMode? = nil
     @State private var rotatorTask: Task<Void, Never>? = nil
+    // PROTOTYPE (throwaway): gate is always false unless
+    // REBORN_ZUNE_PROTO_PLAYER=1 — normal mode is bit-identical.
+    @ObservedObject private var proto = PlaybackPrototypeModel.shared
     @Environment(\.resonantLayout) private var layout
     @Environment(\.resonantWindowSize) private var windowSize
 
@@ -50,7 +53,7 @@ public struct MiniPlayer: View {
         HStack(spacing: 24 * elastic) {
             // Art (44pt)
             Button(action: onOpenNowPlaying) {
-                if let current = engine.currentItem {
+                if let current = displayItem {
                     artwork(for: current)
                         .frame(width: artFrame, height: artFrame)
                 } else {
@@ -73,11 +76,11 @@ public struct MiniPlayer: View {
             .buttonStyle(.plain)
 
             // Scrubber center
-            scrubber
+            scrubberRegion
                 .frame(maxWidth: .infinity)
 
             // Transport right
-            transport
+            transportRegion
         }
         .padding(.horizontal, spacing.padX)
         .padding(.vertical, rowVPad)
@@ -105,7 +108,7 @@ public struct MiniPlayer: View {
 
     private var nowView: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(engine.currentItem?.title ?? "—")
+            Text(displayItem?.title ?? "—")
                 .font(ResonantFont.display(22, weight: .light))
                 .tracking(-0.22)
                 .foregroundColor(ResonantColors.ink)
@@ -117,7 +120,7 @@ public struct MiniPlayer: View {
                         .frame(width: 8, height: 8)
                         .opacity(pulseOpacity)
                 }
-                Text(metaLine(for: engine.currentItem))
+                Text(metaLine(for: displayItem))
                     .resonantScaledFont(10, weight: .medium, design: .monospaced, tracking: 1.6)
                     .textCase(.uppercase)
                     .foregroundColor(ResonantColors.ink2)
@@ -151,6 +154,29 @@ public struct MiniPlayer: View {
         let artist = t.artist ?? t.albumArtist ?? "Unknown Artist"
         let album = t.albumTitle ?? ""
         return album.isEmpty ? artist : "\(artist) — \(album)"
+    }
+
+    // MARK: - Prototype mount (throwaway; inert unless env-gated)
+
+    /// PROTOTYPE: stub-track fallback so proto screenshots render populated.
+    private var displayItem: Music? { proto.displayItem(engine) }
+
+    @ViewBuilder
+    private var scrubberRegion: some View {
+        if proto.isEnabled {
+            PrototypeScrubber(engine: engine, miniTheme: true, isTouch: isTouch)
+        } else {
+            scrubber
+        }
+    }
+
+    @ViewBuilder
+    private var transportRegion: some View {
+        if proto.isEnabled {
+            PrototypeMiniTransport(engine: engine, isTouch: isTouch)
+        } else {
+            transport
+        }
     }
 
     // MARK: - Scrubber

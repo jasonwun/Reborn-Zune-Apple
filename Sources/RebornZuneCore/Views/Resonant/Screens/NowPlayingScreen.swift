@@ -13,6 +13,9 @@ public struct NowPlayingScreen: View {
     @State private var repeatMode: RepeatMode = .off
     @State private var volume: Double = 72
     @State private var backHover = false
+    // PROTOTYPE (throwaway): gate is always false unless
+    // REBORN_ZUNE_PROTO_PLAYER=1 — normal mode is bit-identical.
+    @ObservedObject private var proto = PlaybackPrototypeModel.shared
     @Environment(\.resonantLayout) private var layout
     @Environment(\.resonantWindowSize) private var windowSize
     @Environment(\.resonantScreenSize) private var screenSize
@@ -92,7 +95,7 @@ public struct NowPlayingScreen: View {
             VStack {
                 Spacer()
                 HStack(alignment: .bottom, spacing: 18) {
-                    if let track = engine.currentItem,
+                    if let track = displayItem,
                        let album = albumForCurrentTrack() {
                         CoverArt(entry: album.coverEntry)
                             .frame(width: 120, height: 120)
@@ -130,15 +133,23 @@ public struct NowPlayingScreen: View {
             // with the meta card (the queue button still reaches it).
             // Bucketed surfaces render it unconditionally (bit-identical).
             if !layout.arrangementDriven || windowSize.width >= 1000 {
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        upNextRail
-                            .frame(width: 260 * layout.windowScale)
-                            .padding(.trailing, spacing.padX)
-                            .padding(.bottom, 140)
-                    }
+                if proto.isEnabled {
+                    // PROTOTYPE (throwaway): the rail stays in the tree and
+                    // the queue-button toggle animates opacity/offset
+                    // DIRECTLY (0.3s both directions, user-tuned). The
+                    // previous insert/remove + .transition approach was
+                    // fragile: the removal side depends on the transition
+                    // system receiving the animated transaction across the
+                    // ObservedObject-driven update, which is not symmetric
+                    // in practice — removal kept reading as instant.
+                    upNextRailContainer
+                        .opacity(proto.upNextRailHidden ? 0 : 1)
+                        .offset(x: proto.upNextRailHidden ? 24 : 0)
+                        .allowsHitTesting(!proto.upNextRailHidden)
+                        .animation(.easeInOut(duration: 0.3),
+                                   value: proto.upNextRailHidden)
+                } else {
+                    upNextRailContainer
                 }
             }
 
@@ -149,7 +160,7 @@ public struct NowPlayingScreen: View {
             // and Up Next rail.
             VStack {
                 Spacer()
-                scrubberRow
+                scrubberRegion
                     .padding(.horizontal, spacing.padX)
                     .padding(.bottom, 88)
             }
@@ -157,13 +168,51 @@ public struct NowPlayingScreen: View {
             // 9. Transport — absolutely anchored at bottom 28 (per M9 §5.9).
             VStack {
                 Spacer()
-                transportRow
+                transportRegion
                     .padding(.horizontal, spacing.padX)
                     .padding(.bottom, 28)
             }
         }
         .background(Color(red: 14/255, green: 13/255, blue: 10/255))
         .onAppear { PerfProbe.mark("nowplaying.appear") }
+    }
+
+    // MARK: - Prototype mount (throwaway; inert unless env-gated)
+
+    /// PROTOTYPE: stub-track fallback so proto screenshots render populated.
+    private var displayItem: Music? { proto.displayItem(engine) }
+
+    /// Section-7 rail container, extracted so the prototype branch can keep
+    /// it in the tree and animate opacity/offset instead of insert/remove.
+    private var upNextRailContainer: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                upNextRail
+                    .frame(width: 260 * layout.windowScale)
+                    .padding(.trailing, spacing.padX)
+                    .padding(.bottom, 140)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var scrubberRegion: some View {
+        if proto.isEnabled {
+            PrototypeScrubber(engine: engine, miniTheme: false)
+        } else {
+            scrubberRow
+        }
+    }
+
+    @ViewBuilder
+    private var transportRegion: some View {
+        if proto.isEnabled {
+            PrototypeNowPlayingTransport(engine: engine)
+        } else {
+            transportRow
+        }
     }
 
     // MARK: - Subviews
@@ -363,7 +412,7 @@ public struct NowPlayingScreen: View {
     }
 
     private func albumForCurrentTrack() -> Album? {
-        guard let track = engine.currentItem else { return nil }
+        guard let track = displayItem else { return nil }
         return MusicTileBuilderHelper.album(for: track)
     }
 }
