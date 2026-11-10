@@ -44,7 +44,6 @@ public enum LibraryReconciler {
     public static func plan(
         known: [TrackSnapshot],
         discovered: [DiscoveredFile],
-        forceExtraction: Bool = false,
         makeID: () -> UUID = UUID.init
     ) -> ReconciliationPlan {
         // Defensive: one entry per normalized path.
@@ -59,13 +58,11 @@ public enum LibraryReconciler {
 
         for file in files {
             if let old = knownByPath[file.path] {
-                let unchanged = old.modificationDate == file.modificationDate
-                    && old.fileSize == file.fileSize
-                    && old.metadataVersion >= currentMetadataVersion
+                let unchanged = isUnchanged(old, file)
                 tracks.append(PlannedTrack(
                     id: old.id, file: file, kind: .retained,
-                    needsExtraction: forceExtraction || !unchanged,
-                    needsWrite: forceExtraction || !unchanged
+                    needsExtraction: !unchanged,
+                    needsWrite: !unchanged
                         || old.volumeID != file.volumeID || old.fileID != file.fileID))
             } else {
                 newFiles.append(file)
@@ -90,12 +87,10 @@ public enum LibraryReconciler {
         for (k, news) in newByKey {
             guard news.count == 1, let gone = goneByKey[k], gone.count == 1 else { continue }
             let old = gone[0], file = news[0]
-            let unchanged = old.modificationDate == file.modificationDate
-                && old.fileSize == file.fileSize
-                && old.metadataVersion >= currentMetadataVersion
+            let unchanged = isUnchanged(old, file)
             tracks.append(PlannedTrack(
                 id: old.id, file: file, kind: .moved,
-                needsExtraction: forceExtraction || !unchanged,
+                needsExtraction: !unchanged,
                 needsWrite: true))
             movedPaths.insert(file.path)
             movedIDs.insert(old.id)
@@ -106,5 +101,11 @@ public enum LibraryReconciler {
         }
         let missing = disappeared.map(\.id).filter { !movedIDs.contains($0) }
         return ReconciliationPlan(tracks: tracks, missing: missing)
+    }
+
+    private static func isUnchanged(_ old: TrackSnapshot, _ file: DiscoveredFile) -> Bool {
+        old.modificationDate == file.modificationDate
+            && old.fileSize == file.fileSize
+            && old.metadataVersion >= currentMetadataVersion
     }
 }

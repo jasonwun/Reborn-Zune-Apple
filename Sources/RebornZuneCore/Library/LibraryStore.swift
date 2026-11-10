@@ -112,27 +112,36 @@ public actor LibraryStore {
             }
         }
 
-        // Legacy path-hash re-keying: exact current-path matches only.
+        // Legacy path-hash re-keying: exact current-path matches only, and only
+        // to Tracks that really exist. A current file whose extraction failed
+        // is left untouched so a later scan can still re-key it.
         let legacy = try modelContext.fetch(
             FetchDescriptor<StoredPlaylistEntry>(predicate: #Predicate { $0.trackID == nil }))
         if !legacy.isEmpty {
             var byHash: [String: UUID] = [:]
+            var deferred = Set<String>()
             for p in plan.tracks {
-                byHash[Music.legacyID(forPath: p.file.path)] = p.id
-                if p.file.rawPath != p.file.path {
-                    byHash[Music.legacyID(forPath: p.file.rawPath)] = p.id
+                let paths = p.file.rawPath == p.file.path ? [p.file.path] : [p.file.path, p.file.rawPath]
+                let exists = p.kind != .added || extracted[p.file.path] != nil
+                for path in paths {
+                    let hash = Music.legacyID(forPath: path)
+                    if exists { byHash[hash] = p.id } else { deferred.insert(hash) }
                 }
             }
             for entry in legacy {
                 if let id = byHash[entry.musicID] {
                     entry.trackID = id
-                } else {
+                } else if !deferred.contains(entry.musicID) {
                     // Successful scan, no current path matches: confirmed missing.
                     modelContext.delete(entry)
                 }
             }
+            if legacy.contains(where: { $0.trackID == nil && !$0.isDeleted }) == false {
+                state.identityMigrationVersion = max(state.identityMigrationVersion, 1)
+            }
+        } else {
+            state.identityMigrationVersion = max(state.identityMigrationVersion, 1)
         }
-        state.identityMigrationVersion = max(state.identityMigrationVersion, 1)
         state.metadataVersion = currentMetadataVersion
     }
 

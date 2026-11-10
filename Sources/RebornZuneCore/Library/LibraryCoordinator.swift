@@ -129,7 +129,11 @@ public final class LibraryCoordinator {
     }
 
     private func publishCommitted() async {
-        guard let snapshots = try? await store.snapshots() else { return }
+        let snapshots: [TrackSnapshot]
+        do { snapshots = try await store.snapshots() } catch {
+            scanError = "Your Library could not be loaded: \(error.localizedDescription)"
+            return
+        }
         let ids = Self.artworkRepresentatives(snapshots)
         let artwork = (try? await store.artwork(for: ids)) ?? [:]
         let built = await Self.buildMusic(snapshots, artwork: artwork)

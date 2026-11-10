@@ -197,6 +197,36 @@ final class LibraryCoordinatorTests: XCTestCase {
         XCTAssertEqual(state?.metadataVersion, currentMetadataVersion)
     }
 
+    func testLegacyEntryForUnextractableCurrentFileIsNotRekeyedToGhostOrDeleted() async throws {
+        let container = try container()
+        let ctx = ModelContext(container)
+        let pl = StoredPlaylist(name: "Old")
+        ctx.insert(pl)
+        ctx.insert(StoredPlaylistEntry(orderIndex: 0, musicID: Music.legacyID(forPath: "/fake/bad.mp3"), playlist: pl))
+        try ctx.save()
+
+        let source = FakeSource()
+        source.files = [file("bad.mp3"), file("ok.mp3")]
+        source.failExtraction(of: "/fake/bad.mp3")
+        let c = coordinator(container, source)
+        await c.start()
+        XCTAssertEqual(c.tracks.map(\.title), ["ok.mp3"])
+        let entries = try ModelContext(container).fetch(FetchDescriptor<StoredPlaylistEntry>())
+        XCTAssertEqual(entries.count, 1, "kept for a later scan")
+        XCTAssertNil(entries[0].trackID, "must not point at a Track that does not exist")
+        let state = try ModelContext(container).fetch(FetchDescriptor<StoredLibraryState>()).first
+        XCTAssertEqual(state?.identityMigrationVersion, 0, "migration is not complete while a legacy entry remains")
+
+        source.failExtraction(of: "")  // no-op; next scan succeeds below
+        let healed = FakeSource()
+        healed.files = [file("bad.mp3"), file("ok.mp3")]
+        let c2 = coordinator(container, healed)
+        await c2.start()
+        let after = try ModelContext(container).fetch(FetchDescriptor<StoredPlaylistEntry>())
+        XCTAssertNotNil(after.first?.trackID)
+        XCTAssertEqual(after.first?.trackID.map(\.uuidString), c2.tracks.first { $0.title == "bad.mp3" }?.id)
+    }
+
     func testFailedScanLeavesLegacyEntriesUntouched() async throws {
         let container = try container()
         let ctx = ModelContext(container)
