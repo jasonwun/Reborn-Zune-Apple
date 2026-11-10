@@ -12,6 +12,10 @@ _Avoid_: media library, collection
 A single local folder that contributes tracks to the Library. On macOS the default source is `~/Music`; users can add and remove sources.
 _Avoid_: watched folder, directory
 
+**Track Identity** (曲目身份):
+The stable UUID of a Library track. It survives same-path replacement and same-volume moves; Playlists reference it. See ADR-0009.
+_Avoid_: track ID (ambiguous with the legacy path hash)
+
 **Queue** (队列):
 The explicit, editable list of upcoming tracks. Users append via Play Next / Play Later, and reorder or remove entries in Up Next.
 _Avoid_: implicit whole-library queue (the retired behavior)

@@ -53,14 +53,38 @@ private struct SnapshotView: View {
 @MainActor
 private struct ResonantHost: View {
     @State private var engine = PlaybackEngine()
-    @State private var state = LibraryHostState()
-    @State private var showPicker = false
+    @State private var library: LibraryCoordinator
+    @Environment(\.modelContext) private var modelContext
     /// Hardware screen size backing the M15.1 screen-fixed scale tokens.
     /// Re-derived only when the window moves to another screen — never
     /// on window resize. M16.3: initialized synchronously (was a
     /// 1440×900 placeholder until `.task` ran) so the tile wall's
     /// first-layout freeze never sees a stale screen size.
     @State private var screenSize = NSScreen.main?.frame.size ?? CGSize(width: 1440, height: 900)
+    @State private var demo: DemoLibrary?
+
+    init() {
+        // DEBUG override lets verification point the default Library Source
+        // at a prepared folder instead of ~/Music.
+        let root: URL
+        if let override = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_LIBRARY_FOLDER"] {
+            root = URL(fileURLWithPath: override)
+        } else {
+            root = FileManager.default.urls(for: .musicDirectory, in: .userDomainMask).first
+                ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Music")
+        }
+        _library = State(initialValue: LibraryCoordinator(
+            container: RebornZuneMacApp.sharedContainer,
+            source: FolderFileSource(root: root)))
+    }
+
+    private struct DemoLibrary {
+        let tracks: [Music]
+        let tiles: [TileWallEntry]
+        let library: ResonantLibrary
+    }
+
+    private var shownTracks: [Music] { demo?.tracks ?? library.tracks }
 
     var body: some View {
         let _ = PerfProbe.once("app.body")
@@ -69,10 +93,21 @@ private struct ResonantHost: View {
             ? nil
             : LightingAnimator()
 
-        let tilesToShow = state.tiles.isEmpty
+        let tilesToShow = shownTracks.isEmpty
             ? SyntheticTiles.sample(count: 250)
-            : state.tiles
-        let library = state.library
+            : (demo?.tiles ?? MusicTileBuilder.tiles(from: library.tracks))
+        let resonantLibrary = demo?.library ?? ResonantLibrary.from(tracks: library.tracks)
+
+        let status: LibraryStatus? = {
+            guard demo == nil else { return nil }
+            switch library.phase {
+            case .ready: return nil
+            case .loading: return .loading
+            case .empty: return .empty(path: library.sourcePath)
+            case .failed: return .failed(message: library.scanError ?? "The scan did not finish.")
+            }
+        }()
+        let banner: String? = (status == nil && demo == nil) ? library.scanError : nil
 
         // M15.1: size tokens are fixed per screen (`.mac(screen:)`);
         // the live window size goes to `resonantWindowSize`, which views
@@ -80,12 +115,13 @@ private struct ResonantHost: View {
         GeometryReader { proxy in
             ResonantApp(
                 engine: engine,
-                library: library,
+                library: resonantLibrary,
                 tiles: tilesToShow,
                 lightingAnimator: lighting,
                 density: .cozy,
-                needsLibraryFolder: state.phase == .needsFolder,
-                onPickFolder: { showPicker = true }
+                libraryStatus: status,
+                scanBanner: banner,
+                onRetry: { Task { await library.retry() } }
             )
             .environment(\.resonantLayout, .mac(screen: screenSize))
             .environment(\.resonantWindowSize, proxy.size)
@@ -97,34 +133,24 @@ private struct ResonantHost: View {
             for: NSWindow.didChangeScreenNotification)) { _ in
             updateScreenSize()
         }
-        .fileImporter(
-            isPresented: $showPicker,
-            allowedContentTypes: [.folder]
-        ) { result in
-            if case .success(let url) = result {
-                Task { await state.load(folder: url, into: engine) }
-            }
+        .onChange(of: library.tracks) { _, tracks in
+            // Adopt the Library as the playback queue only when nothing is
+            // queued; a refresh must never disturb current playback.
+            if engine.queue.isEmpty, !tracks.isEmpty { engine.setQueue(tracks) }
         }
         .task {
             updateScreenSize()
             // Debug: synthetic demo library to bypass TCC / sandbox file access.
             if ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_DEMO_LIBRARY"] == "1" {
                 let tracks = ResonantDemoLibrary.makeMusic()
-                state.tracks = tracks
-                state.tiles = MusicTileBuilder.tiles(from: tracks)
-                state.library = ResonantLibrary.from(tracks: tracks)
-                state.phase = .ready
+                demo = DemoLibrary(tracks: tracks,
+                                   tiles: MusicTileBuilder.tiles(from: tracks),
+                                   library: ResonantLibrary.from(tracks: tracks))
                 engine.setQueue(tracks)
                 PerfProbe.mark("library.demo.ready")
                 return
             }
-            if let override = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_LIBRARY_FOLDER"] {
-                await state.load(folder: URL(fileURLWithPath: override), into: engine)
-                return
-            }
-            if let saved = LibraryFolderStore.read() {
-                await state.load(folder: saved, into: engine)
-            }
+            await library.start()
         }
     }
 
@@ -223,41 +249,6 @@ private struct WindowSizeAccessor: NSViewRepresentable {
                                      height: max(targetSize.height, window.contentMinSize.height))
                 window.setContentSize(clamped)
             }
-        }
-    }
-}
-
-private enum LibraryPhase: Equatable {
-    case needsFolder
-    case loading
-    case ready
-}
-
-@MainActor
-@Observable
-private final class LibraryHostState {
-    var phase: LibraryPhase = .needsFolder
-    var tiles: [TileWallEntry] = []
-    var tracks: [Music] = []
-    var library: ResonantLibrary = ResonantLibrary(albums: [], artists: [])
-
-    func load(folder: URL, into engine: PlaybackEngine) async {
-        phase = .loading
-        let source = FolderLibrarySource(folder: folder)
-        do {
-            let loaded = try await source.load()
-            tracks = loaded
-            tiles = MusicTileBuilder.tiles(from: loaded)
-            library = ResonantLibrary.from(tracks: loaded)
-            LibraryFolderStore.write(folder)
-            // A folder with no usable audio is functionally the same as
-            // no folder picked — fall back to the empty state.
-            phase = loaded.isEmpty ? .needsFolder : .ready
-            if !loaded.isEmpty {
-                engine.setQueue(loaded)
-            }
-        } catch {
-            phase = .needsFolder
         }
     }
 }

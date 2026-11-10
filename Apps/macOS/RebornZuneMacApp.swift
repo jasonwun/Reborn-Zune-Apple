@@ -7,8 +7,18 @@ struct RebornZuneMacApp: App {
     /// Persistent SwiftData container holding playlists + app settings.
     /// Failure to open falls back to an in-memory container so the app
     /// can still launch (the user just loses persistence).
-    private let modelContainer: ModelContainer = {
+    private let modelContainer = RebornZuneMacApp.sharedContainer
+
+    /// One container shared by SwiftUI (`.modelContainer`) and the Library
+    /// coordinator, so both see the same store. DEBUG builds honor
+    /// `REBORN_ZUNE_DEBUG_STORE=<path>` to isolate verification runs.
+    static let sharedContainer: ModelContainer = {
         do {
+            #if DEBUG
+            if let path = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_STORE"] {
+                return try RebornZunePersistence.makePersistentContainer(at: URL(fileURLWithPath: path))
+            }
+            #endif
             return try RebornZunePersistence.makePersistentContainer()
         } catch {
             return (try? RebornZunePersistence.makeInMemoryContainer())

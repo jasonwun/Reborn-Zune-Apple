@@ -1,3 +1,5 @@
+> **Superseded by [ADR-0009](0009-stable-track-identity-and-persisted-library.md)** — Library metadata is now persisted.
+
 # SwiftData persistence limited to playlists and settings on macOS/iPadOS
 
 The filesystem is the source of truth for music; we persist only what cannot be

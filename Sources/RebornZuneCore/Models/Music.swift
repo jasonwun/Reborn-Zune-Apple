@@ -34,7 +34,11 @@ extension Music {
     /// filesystem path so that two `Music` instances representing the same file always
     /// share an `id`.
     public static func makeID(for url: URL) -> String {
-        let path = url.path
+        legacyID(forPath: url.path)
+    }
+
+    /// Legacy path-hash key for `path`; used to re-key old Playlist entries.
+    public static func legacyID(forPath path: String) -> String {
         let digest = SHA256.hash(data: Data(path.utf8))
         return digest.map { String(format: "%02x", $0) }.joined()
     }

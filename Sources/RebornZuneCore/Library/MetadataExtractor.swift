@@ -6,6 +6,22 @@ struct MetadataExtractor {
     /// Falls back gracefully on missing tags (uses filename for title, etc.).
     /// Throws only on unrecoverable IO errors.
     static func extract(from url: URL) async throws -> Music {
+        let meta = try await extractMetadata(from: url)
+        return Music(
+            id: Music.makeID(for: url),
+            url: url,
+            title: meta.title,
+            artist: meta.artist,
+            albumArtist: meta.albumArtist,
+            albumTitle: meta.albumTitle,
+            year: meta.year,
+            duration: meta.duration,
+            artworkData: meta.artworkData
+        )
+    }
+
+    /// Reads tags from `url` without assigning any identity.
+    static func extractMetadata(from url: URL) async throws -> ExtractedMetadata {
         let asset = AVURLAsset(url: url)
 
         // Modern async metadata API. Both calls can throw on IO errors.
@@ -21,9 +37,7 @@ struct MetadataExtractor {
         let year = try await parseYear(metadata)
         let artworkData = try await firstDataValue(metadata, commonKey: .commonKeyArtwork)
 
-        return Music(
-            id: Music.makeID(for: url),
-            url: url,
+        return ExtractedMetadata(
             title: title,
             artist: artist,
             albumArtist: albumArtist,

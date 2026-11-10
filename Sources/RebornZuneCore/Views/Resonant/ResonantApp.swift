@@ -17,6 +17,9 @@ public struct ResonantApp: View {
     let platform: ResonantPlatform
     let needsLibraryFolder: Bool
     let onPickFolder: () -> Void
+    let libraryStatus: LibraryStatus?
+    let scanBanner: String?
+    let onRetry: () -> Void
 
     @State private var router = ResonantRouter(initial: ResonantRouter.envInitialRoute())
     @State private var showCreatePlaylist = false
@@ -29,7 +32,10 @@ public struct ResonantApp: View {
                 density: ResonantDensity = .cozy,
                 platform: ResonantPlatform = .mac,
                 needsLibraryFolder: Bool = false,
-                onPickFolder: @escaping () -> Void = {}) {
+                onPickFolder: @escaping () -> Void = {},
+                libraryStatus: LibraryStatus? = nil,
+                scanBanner: String? = nil,
+                onRetry: @escaping () -> Void = {}) {
         self.engine = engine
         self.library = library
         self.tiles = tiles
@@ -38,6 +44,9 @@ public struct ResonantApp: View {
         self.platform = platform
         self.needsLibraryFolder = needsLibraryFolder
         self.onPickFolder = onPickFolder
+        self.libraryStatus = libraryStatus
+        self.scanBanner = scanBanner
+        self.onRetry = onRetry
     }
 
     private var spacing: ResonantSpacing { ResonantSpacing.for(density) }
@@ -84,6 +93,9 @@ public struct ResonantApp: View {
                 VStack(spacing: 0) {
                     if router.route != .nowPlaying {
                         PivotNav(router: router, spacing: spacing)
+                    }
+                    if let scanBanner {
+                        ScanBanner(message: scanBanner, onRetry: onRetry)
                     }
                     content
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -132,7 +144,9 @@ public struct ResonantApp: View {
 
     @ViewBuilder
     private var content: some View {
-        if needsLibraryFolder {
+        if let libraryStatus {
+            LibraryStatusView(status: libraryStatus, onRetry: onRetry)
+        } else if needsLibraryFolder {
             FolderEmptyState(onPickFolder: onPickFolder)
         } else {
             switch router.route {
@@ -217,6 +231,98 @@ private struct PlaylistByIDScreen: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+}
+
+/// What the Library coordinator can honestly report when there is nothing
+/// to browse. Never substitutes Demo Library content.
+public enum LibraryStatus: Equatable, Sendable {
+    case loading
+    case empty(path: String)
+    case failed(message: String)
+}
+
+/// Shown when a refresh failed but a previously committed Library is still
+/// browsable and playing.
+private struct ScanBanner: View {
+    let message: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(message)
+                .font(.system(size: 12))
+                .foregroundColor(ResonantColors.ink2)
+                .lineLimit(2)
+            Spacer(minLength: 12)
+            Button("Retry", action: onRetry)
+                .buttonStyle(.plain)
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .tracking(2.2)
+                .textCase(.uppercase)
+                .foregroundColor(ResonantColors.magenta)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 8)
+    }
+}
+
+private struct LibraryStatusView: View {
+    let status: LibraryStatus
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            ResonantStack().frame(width: 88, height: 88)
+            switch status {
+            case .loading:
+                Text("RESONANT · SCANNING")
+                    .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
+                Text("Scanning your library…")
+                    .font(ResonantFont.display(72, weight: .ultraLight))
+                    .tracking(-1.4)
+                ProgressView().controlSize(.small)
+            case .empty(let path):
+                Text("RESONANT · YOUR LIBRARY IS EMPTY")
+                    .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
+                Text("No music found")
+                    .font(ResonantFont.display(96, weight: .ultraLight))
+                    .tracking(-2.0)
+                Text("There are no supported audio files (MP3, M4A, MP4, AAC) in \(path). Add some and relaunch, or scan again.")
+                    .font(.system(size: 14))
+                    .foregroundColor(ResonantColors.ink2)
+                    .frame(maxWidth: 540, alignment: .leading)
+                retryButton("Scan again")
+            case .failed(let message):
+                Text("RESONANT · SCAN FAILED")
+                    .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
+                Text("Couldn’t read your library")
+                    .font(ResonantFont.display(72, weight: .ultraLight))
+                    .tracking(-1.4)
+                Text(message)
+                    .font(.system(size: 14))
+                    .foregroundColor(ResonantColors.ink2)
+                    .frame(maxWidth: 540, alignment: .leading)
+                retryButton("Retry")
+            }
+        }
+        .padding(80)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func retryButton(_ title: String) -> some View {
+        Button(action: onRetry) {
+            Text(title)
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .tracking(2.2)
+                .textCase(.uppercase)
+                .foregroundColor(ResonantColors.paper)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 12)
+        }
+        .background(ResonantColors.magenta)
+        .buttonStyle(.plain)
+        .padding(.top, 8)
     }
 }
 
