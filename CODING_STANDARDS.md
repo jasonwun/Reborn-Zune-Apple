@@ -6,6 +6,9 @@ Every change must leave these commands exiting 0 (run all that apply to the
 change's scope):
 
 ```sh
+# Create the gitignored tvOS user-music folder (same as CI)
+mkdir -p Apps/tvOS/Resources/UserMusic
+
 # Generate Xcode project from project.yml
 xcodegen generate
 
@@ -13,7 +16,8 @@ xcodegen generate
 swift build
 swift test
 
-# App targets (built via xcodebuild after xcodegen)
+# App targets (run sequentially after xcodegen; parallel xcodebuild
+# invocations can lock the shared DerivedData build database)
 xcodebuild -project RebornZune.xcodeproj -scheme RebornZune-macOS -destination 'platform=macOS' build
 xcodebuild -project RebornZune.xcodeproj -scheme RebornZune-iPadOS -destination 'generic/platform=iOS Simulator' build
 xcodebuild -project RebornZune.xcodeproj -scheme RebornZune-tvOS -destination 'generic/platform=tvOS Simulator' build
