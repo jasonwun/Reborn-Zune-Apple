@@ -132,12 +132,14 @@ public actor LibraryStore {
             })
         }
         guard hasSearch else { return FetchDescriptor<StoredTrack>() }
+        // Explicit nil checks preserve SQL translation while avoiding a
+        // chain of optional method calls in each disjunct.
         return FetchDescriptor<StoredTrack>(predicate: #Predicate {
             $0.title.localizedStandardContains(searchText)
-                || $0.artist?.localizedStandardContains(searchText) == true
-                || $0.albumArtist?.localizedStandardContains(searchText) == true
-                || $0.albumTitle?.localizedStandardContains(searchText) == true
-                || $0.genre?.localizedStandardContains(searchText) == true
+                || ($0.artist != nil && $0.artist!.localizedStandardContains(searchText))
+                || ($0.albumArtist != nil && $0.albumArtist!.localizedStandardContains(searchText))
+                || ($0.albumTitle != nil && $0.albumTitle!.localizedStandardContains(searchText))
+                || ($0.genre != nil && $0.genre!.localizedStandardContains(searchText))
         })
     }
 
