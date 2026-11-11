@@ -187,40 +187,6 @@ public actor LibraryStore {
         for entry in linked {
             if let id = entry.trackID, missing.contains(id) { modelContext.delete(entry) }
         }
-
-        for state in try modelContext.fetch(FetchDescriptor<StoredQueueState>()) {
-            let originalEntryIDs = state.originalEntryIDs ?? []
-            let activeEntryIDs = state.activeEntryIDs ?? []
-            let hasEntryIDs = activeEntryIDs.count == state.activeTrackIDs.count
-                && originalEntryIDs.count == state.originalTrackIDs.count
-            let savedIndex = state.currentIndex
-            let currentTrackID = state.activeTrackIDs.indices.contains(savedIndex)
-                ? state.activeTrackIDs[savedIndex]
-                : nil
-            let currentEntryID = hasEntryIDs && activeEntryIDs.indices.contains(savedIndex)
-                ? activeEntryIDs[savedIndex]
-                : nil
-
-            let originalIndices = state.originalTrackIDs.indices.filter { !missing.contains(state.originalTrackIDs[$0]) }
-            state.originalTrackIDs = originalIndices.map { state.originalTrackIDs[$0] }
-            state.originalEntryIDs = hasEntryIDs
-                ? originalIndices.map { originalEntryIDs[$0] }
-                : nil
-            let activeIndices = state.activeTrackIDs.indices.filter { !missing.contains(state.activeTrackIDs[$0]) }
-            state.activeTrackIDs = activeIndices.map { state.activeTrackIDs[$0] }
-            state.activeEntryIDs = hasEntryIDs
-                ? activeIndices.map { activeEntryIDs[$0] }
-                : nil
-
-            if let currentEntryID {
-                state.currentIndex = state.activeEntryIDs?.firstIndex(of: currentEntryID) ?? -1
-            } else if let currentTrackID, !missing.contains(currentTrackID) {
-                state.currentIndex = state.activeTrackIDs.firstIndex(of: currentTrackID) ?? -1
-            } else {
-                state.currentIndex = -1
-            }
-            if state.currentIndex == -1 { state.position = 0 }
-        }
     }
 
     private func updateCommittedSources(_ scans: [LibrarySourceScan]) throws {
