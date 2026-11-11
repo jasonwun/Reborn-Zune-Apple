@@ -56,6 +56,9 @@ not just by green builds and tests:
     in-memory persistence, invalidating relaunch verification. Keep only the
     test music folder outside the container and grant it through the app's
     Open Panel.
+  - For Dock-menu verification, follow `docs/agents/macos-dock-verification.md`
+    to launch an isolated LaunchServices copy and inspect the real menu through
+    accessibility.
   - When other apps or system dialogs obscure the target, capture only its
     window with `screencapture -x -l <windowID> output.png`. Obtain the target
     window ID through accessibility tooling, and isolate it rather than
