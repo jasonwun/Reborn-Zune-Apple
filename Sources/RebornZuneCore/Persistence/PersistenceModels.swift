@@ -39,18 +39,25 @@ public final class StoredPlaylist {
 @Model
 public final class StoredPlaylistEntry {
     public var orderIndex: Int
+    /// Legacy path-hash key (see `Music.makeID(for:)`). Kept only so old
+    /// entries can be re-keyed to `trackID` on an exact current-path match.
     public var musicID: String
+    /// Stable Track Identity (`StoredTrack.id`). `nil` until a legacy entry
+    /// has been re-keyed by a successful Library scan.
+    public var trackID: UUID?
     public var addedAt: Date
     public var playlist: StoredPlaylist?
 
     public init(
         orderIndex: Int,
         musicID: String,
+        trackID: UUID? = nil,
         addedAt: Date = .now,
         playlist: StoredPlaylist? = nil
     ) {
         self.orderIndex = orderIndex
         self.musicID = musicID
+        self.trackID = trackID
         self.addedAt = addedAt
         self.playlist = playlist
     }
@@ -96,7 +103,10 @@ public enum RebornZunePersistence {
     public static let schema = Schema([
         StoredPlaylist.self,
         StoredPlaylistEntry.self,
-        StoredAppSettings.self
+        StoredAppSettings.self,
+        StoredTrack.self,
+        StoredTrackArtwork.self,
+        StoredLibraryState.self
     ])
 
     /// In-memory container, useful for tests + previews.
@@ -109,5 +119,11 @@ public enum RebornZunePersistence {
     /// (`Application Support/default.store` on macOS/iPadOS).
     public static func makePersistentContainer() throws -> ModelContainer {
         try ModelContainer(for: schema)
+    }
+
+    /// Persistent on-disk container at an explicit store location (tests and
+    /// debug isolation).
+    public static func makePersistentContainer(at url: URL) throws -> ModelContainer {
+        try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, url: url))
     }
 }
