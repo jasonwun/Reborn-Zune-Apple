@@ -10,6 +10,7 @@ struct MacArtistScreen: View {
     let engine: PlaybackEngine
     let onAlbum: (Album) -> Void
     let onArtist: (Artist) -> Void
+    let playlistActions: PlaylistActions?
 
     @Environment(\.resonantLayout) private var layout
     @Environment(\.resonantWindowSize) private var windowSize
@@ -78,20 +79,10 @@ struct MacArtistScreen: View {
                 .resonantTag(size: 10, tracking: 2.2)
                 .padding(.bottom, 12)
             ForEach(Array(tracks.prefix(5).enumerated()), id: \.offset) { index, track in
-                HStack(spacing: 16) {
-                    Text(String(format: "%02d", index + 1))
-                        .resonantTag(size: 10, tracking: 1.4)
-                        .frame(width: 24, alignment: .leading)
-                    Text(track.title)
-                        .font(ResonantFont.display(22, weight: .light))
-                        .tracking(-0.22)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Text(ResonantSynth.runtime(seconds: track.duration))
-                        .resonantTag(size: 10, tracking: 1.2)
+                MacArtistTrackRow(index: index, track: track, playlistActions: playlistActions) {
+                    engine.setQueue(tracks, startingAt: index)
+                    engine.play()
                 }
-                .padding(.vertical, 10)
-                .overlay(index == 0 ? nil : Rectangle().fill(ResonantColors.ink4).frame(height: 0.5), alignment: .top)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -154,6 +145,42 @@ struct MacArtistScreen: View {
             }
         }
         .overlay(Rectangle().fill(ResonantColors.ink4).frame(height: 0.5).offset(y: 24), alignment: .top)
+    }
+}
+
+private struct MacArtistTrackRow: View {
+    let index: Int
+    let track: Music
+    let playlistActions: PlaylistActions?
+    let onPlay: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Text(String(format: "%02d", index + 1))
+                .resonantTag(size: 10, tracking: 1.4)
+                .frame(width: 24, alignment: .leading)
+            Text(track.title)
+                .font(ResonantFont.display(22, weight: .light))
+                .tracking(-0.22)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(ResonantSynth.runtime(seconds: track.duration))
+                .resonantTag(size: 10, tracking: 1.2)
+            if let playlistActions {
+                TrackPlaylistMenu(actions: playlistActions, tracks: [track], hover: hover)
+            }
+        }
+        .padding(.vertical, 10)
+        .overlay(index == 0 ? nil : Rectangle().fill(ResonantColors.ink4).frame(height: 0.5), alignment: .top)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onPlay)
+        .onHover { hover = $0 }
+        .contextMenu {
+            if let playlistActions {
+                AddToPlaylistMenu(actions: playlistActions, tracks: [track])
+            }
+        }
     }
 }
 #endif

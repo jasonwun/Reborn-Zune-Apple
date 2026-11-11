@@ -256,6 +256,7 @@ public actor LibraryStore {
             let configurations = try modelContext.fetch(FetchDescriptor<StoredLibrarySource>(
                 predicate: #Predicate { $0.path == path }))
             for configuration in configurations { modelContext.delete(configuration) }
+            try normalizePlaylistOrder()
             try modelContext.save()
         } catch {
             modelContext.rollback()
@@ -307,6 +308,7 @@ public actor LibraryStore {
             }
             try updateCommittedSources(scans)
             try migrateLegacyEntries(scans)
+            try normalizePlaylistOrder()
             try modelContext.save()
         } catch {
             modelContext.rollback()
@@ -380,6 +382,16 @@ public actor LibraryStore {
             FetchDescriptor<StoredPlaylistEntry>(predicate: #Predicate { $0.trackID != nil }))
         for entry in linked {
             if let id = entry.trackID, missing.contains(id) { modelContext.delete(entry) }
+        }
+    }
+
+    private func normalizePlaylistOrder() throws {
+        let entries = try modelContext.fetch(FetchDescriptor<StoredPlaylistEntry>())
+            .filter { !$0.isDeleted }
+        let grouped = Dictionary(grouping: entries, by: { $0.playlist?.id })
+        for playlistEntries in grouped.values {
+            let ordered = PlaylistEntryOrdering.sorted(playlistEntries)
+            for (index, entry) in ordered.enumerated() { entry.orderIndex = index }
         }
     }
 

@@ -126,7 +126,10 @@ private struct ResonantHost: View {
                 onBrowse: { query in await library.browse(matching: query) },
                 resolveAlbum: { album in await library.loadAlbum(album) },
                 resolveArtist: { artist in await library.loadArtist(artist) },
-                resolveTracks: { ids in await library.loadTracks(withIDs: ids) }
+                resolveTracks: { ids in await library.loadTracks(withIDs: ids) },
+                resolvePlaylistPickerTracks: { query in
+                    await library.playlistPickerTracks(matching: query)
+                }
             )
             .environment(\.resonantLayout, .mac(screen: screenSize))
             .environment(\.resonantWindowSize, proxy.size)

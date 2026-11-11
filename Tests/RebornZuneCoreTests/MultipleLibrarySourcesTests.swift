@@ -162,6 +162,86 @@ final class MultipleLibrarySourcesTests: XCTestCase {
         XCTAssertEqual(coordinator.sources[0].committedTrackCount, 1)
     }
 
+    func testSuccessfulScanDeletesMissingPlaylistEntriesAndNormalizesRemainingOrder() async throws {
+        let source = MultiFakeSource("/fake/A")
+        source.files = [file(source.sourcePath, "one.mp3"),
+                        file(source.sourcePath, "two.mp3"),
+                        file(source.sourcePath, "three.mp3")]
+        let container = try container()
+        let coordinator = coordinator(container, sources: [source])
+        await coordinator.start()
+        let idsByTitle = Dictionary(uniqueKeysWithValues: coordinator.tracks.map { ($0.title, $0.id) })
+        let context = ModelContext(container)
+        let store = PlaylistStore(modelContext: context)
+        let playlist = try store.createPlaylist(named: "Cleanup")
+        try store.addTracks([idsByTitle["one.mp3"]!, idsByTitle["two.mp3"]!,
+                             idsByTitle["three.mp3"]!], to: playlist)
+
+        source.files = [file(source.sourcePath, "one.mp3"),
+                        file(source.sourcePath, "three.mp3")]
+        await coordinator.refresh()
+
+        let refreshedContext = ModelContext(container)
+        let refreshedPlaylist = try XCTUnwrap(refreshedContext.fetch(
+            FetchDescriptor<StoredPlaylist>()).first)
+        let entries = PlaylistStore(modelContext: refreshedContext).orderedEntries(for: refreshedPlaylist)
+        XCTAssertEqual(entries.map(\.resolvedTrackID),
+                       [idsByTitle["one.mp3"]!, idsByTitle["three.mp3"]!])
+        XCTAssertEqual(entries.map(\.orderIndex), [0, 1])
+    }
+
+    func testFailedScanPreservesPlaylistEntriesAndOrder() async throws {
+        let source = MultiFakeSource("/fake/A")
+        source.files = [file(source.sourcePath, "one.mp3"),
+                        file(source.sourcePath, "two.mp3")]
+        let container = try container()
+        let coordinator = coordinator(container, sources: [source])
+        await coordinator.start()
+        let context = ModelContext(container)
+        let store = PlaylistStore(modelContext: context)
+        let playlist = try store.createPlaylist(named: "Preserved")
+        let trackIDs = coordinator.tracks.map(\.id)
+        try store.addTracks(trackIDs + trackIDs, to: playlist)
+
+        source.error = CocoaError(.fileReadUnknown)
+        await coordinator.refresh()
+
+        let refreshedContext = ModelContext(container)
+        let refreshedPlaylist = try XCTUnwrap(refreshedContext.fetch(
+            FetchDescriptor<StoredPlaylist>()).first)
+        let entries = PlaylistStore(modelContext: refreshedContext).orderedEntries(for: refreshedPlaylist)
+        XCTAssertEqual(entries.map(\.resolvedTrackID), trackIDs + trackIDs)
+        XCTAssertEqual(entries.map(\.orderIndex), [0, 1, 2, 3])
+    }
+
+    func testPlaylistPickerLoadsBeyondBrowsePageAndSearchesStore() async throws {
+        let source = MultiFakeSource("/fake/A")
+        source.files = (0..<101).map { file(source.sourcePath, String(format: "%03d.mp3", $0)) }
+        let coordinator = coordinator(try container(), sources: [source])
+        await coordinator.start()
+        XCTAssertEqual(coordinator.tracks.count, 100)
+
+        let all = await coordinator.playlistPickerTracks(matching: "")
+        let match = await coordinator.playlistPickerTracks(matching: "100.mp3")
+
+        XCTAssertEqual(all.count, 101)
+        XCTAssertEqual(all.map(\.title), (0..<101).map { String(format: "%03d.mp3", $0) })
+        XCTAssertEqual(match.map(\.title), ["100.mp3"])
+    }
+
+    func testPlaylistTrackResolutionRestoresEveryRequestedIDInManualOrder() async throws {
+        let source = MultiFakeSource("/fake/A")
+        source.files = (0..<101).map { file(source.sourcePath, String(format: "%03d.mp3", $0)) }
+        let coordinator = coordinator(try container(), sources: [source])
+        await coordinator.start()
+        let all = await coordinator.playlistPickerTracks(matching: "")
+        let requested = [all[100].id, all[0].id, all[100].id, all[50].id]
+
+        let resolved = await coordinator.loadTracks(withIDs: requested)
+
+        XCTAssertEqual(resolved.map(\.id), requested)
+    }
+
     func testMissingVolumeDuringBookmarkResolutionUsesUnavailableCleanup() async throws {
         let source = MultiFakeSource("/fake/Volume/Music")
         source.files = [file(source.sourcePath, "one.mp3")]

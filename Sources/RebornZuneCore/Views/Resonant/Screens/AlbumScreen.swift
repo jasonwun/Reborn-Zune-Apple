@@ -5,17 +5,21 @@ public struct AlbumScreen: View {
     let spacing: ResonantSpacing
     let engine: PlaybackEngine
     let onArtist: (String) -> Void
+    let playlistActions: PlaylistActions?
 
+    @State private var headerHover = false
     @Environment(\.resonantLayout) private var layout
     @Environment(\.resonantWindowSize) private var windowSize
 
     public init(album: Album, spacing: ResonantSpacing,
                 engine: PlaybackEngine,
-                onArtist: @escaping (String) -> Void) {
+                onArtist: @escaping (String) -> Void,
+                playlistActions: PlaylistActions? = nil) {
         self.album = album
         self.spacing = spacing
         self.engine = engine
         self.onArtist = onArtist
+        self.playlistActions = playlistActions
     }
 
     public var body: some View {
@@ -49,7 +53,7 @@ public struct AlbumScreen: View {
                         .fill(ResonantColors.ink4)
                         .frame(height: 0.5)
                     #if os(macOS)
-                    ForEach(album.trackPresentation) { row in
+                    ForEach(album.trackPresentation) { (row: AlbumTrackPresentation) in
                         if let heading = row.discHeading {
                             Text(heading.uppercased())
                                 .resonantTag(size: 10, tracking: 2.2)
@@ -62,6 +66,8 @@ public struct AlbumScreen: View {
                             meta: row.track.genre ?? "—",
                             time: ResonantSynth.runtime(seconds: row.track.duration),
                             playing: engine.currentItem?.id == row.track.id,
+                            track: row.track,
+                            playlistActions: playlistActions,
                             onPlay: {
                                 engine.setQueue(album.tracks, startingAt: row.queueIndex)
                                 engine.play()
@@ -138,7 +144,14 @@ public struct AlbumScreen: View {
                     engine.setQueue(album.tracks)
                     engine.play()
                 }
-                #if !os(macOS)
+                #if os(macOS)
+                if let playlistActions {
+                    AddToPlaylistMenu(actions: playlistActions, tracks: album.tracks)
+                        .menuStyle(.borderlessButton)
+                    TrackPlaylistMenu(actions: playlistActions, tracks: album.tracks,
+                                      hover: headerHover)
+                }
+                #else
                 secondaryButton(label: "+ add to library") {}
                 #endif
                 Text("\(album.tracks.count) TRACKS · \(album.resonantRuntime)")
@@ -148,6 +161,14 @@ public struct AlbumScreen: View {
             .padding(.top, 22)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        #if os(macOS)
+        .onHover { headerHover = $0 }
+        .contextMenu {
+            if let playlistActions {
+                AddToPlaylistMenu(actions: playlistActions, tracks: album.tracks)
+            }
+        }
+        #endif
     }
 }
 
@@ -157,8 +178,23 @@ struct TrackRow: View {
     let meta: String
     let time: String
     let playing: Bool
+    let track: Music?
+    let playlistActions: PlaylistActions?
     let onPlay: () -> Void
     @State private var hover = false
+
+    init(number: Int, title: String, meta: String, time: String, playing: Bool,
+         track: Music? = nil, playlistActions: PlaylistActions? = nil,
+         onPlay: @escaping () -> Void) {
+        self.number = number
+        self.title = title
+        self.meta = meta
+        self.time = time
+        self.playing = playing
+        self.track = track
+        self.playlistActions = playlistActions
+        self.onPlay = onPlay
+    }
 
     var body: some View {
         HStack(spacing: 24) {
@@ -185,6 +221,11 @@ struct TrackRow: View {
             Text(time)
                 .resonantScaledFont(11, design: .monospaced)
                 .foregroundColor(ResonantColors.ink2)
+            #if os(macOS)
+            if let track, let playlistActions {
+                TrackPlaylistMenu(actions: playlistActions, tracks: [track], hover: hover)
+            }
+            #endif
         }
         // Design: `.track-row { padding: 14px 0 }` on mac,
         // `[data-platform="ipad"] .track-row { padding: 18px 0 }` —
@@ -198,6 +239,13 @@ struct TrackRow: View {
         .overlay(Rectangle().fill(ResonantColors.ink4).frame(height: 0.5), alignment: .bottom)
         .contentShape(Rectangle())
         .onTapGesture(perform: onPlay)
+        #if os(macOS)
+        .contextMenu {
+            if let track, let playlistActions {
+                AddToPlaylistMenu(actions: playlistActions, tracks: [track])
+            }
+        }
+        #endif
         .onHover { hover = $0 }
         .animation(.timingCurve(0.22, 0.61, 0.36, 1, duration: 0.28), value: hover)
     }

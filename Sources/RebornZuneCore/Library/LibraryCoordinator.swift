@@ -321,6 +321,19 @@ public final class LibraryCoordinator {
         }
     }
 
+    /// Loads the complete, title-sorted Track set for the Add Tracks picker.
+    /// Unlike browsing, this intentionally does not use the 100-row page cap.
+    public func playlistPickerTracks(matching searchText: String) async -> [Music] {
+        let query = LibraryTrackQuery(searchText: searchText, sort: .title)
+        do {
+            let snapshots = try await allSnapshots(matching: query)
+            return await Self.buildMusic(snapshots, artwork: [:])
+        } catch {
+            scanError = "The Track picker could not be loaded: \(error.localizedDescription)"
+            return []
+        }
+    }
+
     /// Loads selected Tracks for a Playlist and restores their requested order.
     public func loadTracks(withIDs ids: [String]) async -> [Music] {
         let uuids = ids.compactMap(UUID.init(uuidString:))
