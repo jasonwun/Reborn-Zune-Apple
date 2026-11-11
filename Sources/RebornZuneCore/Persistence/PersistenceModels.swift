@@ -63,6 +63,12 @@ public final class StoredPlaylistEntry {
     }
 }
 
+extension StoredPlaylistEntry {
+    /// Stable Track Identity when migration has run, or the legacy path hash
+    /// retained for compatibility with not-yet-migrated entries.
+    public var resolvedTrackID: String { trackID?.uuidString ?? musicID }
+}
+
 // MARK: - App settings
 
 /// Persisted user-level preferences. There's exactly one row of this

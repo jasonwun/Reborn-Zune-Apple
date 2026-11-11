@@ -5,11 +5,33 @@ struct MacArtistsScreen: View {
     let library: ResonantLibrary
     let spacing: ResonantSpacing
     let onOpen: (Artist) -> Void
+    let totalTrackCount: Int?
+    let hasMoreTracks: Bool
+    let loadedTrackCount: Int
+    let onLoadMore: () -> Void
 
     @State private var sort: ArtistSort = .az
     @Environment(\.resonantLayout) private var layout
 
     enum ArtistSort: Hashable { case az, albums }
+
+    init(
+        library: ResonantLibrary,
+        spacing: ResonantSpacing,
+        totalTrackCount: Int? = nil,
+        hasMoreTracks: Bool = false,
+        loadedTrackCount: Int = 0,
+        onLoadMore: @escaping () -> Void = {},
+        onOpen: @escaping (Artist) -> Void
+    ) {
+        self.library = library
+        self.spacing = spacing
+        self.totalTrackCount = totalTrackCount
+        self.hasMoreTracks = hasMoreTracks
+        self.loadedTrackCount = loadedTrackCount
+        self.onLoadMore = onLoadMore
+        self.onOpen = onOpen
+    }
 
     private var sorted: [Artist] {
         library.artists.sorted { lhs, rhs in
@@ -27,7 +49,8 @@ struct MacArtistsScreen: View {
         let scale = layout.displayFontScale
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
-                Text("COLLECTION · \(library.artists.count) ARTISTS")
+                Text(totalTrackCount.map { "COLLECTION · \($0) TRACKS" }
+                     ?? "COLLECTION · \(library.artists.count) ARTISTS")
                     .resonantTag(size: 10, tracking: 2.2)
                     .padding(.leading, 12)
                     .padding(.bottom, 12 * scale)
@@ -54,6 +77,9 @@ struct MacArtistsScreen: View {
                 LazyVStack(spacing: 0) {
                     ForEach(sorted) { artist in
                         MacArtistRow(artist: artist, onClick: { onOpen(artist) })
+                    }
+                    if hasMoreTracks {
+                        StoreLoadMoreSentinel(loadedTrackCount: loadedTrackCount, onLoadMore: onLoadMore)
                     }
                 }
                 .padding(.horizontal, 8)

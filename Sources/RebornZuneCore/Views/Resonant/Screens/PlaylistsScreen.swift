@@ -89,7 +89,7 @@ struct PlaylistTile: View {
         let albums = playlist.entries
             .sorted { $0.orderIndex < $1.orderIndex }
             .compactMap { entry -> Album? in
-                library.albums.first { $0.tracks.contains { $0.id == entry.musicID } }
+                library.albums.first { $0.tracks.contains { $0.id == entry.resolvedTrackID } }
             }
         let uniqued = Array(NSOrderedSet(array: albums.map { $0.id })) as? [String] ?? []
         let resolved = uniqued.compactMap { id in library.albums.first { $0.id == id } }
@@ -102,7 +102,7 @@ struct PlaylistTile: View {
         let count = playlist.entries.count
         let totalSeconds = playlist.entries
             .compactMap { entry -> TimeInterval? in
-                library.albums.flatMap(\.tracks).first { $0.id == entry.musicID }?.duration
+                library.albums.flatMap(\.tracks).first { $0.id == entry.resolvedTrackID }?.duration
             }
             .reduce(0, +)
         let hours = ResonantSynth.runtime(seconds: totalSeconds)

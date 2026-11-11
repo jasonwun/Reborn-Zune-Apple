@@ -44,6 +44,9 @@ files, and so Playlists can reference Tracks that survive moves.
 ## Consequences
 
 tvOS and iPadOS keep their existing behavior; they do not use the coordinator.
-Tracks are fetched in batches of 1000; the single-save commit trades the
-500–1000-row save cadence for atomicity and should be revisited if memory at
-50,000 tracks demands it.
+macOS browsing uses Store-evaluated predicates, deterministic sorting, counts,
+and pages of 100 lightweight Tracks; Album details use an Album predicate.
+Incremental reconciliation fetches known rows only for their Library Source, in
+batches of 1000, rather than taking a whole-Library snapshot. The single-save
+commit trades the 500–1000-row save cadence for atomicity and should be
+revisited if memory at 50,000 tracks demands it.

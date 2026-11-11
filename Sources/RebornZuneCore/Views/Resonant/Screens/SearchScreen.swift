@@ -5,21 +5,44 @@ public struct SearchScreen: View {
     let spacing: ResonantSpacing
     let router: ResonantRouter
     let onOpen: (Album) -> Void
+    let totalTrackCount: Int?
+    let hasMoreTracks: Bool
+    let loadedTrackCount: Int
+    let usesStoreBrowsing: Bool
+    let onLoadMore: () -> Void
+    let onSearch: (String) async -> Void
 
     @State private var query: String = ""
     @FocusState private var focused: Bool
     @Environment(\.resonantLayout) private var layout
 
-    public init(library: ResonantLibrary, spacing: ResonantSpacing, router: ResonantRouter,
-                onOpen: @escaping (Album) -> Void) {
+    public init(
+        library: ResonantLibrary,
+        spacing: ResonantSpacing,
+        router: ResonantRouter,
+        totalTrackCount: Int? = nil,
+        hasMoreTracks: Bool = false,
+        loadedTrackCount: Int = 0,
+        usesStoreBrowsing: Bool = false,
+        onLoadMore: @escaping () -> Void = {},
+        onSearch: @escaping (String) async -> Void = { _ in },
+        onOpen: @escaping (Album) -> Void
+    ) {
         self.library = library
         self.spacing = spacing
+        self.totalTrackCount = totalTrackCount
+        self.hasMoreTracks = hasMoreTracks
+        self.loadedTrackCount = loadedTrackCount
+        self.usesStoreBrowsing = usesStoreBrowsing
+        self.onLoadMore = onLoadMore
+        self.onSearch = onSearch
         self.router = router
         self.onOpen = onOpen
     }
 
     private var matches: [Album] {
         #if os(macOS)
+        if usesStoreBrowsing { return library.albums }
         return RealLibraryPresentation.albums(matching: query, in: library)
         #else
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
@@ -47,7 +70,7 @@ public struct SearchScreen: View {
         VStack(alignment: .leading, spacing: 0) {
             Text(query.isEmpty
                  ? "TYPE TO SEARCH ALBUMS · ARTISTS · GENRES"
-                 : "\(matches.count) RESULTS")
+                 : "\(usesStoreBrowsing ? (totalTrackCount ?? 0) : matches.count) RESULTS")
                 .resonantTag(size: 10, tracking: 2.2)
                 .padding(.bottom, 14)
 
@@ -59,6 +82,12 @@ public struct SearchScreen: View {
                 .focused($focused)
                 .onAppear { focused = true }
                 .onChange(of: router.searchFocusRequestID) { _, _ in focused = true }
+                .task(id: query) {
+                    guard usesStoreBrowsing else { return }
+                    try? await Task.sleep(nanoseconds: 200_000_000)
+                    guard !Task.isCancelled else { return }
+                    await onSearch(query)
+                }
 
             ScrollView {
                 if query.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -104,6 +133,9 @@ public struct SearchScreen: View {
                                 }
                             }
                             .buttonStyle(.plain)
+                        }
+                        if hasMoreTracks {
+                            StoreLoadMoreSentinel(loadedTrackCount: loadedTrackCount, onLoadMore: onLoadMore)
                         }
                     }
                     .padding(.top, 8)

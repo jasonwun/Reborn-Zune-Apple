@@ -25,7 +25,7 @@ public struct PlaylistScreen: View {
         playlist.entries
             .sorted { $0.orderIndex < $1.orderIndex }
             .compactMap { entry in
-                library.albums.flatMap(\.tracks).first { $0.id == entry.musicID }
+                library.albums.flatMap(\.tracks).first { $0.id == entry.resolvedTrackID }
             }
     }
 
