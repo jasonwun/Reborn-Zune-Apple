@@ -132,15 +132,56 @@ public actor LibraryStore {
             })
         }
         guard hasSearch else { return FetchDescriptor<StoredTrack>() }
-        // Explicit nil checks preserve SQL translation while avoiding a
-        // chain of optional method calls in each disjunct.
-        return FetchDescriptor<StoredTrack>(predicate: #Predicate {
-            $0.title.localizedStandardContains(searchText)
-                || ($0.artist != nil && $0.artist!.localizedStandardContains(searchText))
-                || ($0.albumArtist != nil && $0.albumArtist!.localizedStandardContains(searchText))
-                || ($0.albumTitle != nil && $0.albumTitle!.localizedStandardContains(searchText))
-                || ($0.genre != nil && $0.genre!.localizedStandardContains(searchText))
-        })
+        // Build the same expressions as the macro in smaller, named pieces.
+        // This avoids both a compiler type-check timeout and ForceUnwrap,
+        // which older Core Data versions cannot translate to SQL.
+        let predicate = Predicate<StoredTrack> { track in
+            let title = PredicateExpressions.build_localizedStandardContains(
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg(track), keyPath: \.title),
+                PredicateExpressions.build_Arg(searchText))
+            let artist = PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_flatMap(
+                    PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg(track), keyPath: \.artist)
+                ) {
+                    PredicateExpressions.build_localizedStandardContains(
+                        PredicateExpressions.build_Arg($0), PredicateExpressions.build_Arg(searchText))
+                },
+                rhs: PredicateExpressions.build_Arg(true))
+            let albumArtist = PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_flatMap(
+                    PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg(track), keyPath: \.albumArtist)
+                ) {
+                    PredicateExpressions.build_localizedStandardContains(
+                        PredicateExpressions.build_Arg($0), PredicateExpressions.build_Arg(searchText))
+                },
+                rhs: PredicateExpressions.build_Arg(true))
+            let albumTitle = PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_flatMap(
+                    PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg(track), keyPath: \.albumTitle)
+                ) {
+                    PredicateExpressions.build_localizedStandardContains(
+                        PredicateExpressions.build_Arg($0), PredicateExpressions.build_Arg(searchText))
+                },
+                rhs: PredicateExpressions.build_Arg(true))
+            let genre = PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_flatMap(
+                    PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg(track), keyPath: \.genre)
+                ) {
+                    PredicateExpressions.build_localizedStandardContains(
+                        PredicateExpressions.build_Arg($0), PredicateExpressions.build_Arg(searchText))
+                },
+                rhs: PredicateExpressions.build_Arg(true))
+            let titleOrArtist = PredicateExpressions.build_Disjunction(lhs: title, rhs: artist)
+            let albumArtistOrTitle = PredicateExpressions.build_Disjunction(lhs: albumArtist, rhs: albumTitle)
+            let firstFour = PredicateExpressions.build_Disjunction(lhs: titleOrArtist, rhs: albumArtistOrTitle)
+            return PredicateExpressions.build_Disjunction(lhs: firstFour, rhs: genre)
+        }
+        return FetchDescriptor<StoredTrack>(predicate: predicate)
     }
 
     /// Selected Track Identities for detail surfaces such as Playlists.
