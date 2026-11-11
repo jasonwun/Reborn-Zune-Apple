@@ -8,7 +8,6 @@ public struct AlbumScreen: View {
 
     @Environment(\.resonantLayout) private var layout
     @Environment(\.resonantWindowSize) private var windowSize
-    @State private var headerHover = false
 
     public init(album: Album, spacing: ResonantSpacing,
                 engine: PlaybackEngine,
@@ -66,9 +65,7 @@ public struct AlbumScreen: View {
                             onPlay: {
                                 engine.setQueue(album.tracks, startingAt: row.queueIndex)
                                 engine.play()
-                            },
-                            onPlayNext: { engine.playNext(row.track) },
-                            onPlayLater: { engine.playLater(row.track) }
+                            }
                         )
                     }
                     #else
@@ -82,9 +79,7 @@ public struct AlbumScreen: View {
                             onPlay: {
                                 engine.setQueue(album.tracks, startingAt: idx)
                                 engine.play()
-                            },
-                            onPlayNext: { engine.playNext(track) },
-                            onPlayLater: { engine.playLater(track) }
+                            }
                         )
                     }
                     #endif
@@ -143,14 +138,7 @@ public struct AlbumScreen: View {
                     engine.setQueue(album.tracks)
                     engine.play()
                 }
-                #if os(macOS)
-                if headerHover {
-                    QueueHoverMenu(
-                        onPlayNext: { engine.playNext(album.tracks) },
-                        onPlayLater: { engine.playLater(album.tracks) }
-                    )
-                }
-                #else
+                #if !os(macOS)
                 secondaryButton(label: "+ add to library") {}
                 #endif
                 Text("\(album.tracks.count) TRACKS · \(album.resonantRuntime)")
@@ -160,14 +148,6 @@ public struct AlbumScreen: View {
             .padding(.top, 22)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        #if os(macOS)
-        .contentShape(Rectangle())
-        .onHover { headerHover = $0 }
-        .queueContextMenu(
-            onPlayNext: { engine.playNext(album.tracks) },
-            onPlayLater: { engine.playLater(album.tracks) }
-        )
-        #endif
     }
 }
 
@@ -178,8 +158,6 @@ struct TrackRow: View {
     let time: String
     let playing: Bool
     let onPlay: () -> Void
-    let onPlayNext: () -> Void
-    let onPlayLater: () -> Void
     @State private var hover = false
 
     var body: some View {
@@ -207,11 +185,6 @@ struct TrackRow: View {
             Text(time)
                 .resonantScaledFont(11, design: .monospaced)
                 .foregroundColor(ResonantColors.ink2)
-            #if os(macOS)
-            if hover {
-                QueueHoverMenu(onPlayNext: onPlayNext, onPlayLater: onPlayLater)
-            }
-            #endif
         }
         // Design: `.track-row { padding: 14px 0 }` on mac,
         // `[data-platform="ipad"] .track-row { padding: 18px 0 }` —
@@ -225,9 +198,6 @@ struct TrackRow: View {
         .overlay(Rectangle().fill(ResonantColors.ink4).frame(height: 0.5), alignment: .bottom)
         .contentShape(Rectangle())
         .onTapGesture(perform: onPlay)
-        #if os(macOS)
-        .queueContextMenu(onPlayNext: onPlayNext, onPlayLater: onPlayLater)
-        #endif
         .onHover { hover = $0 }
         .animation(.timingCurve(0.22, 0.61, 0.36, 1, duration: 0.28), value: hover)
     }
