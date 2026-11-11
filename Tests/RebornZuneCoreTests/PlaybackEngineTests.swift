@@ -7,7 +7,7 @@ final class PlaybackEngineTests: XCTestCase {
 
     // MARK: - Fixtures
 
-    private func makeMusic(_ name: String) -> Music {
+    private func makeMusic(_ name: String, duration: TimeInterval = 1.0) -> Music {
         let url = URL(fileURLWithPath: "/tmp/reborn-zune-tests/\(name).m4a")
         return Music(
             id: Music.makeID(for: url),
@@ -17,7 +17,49 @@ final class PlaybackEngineTests: XCTestCase {
             albumArtist: nil,
             albumTitle: "Test Album",
             year: nil,
-            duration: 1.0,
+            duration: duration,
+            artworkData: nil
+        )
+    }
+
+    @MainActor
+    private final class FakeQueuePlayer: QueuePlayer {
+        var itemURLs: [URL] = []
+        var seekPositions: [TimeInterval] = []
+        var volume: Double = 1
+        var isPlaying = false
+        var onTimeUpdate: ((TimeInterval, TimeInterval?) -> Void)?
+        var onItemEnd: (() -> Void)?
+
+        func replaceItems(with urls: [URL]) { itemURLs = urls }
+        func play() { isPlaying = true }
+        func pause() { isPlaying = false }
+        func seek(to seconds: TimeInterval) { seekPositions.append(seconds) }
+        func invalidate() { itemURLs = []; isPlaying = false }
+        func finishCurrentItem() { onItemEnd?() }
+    }
+
+    private func makeEngine(
+        player: FakeQueuePlayer,
+        now: @escaping () -> TimeInterval = { 0 }
+    ) -> PlaybackEngine {
+        PlaybackEngine(playerFactory: { player }, timeSource: now)
+    }
+
+    private func makeSilenceTrack(_ name: String) -> Music {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        return Music(
+            id: UUID().uuidString,
+            url: repositoryRoot.appendingPathComponent("Apps/tvOS/Resources/silence.m4a"),
+            title: name,
+            artist: nil,
+            albumArtist: nil,
+            albumTitle: nil,
+            year: nil,
+            duration: 5,
             artworkData: nil
         )
     }
@@ -223,5 +265,156 @@ final class PlaybackEngineTests: XCTestCase {
         engine.setQueue([a])
         engine.seek(to: -100)
         XCTAssertEqual(engine.currentTime, 0)
+    }
+
+    func testVolumeIsClampedAndAppliedToPlayer() {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        engine.setQueue([makeMusic("volume")])
+
+        engine.volume = 0.35
+        XCTAssertEqual(engine.volume, 0.35)
+        XCTAssertEqual(player.volume, 0.35)
+
+        engine.volume = 2
+        XCTAssertEqual(engine.volume, 1)
+        XCTAssertEqual(player.volume, 1)
+
+        engine.volume = -1
+        XCTAssertEqual(engine.volume, 0)
+        XCTAssertEqual(player.volume, 0)
+    }
+
+    func testTrackChangesAndRestartsEmitExplicitStartReasons() {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        let tracks = [makeMusic("first"), makeMusic("second")]
+        var signals: [PlaybackSignal] = []
+        engine.playbackSignalHandler = { signals.append($0) }
+        engine.setQueue(tracks)
+        engine.play()
+
+        engine.next()
+        engine.previous()
+        engine.previous()
+        engine.repeatMode = .one
+        player.finishCurrentItem()
+
+        let startReasons: [PlaybackStartReason] = signals.compactMap { signal in
+            guard case .start(_, _, let reason) = signal else { return nil }
+            return reason
+        }
+        XCTAssertEqual(startReasons, [.actual, .actual, .actual, .manualRestart, .repeatOneRestart])
+    }
+
+    func testActivePlaybackSignalExcludesSeekJumpsAndHandlesUnknownDuration() {
+        let player = FakeQueuePlayer()
+        var now: TimeInterval = 0
+        let engine = makeEngine(player: player, now: { now })
+        var signals: [PlaybackSignal] = []
+        engine.playbackSignalHandler = { signals.append($0) }
+        engine.setQueue([makeMusic("unknown", duration: 0)])
+        engine.play()
+
+        now = 10
+        player.onTimeUpdate?(0.25, nil)
+        now = 20
+        engine.seek(to: 0.5)
+        now = 50
+        player.onTimeUpdate?(80, nil)
+
+        let observations = signals.compactMap { signal -> (id: UUID, elapsed: TimeInterval, duration: TimeInterval?)? in
+            guard case .activePlayback(let id, _, let elapsed, let duration) = signal else { return nil }
+            return (id, elapsed, duration)
+        }
+        XCTAssertEqual(observations.last?.elapsed, 50)
+        XCTAssertNil(observations.last?.duration)
+        XCTAssertEqual(observations.last?.id, observations.first?.id)
+    }
+
+    func testRepeatedPlayDoesNotDiscardUnobservedActivePlayback() {
+        let player = FakeQueuePlayer()
+        var now: TimeInterval = 0
+        let engine = makeEngine(player: player, now: { now })
+        engine.setQueue([makeMusic("repeat-play")])
+        engine.play()
+
+        now = 10
+        engine.play()
+        now = 20
+        engine.pause()
+
+        XCTAssertEqual(engine.activePlaybackTime, 20, accuracy: 0.0001)
+    }
+
+    func testActivePlaybackAccumulatesOnlyWhilePlaying() {
+        let player = FakeQueuePlayer()
+        var now: TimeInterval = 0
+        let engine = makeEngine(player: player, now: { now })
+        engine.setQueue([makeMusic("active")])
+        engine.play()
+
+        now = 10
+        player.onTimeUpdate?(10, 100)
+        now = 20
+        engine.pause()
+        now = 40
+        player.onTimeUpdate?(10, 100)
+        engine.play()
+        now = 45
+        player.onTimeUpdate?(15, 100)
+
+        XCTAssertEqual(engine.activePlaybackTime, 25, accuracy: 0.0001)
+    }
+
+    func testLoadStartResumeAndSeekHaveDistinctSignals() {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        let track = makeMusic("signals")
+        var signals: [PlaybackSignal] = []
+        engine.playbackSignalHandler = { signals.append($0) }
+
+        engine.setQueue([track])
+        engine.play()
+        engine.pause()
+        engine.play()
+        engine.seek(to: 0.5)
+
+        XCTAssertEqual(signals.filter { if case .load = $0 { true } else { false } }.count, 1)
+        let startReasons: [PlaybackStartReason] = signals.compactMap { signal in
+            guard case .start(_, _, let reason) = signal else { return nil }
+            return reason
+        }
+        XCTAssertEqual(startReasons, [.actual])
+        XCTAssertEqual(signals.filter { if case .resume = $0 { true } else { false } }.count, 1)
+        XCTAssertEqual(signals.filter { if case .seek = $0 { true } else { false } }.count, 1)
+    }
+
+    func testRealAudioPlaybackAdvancesTime() async throws {
+        let track = makeSilenceTrack("Silence")
+        let engine = PlaybackEngine()
+        engine.setQueue([track])
+
+        engine.play()
+        try await Task.sleep(nanoseconds: 700_000_000)
+
+        XCTAssertEqual(engine.state, .playing)
+        XCTAssertGreaterThan(engine.currentTime, 0)
+        engine.pause()
+    }
+
+    func testRealAudioNaturallyAdvancesToDisplayedNextTrack() async throws {
+        let tracks = [makeSilenceTrack("One"), makeSilenceTrack("Two"), makeSilenceTrack("Three")]
+        let engine = PlaybackEngine()
+        engine.setQueue(tracks)
+        engine.play()
+
+        for _ in 0..<70 where engine.currentItem?.id != tracks[1].id {
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+
+        XCTAssertEqual(engine.currentItem, tracks[1])
+        XCTAssertEqual(engine.state, .playing)
+        engine.pause()
     }
 }
