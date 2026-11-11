@@ -6,34 +6,50 @@ public struct PlaylistScreen: View {
     let library: ResonantLibrary
     let spacing: ResonantSpacing
     let engine: PlaybackEngine
+    let playlistActions: PlaylistActions?
+    let onAddTracks: () -> Void
+    let onRename: () -> Void
+    let onDelete: () -> Void
+    let onRemoveEntry: (StoredPlaylist, StoredPlaylistEntry) -> Void
+    let onMoveEntry: (StoredPlaylist, StoredPlaylistEntry, Int) -> Void
 
-    // macOS-only consumer: end-of-scroll clearance below the track
-    // list (M15 R2). Unused in the iPad branch — bit-identical there.
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.resonantLayout) private var layout
 
     public init(playlist: StoredPlaylist,
                 library: ResonantLibrary,
                 spacing: ResonantSpacing,
-                engine: PlaybackEngine) {
+                engine: PlaybackEngine,
+                playlistActions: PlaylistActions? = nil,
+                onAddTracks: @escaping () -> Void = {},
+                onRename: @escaping () -> Void = {},
+                onDelete: @escaping () -> Void = {},
+                onRemoveEntry: @escaping (StoredPlaylist, StoredPlaylistEntry) -> Void = { _, _ in },
+                onMoveEntry: @escaping (StoredPlaylist, StoredPlaylistEntry, Int) -> Void = { _, _, _ in }) {
         self.playlist = playlist
         self.library = library
         self.spacing = spacing
         self.engine = engine
+        self.playlistActions = playlistActions
+        self.onAddTracks = onAddTracks
+        self.onRename = onRename
+        self.onDelete = onDelete
+        self.onRemoveEntry = onRemoveEntry
+        self.onMoveEntry = onMoveEntry
     }
 
-    private var resolvedTracks: [Music] {
-        playlist.entries
-            .sorted { $0.orderIndex < $1.orderIndex }
-            .compactMap { entry in
-                library.albums.flatMap(\.tracks).first { $0.id == entry.resolvedTrackID }
-            }
+    private var store: PlaylistStore { PlaylistStore(modelContext: modelContext) }
+    private var libraryTracks: [Music] { library.albums.flatMap(\.tracks) }
+    private var resolvedEntries: [PlaylistResolvedEntry] {
+        store.resolvedEntries(for: playlist, tracks: libraryTracks)
     }
+    private var resolvedTracks: [Music] { resolvedEntries.map(\.track) }
 
     private var coverEntries: [CoverArt.Entry] {
         let uniqueAlbumIDs = NSMutableOrderedSet()
-        for t in resolvedTracks {
-            if let alb = library.albums.first(where: { $0.tracks.contains { $0.id == t.id } }) {
-                uniqueAlbumIDs.add(alb.id)
+        for track in resolvedTracks {
+            if let album = library.albums.first(where: { $0.tracks.contains { $0.id == track.id } }) {
+                uniqueAlbumIDs.add(album.id)
             }
         }
         let resolved = (uniqueAlbumIDs.array as? [String] ?? []).compactMap { id in
@@ -51,8 +67,8 @@ public struct PlaylistScreen: View {
 
     private var artistSummary: String {
         let uniqueArtists = NSMutableOrderedSet()
-        for t in resolvedTracks.prefix(8) {
-            if let a = t.albumArtist ?? t.artist { uniqueArtists.add(a) }
+        for track in resolvedTracks.prefix(8) {
+            if let artist = track.albumArtist ?? track.artist { uniqueArtists.add(artist) }
         }
         let names = (uniqueArtists.array as? [String] ?? []).prefix(3).joined(separator: " · ")
         return names.isEmpty ? "" : "Tracks from \(names)…"
@@ -60,7 +76,7 @@ public struct PlaylistScreen: View {
 
     private var emptyInstructions: String {
         #if os(macOS)
-        "Hop over to albums or artists and find songs you like, then use + add tracks to build this list."
+        "Use + add tracks to choose songs from your Library. You can also add tracks from album and track menus."
         #else
         "Hop over to albums or artists, find a song you like, and drop it here. Or click + add tracks above to build one from a daily mix."
         #endif
@@ -94,20 +110,36 @@ public struct PlaylistScreen: View {
                         .padding(.top, 8)
                     HStack(spacing: 12) {
                         primaryButton(label: "▶ play list") {
-                            if !resolvedTracks.isEmpty {
-                                engine.setQueue(resolvedTracks)
-                                engine.play()
-                            }
+                            guard !resolvedTracks.isEmpty else { return }
+                            engine.setQueue(resolvedTracks)
+                            engine.play()
                         }
-                        secondaryButton(label: "+ add tracks") {}
-                        #if !os(macOS)
+                        #if os(macOS)
+                        .disabled(resolvedTracks.isEmpty)
+                        #endif
+                        .accessibilityIdentifier("playlist-play-button")
+                        secondaryButton(label: "+ add tracks", action: onAddTracks)
+                            .accessibilityIdentifier("playlist-add-tracks-button")
+                        #if os(macOS)
+                        if let playlistActions {
+                            Menu {
+                                managementMenuItems
+                            } label: {
+                                Text("··· more")
+                                    .resonantTag(size: 10, tracking: 2.2)
+                            }
+                            .menuStyle(.borderlessButton)
+                            .menuIndicator(.hidden)
+                            .accessibilityIdentifier("playlist-more-menu")
+                        }
+                        #else
                         Text("· share")
                             .resonantTag(size: 10, tracking: 2.2)
                             .padding(.leading, 8)
-                        #endif
                         Spacer()
                         Text("··· more")
                             .resonantTag(size: 10, tracking: 2.2)
+                        #endif
                     }
                     .padding(.top, 22)
                 }
@@ -115,61 +147,77 @@ public struct PlaylistScreen: View {
             }
             .padding(.top, 12)
             .padding(.bottom, 20)
+            #if os(macOS)
+            .contextMenu { managementMenuItems }
+            #endif
 
-            ScrollView {
-                if resolvedTracks.isEmpty {
-                    emptyState
-                } else {
+            if resolvedTracks.isEmpty {
+                ScrollView { emptyState }
+            } else {
+                #if os(macOS)
+                List {
+                    ForEach(Array(resolvedEntries.enumerated()), id: \.element.id) { index, resolved in
+                        MacPlaylistEntryRow(
+                            index: index,
+                            resolved: resolved,
+                            playing: engine.currentItem?.id == resolved.track.id,
+                            actions: playlistActions,
+                            onPlay: {
+                                engine.setQueue(resolvedTracks, startingAt: index)
+                                engine.play()
+                            },
+                            onRemove: {
+                                onRemoveEntry(playlist, resolved.entry)
+                            })
+                    }
+                    .onMove(perform: moveEntries)
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .padding(.top, 8)
+                .padding(.bottom, 68 * layout.windowScale)
+                #else
+                ScrollView {
                     LazyVStack(spacing: 0) {
                         Rectangle().fill(ResonantColors.ink4).frame(height: 0.5)
-                        ForEach(Array(resolvedTracks.enumerated()), id: \.offset) { idx, t in
-                            HStack(spacing: 18) {
-                                Text(String(format: "%02d", idx + 1))
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .tracking(0.8)
-                                    .foregroundColor(ResonantColors.ink3)
-                                    .frame(width: 32, alignment: .leading)
-                                if let alb = library.albums.first(where: { $0.tracks.contains { $0.id == t.id } }) {
-                                    CoverArt(entry: alb.coverEntry, bordered: false)
-                                        .frame(width: 32, height: 32)
-                                } else {
-                                    Rectangle().fill(ResonantColors.ink4).frame(width: 32, height: 32)
-                                }
-                                Text(t.title)
-                                    .font(ResonantFont.display(28, weight: .light))
-                                    .tracking(-0.28)
-                                    .lineLimit(1)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                Text(t.albumArtist ?? t.artist ?? "")
-                                    .resonantTag(size: 10, tracking: 1.4)
-                                Text(ResonantSynth.runtime(seconds: t.duration))
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundColor(ResonantColors.ink2)
-                            }
-                            .padding(.vertical, 14)
-                            .overlay(Rectangle().fill(ResonantColors.ink4).frame(height: 0.5), alignment: .bottom)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                engine.setQueue(resolvedTracks, startingAt: idx)
+                        ForEach(Array(resolvedTracks.enumerated()), id: \.offset) { index, track in
+                            LegacyPlaylistTrackRow(index: index, track: track, library: library) {
+                                engine.setQueue(resolvedTracks, startingAt: index)
                                 engine.play()
                             }
                         }
                     }
                     .padding(.top, 8)
-                    #if os(macOS)
-                    // See ArtistScreen: end-of-scroll clearance ≈
-                    // MiniPlayer height on macOS (M15 R2).
-                    .padding(.bottom, 68 * layout.windowScale)
-                    #else
                     .padding(.bottom, 16)
-                    #endif
                 }
+                #endif
             }
         }
         .padding(.top, 8)
         .padding(.horizontal, spacing.padX)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
+
+    #if os(macOS)
+    @ViewBuilder
+    private var managementMenuItems: some View {
+        if let playlistActions {
+            AddToPlaylistMenu(actions: playlistActions, tracks: resolvedTracks)
+                .disabled(resolvedTracks.isEmpty)
+            Divider()
+            Button("Rename…", action: onRename)
+            Button("Delete Playlist…", role: .destructive, action: onDelete)
+        }
+    }
+
+    private func moveEntries(from sources: IndexSet, to destination: Int) {
+        guard let source = sources.first, sources.count == 1 else { return }
+        let entries = resolvedEntries
+        guard entries.indices.contains(source) else { return }
+        let finalDestination = source < destination ? destination - 1 : destination
+        onMoveEntry(playlist, entries[source].entry, finalDestination)
+    }
+    #endif
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -189,5 +237,114 @@ public struct PlaylistScreen: View {
         }
         .padding(.top, 32)
         .frame(maxWidth: 640, alignment: .leading)
+    }
+}
+
+#if os(macOS)
+private struct MacPlaylistEntryRow: View {
+    let index: Int
+    let resolved: PlaylistResolvedEntry
+    let playing: Bool
+    let actions: PlaylistActions?
+    let onPlay: () -> Void
+    let onRemove: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        PlaylistTrackRowContent(
+            index: index, track: resolved.track, coverEntry: nil, showsCover: false,
+            playing: playing, hover: hover, onPlay: onPlay
+        ) {
+            if let actions {
+                Menu {
+                    AddToPlaylistMenu(actions: actions, tracks: [resolved.track])
+                    Divider()
+                    Button("Remove from Playlist", action: onRemove)
+                } label: {
+                    Text("⋯")
+                        .font(.system(size: 18, weight: .medium))
+                        .frame(width: 32, height: 32)
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .opacity(hover ? 1 : 0)
+                .allowsHitTesting(hover)
+                .accessibilityIdentifier("playlist-entry-actions-menu")
+            } else {
+                Button("Remove from Playlist", action: onRemove).hidden()
+            }
+        }
+        .onHover { hover = $0 }
+        .contextMenu {
+            if let actions {
+                AddToPlaylistMenu(actions: actions, tracks: [resolved.track])
+                Divider()
+            }
+            Button("Remove from Playlist", action: onRemove)
+        }
+        .accessibilityIdentifier("playlist-entry-\(resolved.id.uuidString)")
+    }
+}
+#endif
+
+private struct LegacyPlaylistTrackRow: View {
+    let index: Int
+    let track: Music
+    let library: ResonantLibrary
+    let onPlay: () -> Void
+
+    var body: some View {
+        let album = library.albums.first { $0.tracks.contains { $0.id == track.id } }
+        PlaylistTrackRowContent(
+            index: index, track: track, coverEntry: album?.coverEntry, showsCover: true,
+            playing: false, hover: false, onPlay: onPlay
+        ) {
+            EmptyView()
+        }
+    }
+}
+
+private struct PlaylistTrackRowContent<Trailing: View>: View {
+    let index: Int
+    let track: Music
+    let coverEntry: CoverArt.Entry?
+    let showsCover: Bool
+    let playing: Bool
+    let hover: Bool
+    let onPlay: () -> Void
+    @ViewBuilder let trailing: Trailing
+
+    var body: some View {
+        HStack(spacing: 18) {
+            Text(String(format: "%02d", index + 1))
+                .font(.system(size: 11, design: .monospaced))
+                .tracking(0.8)
+                .foregroundColor(ResonantColors.ink3)
+                .frame(width: 32, alignment: .leading)
+            if showsCover {
+                if let coverEntry {
+                    CoverArt(entry: coverEntry, bordered: false)
+                        .frame(width: 32, height: 32)
+                } else {
+                    Rectangle().fill(ResonantColors.ink4).frame(width: 32, height: 32)
+                }
+            }
+            Text(track.title)
+                .font(ResonantFont.display(28, weight: .light))
+                .tracking(-0.28)
+                .foregroundColor(playing || hover ? ResonantColors.magenta : ResonantColors.ink)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(track.albumArtist ?? track.artist ?? "")
+                .resonantTag(size: 10, tracking: 1.4)
+            Text(ResonantSynth.runtime(seconds: track.duration))
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(ResonantColors.ink2)
+            trailing
+        }
+        .padding(.vertical, 14)
+        .overlay(Rectangle().fill(ResonantColors.ink4).frame(height: 0.5), alignment: .bottom)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onPlay)
     }
 }

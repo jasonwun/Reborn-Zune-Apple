@@ -6,17 +6,26 @@ public struct PlaylistsScreen: View {
     let spacing: ResonantSpacing
     let onOpen: (StoredPlaylist) -> Void
     let onCreateTapped: () -> Void
+    let onRename: (StoredPlaylist) -> Void
+    let onDelete: (StoredPlaylist) -> Void
+    let resolveTracks: (([String]) async -> [Music])?
     @Query(sort: \StoredPlaylist.createdAt, order: .reverse) var playlists: [StoredPlaylist]
     @Environment(\.resonantLayout) private var layout
 
     public init(library: ResonantLibrary,
                 spacing: ResonantSpacing,
                 onOpen: @escaping (StoredPlaylist) -> Void,
-                onCreateTapped: @escaping () -> Void) {
+                onCreateTapped: @escaping () -> Void,
+                onRename: @escaping (StoredPlaylist) -> Void = { _ in },
+                onDelete: @escaping (StoredPlaylist) -> Void = { _ in },
+                resolveTracks: (([String]) async -> [Music])? = nil) {
         self.library = library
         self.spacing = spacing
         self.onOpen = onOpen
         self.onCreateTapped = onCreateTapped
+        self.onRename = onRename
+        self.onDelete = onDelete
+        self.resolveTracks = resolveTracks
     }
 
     public var body: some View {
@@ -57,7 +66,9 @@ public struct PlaylistsScreen: View {
                     spacing: 48
                 ) {
                     ForEach(playlists) { p in
-                        PlaylistTile(playlist: p, library: library, onClick: { onOpen(p) })
+                        PlaylistTile(playlist: p, library: library, onClick: { onOpen(p) },
+                                     onRename: { onRename(p) }, onDelete: { onDelete(p) },
+                                     resolveTracks: resolveTracks)
                     }
                 }
                 .padding(.top, 4)
@@ -81,30 +92,42 @@ struct PlaylistTile: View {
     let playlist: StoredPlaylist
     let library: ResonantLibrary
     let onClick: () -> Void
+    let onRename: () -> Void
+    let onDelete: () -> Void
+    let resolveTracks: (([String]) async -> [Music])?
     @State private var hover = false
+    @State private var availableTracks: [Music]?
+    @Environment(\.modelContext) private var modelContext
+    private var store: PlaylistStore { PlaylistStore(modelContext: modelContext) }
+
+    private var entryIDs: [String] {
+        store.orderedEntries(for: playlist).map(\.resolvedTrackID)
+    }
 
     private var coverEntries: [CoverArt.Entry] {
         // Resolve entries to album ids that exist in the library; fall back to
         // arbitrary albums if the playlist is empty so we still show art.
-        let albums = playlist.entries
-            .sorted { $0.orderIndex < $1.orderIndex }
+        let sourceAlbums = availableTracks.map { LibraryGrouping.albums(from: $0) } ?? library.albums
+        let albums = store.orderedEntries(for: playlist)
             .compactMap { entry -> Album? in
-                library.albums.first { $0.tracks.contains { $0.id == entry.resolvedTrackID } }
+                sourceAlbums.first { $0.tracks.contains { $0.id == entry.resolvedTrackID } }
             }
         let uniqued = Array(NSOrderedSet(array: albums.map { $0.id })) as? [String] ?? []
-        let resolved = uniqued.compactMap { id in library.albums.first { $0.id == id } }
-        let backfill = library.albums.prefix(4)
+        let resolved = uniqued.compactMap { id in sourceAlbums.first { $0.id == id } }
+        let backfill = sourceAlbums.prefix(4)
         let final = (resolved + backfill).prefix(4).map { $0.coverEntry }
         return Array(final)
     }
 
     private var subtitle: String {
+        let tracks = availableTracks ?? store
+            .resolvedEntries(for: playlist, tracks: library.albums.flatMap(\.tracks)).map(\.track)
+        #if os(macOS)
+        let count = tracks.count
+        #else
         let count = playlist.entries.count
-        let totalSeconds = playlist.entries
-            .compactMap { entry -> TimeInterval? in
-                library.albums.flatMap(\.tracks).first { $0.id == entry.resolvedTrackID }?.duration
-            }
-            .reduce(0, +)
+        #endif
+        let totalSeconds = tracks.reduce(0) { $0 + $1.duration }
         let hours = ResonantSynth.runtime(seconds: totalSeconds)
         #if os(macOS)
         return "\(count) tracks · \(hours)"
@@ -150,5 +173,15 @@ struct PlaylistTile: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
+        #if os(macOS)
+        .contextMenu {
+            Button("Rename…", action: onRename)
+            Button("Delete Playlist…", role: .destructive, action: onDelete)
+        }
+        #endif
+        .task(id: entryIDs) {
+            guard let resolveTracks else { return }
+            availableTracks = await resolveTracks(entryIDs)
+        }
     }
 }

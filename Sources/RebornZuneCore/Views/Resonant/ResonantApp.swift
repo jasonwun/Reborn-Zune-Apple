@@ -30,12 +30,15 @@ public struct ResonantApp: View {
     let resolveAlbum: (Album) async -> Album?
     let resolveArtist: (Artist) async -> Artist?
     let resolveTracks: (([String]) async -> [Music])?
+    let resolvePlaylistPickerTracks: ((String) async -> [Music])?
 
     @State private var router: ResonantRouter
     @State private var showCreatePlaylist = false
+    @State private var playlistInteraction = PlaylistInteractionState()
     @State private var resolvedAlbums: [String: Album] = [:]
     @State private var resolvedArtists: [String: Artist] = [:]
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \StoredPlaylist.createdAt, order: .reverse) private var playlists: [StoredPlaylist]
 
     public init(engine: PlaybackEngine,
                 library: ResonantLibrary,
@@ -58,7 +61,8 @@ public struct ResonantApp: View {
                 onBrowse: @escaping (LibraryTrackQuery) async -> Void = { _ in },
                 resolveAlbum: @escaping (Album) async -> Album? = { $0 },
                 resolveArtist: @escaping (Artist) async -> Artist? = { $0 },
-                resolveTracks: (([String]) async -> [Music])? = nil) {
+                resolveTracks: (([String]) async -> [Music])? = nil,
+                resolvePlaylistPickerTracks: ((String) async -> [Music])? = nil) {
         self.engine = engine
         self.library = library
         self.tiles = tiles
@@ -81,6 +85,7 @@ public struct ResonantApp: View {
         self.resolveAlbum = resolveAlbum
         self.resolveArtist = resolveArtist
         self.resolveTracks = resolveTracks
+        self.resolvePlaylistPickerTracks = resolvePlaylistPickerTracks
     }
 
     private func openAlbum(_ album: Album) {
@@ -114,6 +119,25 @@ public struct ResonantApp: View {
     }
 
     private var spacing: ResonantSpacing { ResonantSpacing.for(density) }
+    private var playlistStore: PlaylistStore { PlaylistStore(modelContext: modelContext) }
+    private var playlistActions: PlaylistActions {
+        PlaylistActions(
+            playlists: playlists,
+            onAdd: { tracks, playlist in addTracks(tracks, to: playlist) },
+            onNew: { tracks in
+                playlistInteraction.requestCreate(
+                    trackIDs: tracks.map(\.id), opensAfterCreation: false)
+            })
+    }
+
+    private func addTracks(_ tracks: [Music], to playlist: StoredPlaylist) {
+        do {
+            try playlistStore.addTracks(tracks.map(\.id), to: playlist)
+            playlistInteraction.showAddedFeedback(to: playlist.name)
+        } catch {
+            // SwiftData keeps the previous state when saving fails.
+        }
+    }
 
     private var upNext: [Music] {
         let q = engine.queue
@@ -200,6 +224,22 @@ public struct ResonantApp: View {
                 }
             }
 
+            #if os(macOS)
+            macPlaylistOverlays
+            if let feedback = playlistInteraction.addedFeedback {
+                VStack {
+                    Spacer()
+                    MacPlaylistFeedback(message: feedback)
+                        .padding(.bottom, 92)
+                }
+                .transition(.opacity)
+                .task(id: feedback) {
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    guard !Task.isCancelled else { return }
+                    playlistInteraction.clearFeedback(feedback)
+                }
+            }
+            #else
             if showCreatePlaylist {
                 CreatePlaylistSheet(
                     onCancel: { showCreatePlaylist = false },
@@ -213,8 +253,73 @@ public struct ResonantApp: View {
                 )
                 .transition(.opacity)
             }
+            #endif
         }
     }
+
+    #if os(macOS)
+    @ViewBuilder
+    private var macPlaylistOverlays: some View {
+        if let request = playlistInteraction.createRequest {
+            MacPlaylistNameSheet(
+                title: "New Playlist", confirmation: "Create",
+                onCancel: playlistInteraction.cancelSheets,
+                onConfirm: { name in
+                    do {
+                        let playlist = try playlistStore.createPlaylist(named: name)
+                        if !request.trackIDs.isEmpty {
+                            try playlistStore.addTracks(request.trackIDs, to: playlist)
+                            playlistInteraction.showAddedFeedback(to: playlist.name)
+                        }
+                        playlistInteraction.completeCreation(with: playlist.id, router: router)
+                    } catch {}
+                })
+                .id("\(request.opensAfterCreation)-\(request.trackIDs.joined(separator: ","))")
+        }
+        if let request = playlistInteraction.renameRequest,
+           let playlist = playlists.first(where: { $0.id == request.playlistID }) {
+            MacPlaylistNameSheet(
+                title: "Rename Playlist", confirmation: "Rename", initialName: request.currentName,
+                onCancel: playlistInteraction.cancelSheets,
+                onConfirm: { name in
+                    do {
+                        try playlistStore.renamePlaylist(playlist, to: name)
+                        playlistInteraction.cancelSheets()
+                    } catch {}
+                })
+                .id(request.playlistID)
+        }
+        if let playlistID = playlistInteraction.deletePlaylistID,
+           let playlist = playlists.first(where: { $0.id == playlistID }) {
+            MacDeletePlaylistSheet(
+                playlistName: playlist.name,
+                onCancel: playlistInteraction.cancelSheets,
+                onDelete: {
+                    do {
+                        try playlistStore.deletePlaylist(playlist)
+                        playlistInteraction.completeDeletion(router: router)
+                    } catch {}
+                })
+                .id(playlistID)
+        }
+        if let playlistID = playlistInteraction.pickerPlaylistID,
+           let playlist = playlists.first(where: { $0.id == playlistID }) {
+            MacPlaylistPicker(
+                loadTracks: {
+                    if let resolvePlaylistPickerTracks {
+                        return await resolvePlaylistPickerTracks("")
+                    }
+                    return library.albums.flatMap(\.tracks)
+                },
+                onCancel: playlistInteraction.cancelSheets,
+                onAdd: { tracks in
+                    addTracks(tracks, to: playlist)
+                    playlistInteraction.cancelSheets()
+                })
+                .id(playlistID)
+        }
+    }
+    #endif
 
     private var miniPlayer: some View {
         MiniPlayer(engine: engine,
@@ -262,20 +367,48 @@ public struct ResonantApp: View {
                     ?? library.albums.first
                 if let album = resolved {
                     AlbumScreen(album: album, spacing: spacing, engine: engine,
-                                onArtist: openArtist(named:))
+                                onArtist: openArtist(named:),
+                                playlistActions: platform == .mac ? playlistActions : nil)
                 } else {
                     Text("Album not found.").foregroundColor(ResonantColors.ink2)
                 }
             case .playlists:
-                PlaylistsScreen(library: library, spacing: spacing,
-                                onOpen: { router.go(.playlist($0.id.uuidString)) },
-                                onCreateTapped: { showCreatePlaylist = true })
+                PlaylistsScreen(
+                    library: library, spacing: spacing,
+                    onOpen: { router.go(.playlist($0.id.uuidString)) },
+                    onCreateTapped: {
+                        #if os(macOS)
+                        playlistInteraction.requestCreate(opensAfterCreation: true)
+                        #else
+                        showCreatePlaylist = true
+                        #endif
+                    },
+                    onRename: { playlist in
+                        playlistInteraction.requestRename(
+                            playlistID: playlist.id, currentName: playlist.name)
+                    },
+                    onDelete: { playlistInteraction.requestDeletion(playlistID: $0.id) },
+                    resolveTracks: resolveTracks)
             case .playlist(let id):
-                PlaylistByIDScreen(idString: id,
-                                   library: library,
-                                   spacing: spacing,
-                                   engine: engine,
-                                   resolveTracks: resolveTracks)
+                PlaylistByIDScreen(
+                    idString: id,
+                    library: library,
+                    spacing: spacing,
+                    engine: engine,
+                    resolveTracks: resolveTracks,
+                    playlistActions: platform == .mac ? playlistActions : nil,
+                    onAddTracks: { playlistInteraction.requestPicker(playlistID: UUID(uuidString: id) ?? UUID()) },
+                    onRename: { playlist in
+                        playlistInteraction.requestRename(
+                            playlistID: playlist.id, currentName: playlist.name)
+                    },
+                    onDelete: { playlistInteraction.requestDeletion(playlistID: $0.id) },
+                    onRemoveEntry: { playlist, entry in
+                        try? playlistStore.removeEntry(entry, from: playlist)
+                    },
+                    onMoveEntry: { playlist, entry, destination in
+                        try? playlistStore.moveEntry(entry, to: destination, in: playlist)
+                    })
             case .artists:
                 #if os(macOS)
                 MacArtistsScreen(library: library, spacing: spacing,
@@ -297,7 +430,8 @@ public struct ResonantApp: View {
                     #if os(macOS)
                     MacArtistScreen(artist: artist, library: library, spacing: spacing, engine: engine,
                                     onAlbum: openAlbum,
-                                    onArtist: openArtist)
+                                    onArtist: openArtist,
+                                    playlistActions: playlistActions)
                     #else
                     ArtistScreen(artist: artist, library: library, spacing: spacing,
                                  onAlbum: openAlbum,
@@ -338,27 +472,55 @@ private struct PlaylistByIDScreen: View {
     let spacing: ResonantSpacing
     let engine: PlaybackEngine
     let resolveTracks: (([String]) async -> [Music])?
+    let playlistActions: PlaylistActions?
+    let onAddTracks: () -> Void
+    let onRename: (StoredPlaylist) -> Void
+    let onDelete: (StoredPlaylist) -> Void
+    let onRemoveEntry: (StoredPlaylist, StoredPlaylistEntry) -> Void
+    let onMoveEntry: (StoredPlaylist, StoredPlaylistEntry, Int) -> Void
     @Query var playlists: [StoredPlaylist]
     @State private var resolvedLibrary: ResonantLibrary?
+    @State private var resolvedEntryIDs: [String]?
 
     var body: some View {
         if let playlist = playlists.first(where: { $0.id.uuidString == idString }) {
-            let entryIDs = playlist.entries.sorted { $0.orderIndex < $1.orderIndex }.map(\.resolvedTrackID)
-            PlaylistScreen(
-                playlist: playlist,
-                library: resolvedLibrary ?? library,
-                spacing: spacing,
-                engine: engine
-            )
+            let entryIDs = PlaylistEntryOrdering.sorted(playlist.entries).map(\.resolvedTrackID)
+            Group {
+                if resolveTracks == nil || resolvedEntryIDs == entryIDs {
+                    PlaylistScreen(
+                        playlist: playlist,
+                        library: resolveTracks == nil
+                            ? library
+                            : resolvedLibrary ?? ResonantLibrary(albums: [], artists: []),
+                        spacing: spacing,
+                        engine: engine,
+                        playlistActions: playlistActions,
+                        onAddTracks: onAddTracks,
+                        onRename: { onRename(playlist) },
+                        onDelete: { onDelete(playlist) },
+                        onRemoveEntry: onRemoveEntry,
+                        onMoveEntry: onMoveEntry
+                    )
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
             .task(id: entryIDs) {
-                guard let resolveTracks else { return }
+                resolvedEntryIDs = nil
+                guard let resolveTracks else {
+                    resolvedEntryIDs = entryIDs
+                    return
+                }
                 guard !entryIDs.isEmpty else {
-                    resolvedLibrary = nil
+                    resolvedLibrary = ResonantLibrary(albums: [], artists: [])
+                    resolvedEntryIDs = entryIDs
                     return
                 }
                 let tracks = await resolveTracks(entryIDs)
                 let albums = await Task.detached { LibraryGrouping.albums(from: tracks) }.value
                 resolvedLibrary = ResonantLibrary(albums: albums, artists: [])
+                resolvedEntryIDs = entryIDs
             }
         } else {
             VStack {
