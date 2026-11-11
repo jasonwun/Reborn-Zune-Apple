@@ -61,7 +61,6 @@ private struct ResonantHost: View {
     /// 1440×900 placeholder until `.task` ran) so the tile wall's
     /// first-layout freeze never sees a stale screen size.
     @State private var screenSize = NSScreen.main?.frame.size ?? CGSize(width: 1440, height: 900)
-    @State private var demo: DemoLibrary?
 
     init() {
         // DEBUG override lets verification point the default Library Source
@@ -78,14 +77,6 @@ private struct ResonantHost: View {
             source: FolderFileSource(root: root)))
     }
 
-    private struct DemoLibrary {
-        let tracks: [Music]
-        let tiles: [TileWallEntry]
-        let library: ResonantLibrary
-    }
-
-    private var shownTracks: [Music] { demo?.tracks ?? library.tracks }
-
     var body: some View {
         let _ = PerfProbe.once("app.body")
         let lighting: LightingAnimator? =
@@ -93,13 +84,12 @@ private struct ResonantHost: View {
             ? nil
             : LightingAnimator()
 
-        let tilesToShow = shownTracks.isEmpty
+        let tilesToShow = library.tracks.isEmpty
             ? SyntheticTiles.sample(count: 250)
-            : (demo?.tiles ?? MusicTileBuilder.tiles(from: library.tracks))
-        let resonantLibrary = demo?.library ?? ResonantLibrary.from(tracks: library.tracks)
+            : MusicTileBuilder.tiles(from: library.tracks)
+        let resonantLibrary = ResonantLibrary.from(tracks: library.tracks)
 
         let status: LibraryStatus? = {
-            guard demo == nil else { return nil }
             switch library.phase {
             case .ready: return nil
             case .loading: return .loading
@@ -107,7 +97,7 @@ private struct ResonantHost: View {
             case .failed: return .failed(message: library.scanError ?? "The scan did not finish.")
             }
         }()
-        let banner: String? = (status == nil && demo == nil) ? library.scanError : nil
+        let banner: String? = status == nil ? library.scanError : nil
 
         // M15.1: size tokens are fixed per screen (`.mac(screen:)`);
         // the live window size goes to `resonantWindowSize`, which views
@@ -140,16 +130,6 @@ private struct ResonantHost: View {
         }
         .task {
             updateScreenSize()
-            // Debug: synthetic demo library to bypass TCC / sandbox file access.
-            if ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_DEMO_LIBRARY"] == "1" {
-                let tracks = ResonantDemoLibrary.makeMusic()
-                demo = DemoLibrary(tracks: tracks,
-                                   tiles: MusicTileBuilder.tiles(from: tracks),
-                                   library: ResonantLibrary.from(tracks: tracks))
-                engine.setQueue(tracks)
-                PerfProbe.mark("library.demo.ready")
-                return
-            }
             await library.start()
         }
     }
