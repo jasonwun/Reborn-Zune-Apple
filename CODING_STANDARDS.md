@@ -10,6 +10,7 @@ change's scope):
 mkdir -p Apps/tvOS/Resources/UserMusic
 
 # Generate Xcode project from project.yml
+mkdir -p Apps/tvOS/Resources/UserMusic
 xcodegen generate
 
 # Swift Package (core, runs on the host)
@@ -22,6 +23,10 @@ xcodebuild -project RebornZune.xcodeproj -scheme RebornZune-macOS -destination '
 xcodebuild -project RebornZune.xcodeproj -scheme RebornZune-iPadOS -destination 'generic/platform=iOS Simulator' build
 xcodebuild -project RebornZune.xcodeproj -scheme RebornZune-tvOS -destination 'generic/platform=tvOS Simulator' build
 ```
+
+Run `xcodebuild` commands sequentially when they share DerivedData. For parallel
+builds, give each invocation a distinct `-derivedDataPath`; sharing one build
+database can fail with `build.db is locked`.
 
 ## Evidence over claims
 
@@ -45,6 +50,12 @@ not just by green builds and tests:
     permission has been granted to the harness terminal, so this works. macOS
     native captures show the actual Metal output; the snapshot harness's
     `ImageRenderer` does NOT, so only use it for layout-only verification.
+  - For isolated Sandbox runs, keep `REBORN_ZUNE_DEBUG_STORE` inside
+    `~/Library/Containers/dev.yjd.rebornzune.macos/Data/tmp/`. External Store
+    paths are not writable without a separate user grant and fall back to
+    in-memory persistence, invalidating relaunch verification. Keep only the
+    test music folder outside the container and grant it through the app's
+    Open Panel.
   - When other apps or system dialogs obscure the target, capture only its
     window with `screencapture -x -l <windowID> output.png`. Obtain the target
     window ID through accessibility tooling, and isolate it rather than

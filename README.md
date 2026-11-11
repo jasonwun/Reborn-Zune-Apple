@@ -14,6 +14,8 @@ composition lighting effects, deployed to macOS, iPadOS, and tvOS.
 Generate the Xcode project from `project.yml`:
 
 ```sh
+# The ignored user-supplied folder must exist locally, as it does in CI.
+mkdir -p Apps/tvOS/Resources/UserMusic
 xcodegen generate
 ```
 
