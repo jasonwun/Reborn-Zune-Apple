@@ -6,16 +6,17 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     let library: LibraryCoordinator
     let engine: PlaybackEngine
+    let queueStore: QueueStore
 
     var body: some View {
         #if DEBUG
         if let path = SnapshotHarness.requestedOutputPath {
             SnapshotView(outputPath: path)
         } else {
-            ResonantHost(library: library, engine: engine)
+            ResonantHost(library: library, engine: engine, queueStore: queueStore)
         }
         #else
-        ResonantHost(library: library, engine: engine)
+        ResonantHost(library: library, engine: engine, queueStore: queueStore)
         #endif
     }
 }
@@ -57,6 +58,7 @@ private struct SnapshotView: View {
 private struct ResonantHost: View {
     let library: LibraryCoordinator
     let engine: PlaybackEngine
+    let queueStore: QueueStore
     @Environment(\.openSettings) private var openSettings
     /// Hardware screen size backing the M15.1 screen-fixed scale tokens.
     /// Re-derived only when the window moves to another screen — never
@@ -117,15 +119,27 @@ private struct ResonantHost: View {
             let remainingIDs = Set(tracks.map(\.id))
             let removedIDs = Set(previous.filter { !remainingIDs.contains($0.id) }.map(\.id))
             engine.removeTracks(withIDs: removedIDs)
-            // Adopt the initial Library only. After cleanup, an empty Queue
-            // must stay stopped rather than selecting a replacement track.
-            if previous.isEmpty, engine.queue.isEmpty, !tracks.isEmpty {
-                engine.setQueue(tracks)
-            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+            try? queueStore.save(engine.persistenceSnapshot)
         }
         .task {
             updateScreenSize()
+            var didChangeQueueDuringScan = false
+            var lastSnapshot = engine.persistenceSnapshot
+            engine.queuePersistenceHandler = { snapshot in
+                guard snapshot != lastSnapshot else { return }
+                didChangeQueueDuringScan = true
+                lastSnapshot = snapshot
+                try? queueStore.save(snapshot)
+            }
             await library.start()
+            if !didChangeQueueDuringScan, let snapshot = try? queueStore.load() {
+                let tracksByID = Dictionary(uniqueKeysWithValues: library.tracks.map { ($0.id, $0) })
+                engine.restoreQueue(snapshot) { tracksByID[$0.uuidString] }
+            }
+            // Persist the resolved snapshot so unresolvable references disappear silently.
+            try? queueStore.save(engine.persistenceSnapshot)
         }
     }
 

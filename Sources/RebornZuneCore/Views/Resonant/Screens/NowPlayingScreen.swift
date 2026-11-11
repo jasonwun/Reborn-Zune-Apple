@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 public struct NowPlayingScreen: View {
     let tiles: [TileWallEntry]
@@ -9,15 +12,20 @@ public struct NowPlayingScreen: View {
     let onBack: () -> Void
 
     @State private var liked = false
+    @State private var upNextInteraction = UpNextInteractionState()
+    #if !os(macOS)
     @State private var shuffle = false
     @State private var repeatMode: RepeatMode = .off
+    #endif
     @State private var volume: Double = 72
     @State private var backHover = false
     @Environment(\.resonantLayout) private var layout
     @Environment(\.resonantWindowSize) private var windowSize
     @Environment(\.resonantScreenSize) private var screenSize
 
+    #if !os(macOS)
     enum RepeatMode { case off, all, one }
+    #endif
 
     public init(tiles: [TileWallEntry],
                 lightingAnimator: LightingAnimator?,
@@ -31,6 +39,16 @@ public struct NowPlayingScreen: View {
         self.upNext = upNext
         self.spacing = spacing
         self.onBack = onBack
+    }
+
+    private var showUpNext: Bool { upNextInteraction.isOpen }
+
+    private func toggleUpNext() {
+        upNextInteraction.toggle()
+    }
+
+    private func dismissUpNext() {
+        upNextInteraction.dismissOverlay(at: windowSize.width)
     }
 
     public var body: some View {
@@ -124,23 +142,37 @@ public struct NowPlayingScreen: View {
                 .padding(.bottom, 140)
             }
 
-            // 7. Up Next rail (bottom-right) — the 260pt column is a
-            // 1440pt-canvas fossil; screen-fixed on macOS (M15.1) and
-            // hidden below 1000pt window width, where it would collide
-            // with the meta card (the queue button still reaches it).
-            // Bucketed surfaces render it unconditionally (bit-identical).
-            if !layout.arrangementDriven || windowSize.width >= 1000 {
+            // 7. One editable Up Next surface. On wide macOS windows it
+            // remains in the view tree while fade/slide toggling; narrow
+            // windows add the same editor as an overlay below.
+            #if os(macOS)
+            if windowSize.width >= 1000 {
                 VStack {
                     Spacer()
                     HStack {
                         Spacer()
-                        upNextRail
-                            .frame(width: 260 * layout.windowScale)
+                        upNextEditor
+                            .frame(width: 300, height: 420)
                             .padding(.trailing, spacing.padX)
                             .padding(.bottom, 140)
+                            .opacity(showUpNext ? 1 : 0)
+                            .offset(x: showUpNext ? 0 : 24)
+                            .allowsHitTesting(showUpNext)
                     }
                 }
             }
+            #else
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    upNextRail
+                        .frame(width: 260 * layout.windowScale)
+                        .padding(.trailing, spacing.padX)
+                        .padding(.bottom, 140)
+                }
+            }
+            #endif
 
             // 8. Scrubber — absolutely anchored at bottom 88 (per M9 §5.9).
             // Kept in its OWN bottom-anchored overlay rather than stacked
@@ -161,8 +193,33 @@ public struct NowPlayingScreen: View {
                     .padding(.horizontal, spacing.padX)
                     .padding(.bottom, 28)
             }
+
+            #if os(macOS)
+            if windowSize.width < 1000, showUpNext {
+                Button(action: { dismissUpNext() }) {
+                    Color.black.opacity(0.48).ignoresSafeArea()
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Dismiss Up Next")
+                .transition(.opacity)
+                HStack {
+                    Spacer()
+                    upNextEditor
+                        .frame(width: 340)
+                        .frame(maxHeight: .infinity)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+                .ignoresSafeArea()
+            }
+            #endif
         }
         .background(Color(red: 14/255, green: 13/255, blue: 10/255))
+        #if os(macOS)
+        .animation(.easeInOut(duration: 0.3), value: showUpNext)
+        .background(EscapeKeyMonitor(isActive: windowSize.width < 1000 && showUpNext) {
+            dismissUpNext()
+        })
+        #endif
         .onAppear { PerfProbe.mark("nowplaying.appear") }
     }
 
@@ -217,6 +274,7 @@ public struct NowPlayingScreen: View {
         .buttonStyle(.plain)
     }
 
+    #if !os(macOS)
     private var upNextRail: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("UP NEXT")
@@ -250,6 +308,58 @@ public struct NowPlayingScreen: View {
             }
         }
     }
+    #endif
+
+    #if os(macOS)
+    private var upNextEditor: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("UP NEXT")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .tracking(2.0)
+                Spacer()
+                Button("Clear") { engine.clearUpNext() }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(engine.upNext.isEmpty ? ResonantColors.ink3 : ResonantColors.magenta)
+                    .disabled(engine.upNext.isEmpty)
+                    .accessibilityLabel("Clear Up Next")
+            }
+            .padding(16)
+
+            if engine.upNext.isEmpty {
+                Text("No upcoming tracks")
+                    .font(.system(size: 13))
+                    .foregroundColor(ResonantColors.ink3)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(16)
+            } else {
+                List {
+                    ForEach(Array(engine.upNext.enumerated()), id: \.offset) { index, track in
+                        UpNextTrackRow(
+                            number: index + 1,
+                            track: track,
+                            onRemove: { engine.removeUpNext(at: index) }
+                        )
+                        .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                    }
+                    .onMove { source, destination in
+                        engine.moveUpNext(fromOffsets: source, toOffset: destination)
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+            }
+        }
+        .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255))
+        .background(Color(red: 22/255, green: 20/255, blue: 18/255).opacity(0.97))
+        .overlay(Rectangle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+        .accessibilityLabel("Up Next")
+    }
+    #endif
 
     private var scrubberRow: some View {
         HStack(spacing: 18) {
@@ -287,10 +397,17 @@ public struct NowPlayingScreen: View {
     private var transportRow: some View {
         HStack {
             HStack(spacing: 22) {
+                #if os(macOS)
+                npButton(symbol: "shuffle", active: engine.isShuffling) { engine.isShuffling.toggle() }
+                npButton(symbol: repeatSymbol, active: engine.repeatMode != .off) {
+                    engine.repeatMode = engine.repeatMode == .off ? .all : (engine.repeatMode == .all ? .one : .off)
+                }
+                #else
                 npButton(symbol: "shuffle", active: shuffle) { shuffle.toggle() }
                 npButton(symbol: repeatSymbol, active: repeatMode != .off) {
                     repeatMode = repeatMode == .off ? .all : (repeatMode == .all ? .one : .off)
                 }
+                #endif
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -311,7 +428,12 @@ public struct NowPlayingScreen: View {
             }
 
             HStack(spacing: 22) {
+                #if os(macOS)
+                npButton(symbol: "list.bullet", active: showUpNext) { toggleUpNext() }
+                    .accessibilityLabel("Up Next")
+                #else
                 npButton(symbol: "list.bullet", active: false) {}
+                #endif
                 volumeWidget
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -340,10 +462,17 @@ public struct NowPlayingScreen: View {
     }
 
     private var repeatSymbol: String {
+        #if os(macOS)
+        switch engine.repeatMode {
+        case .one: return "repeat.1"
+        default: return "repeat"
+        }
+        #else
         switch repeatMode {
         case .one: return "repeat.1"
         default: return "repeat"
         }
+        #endif
     }
 
     private func npButton(symbol: String, active: Bool, action: @escaping () -> Void) -> some View {
@@ -367,6 +496,90 @@ public struct NowPlayingScreen: View {
         return MusicTileBuilderHelper.album(for: track)
     }
 }
+
+#if os(macOS)
+private struct EscapeKeyMonitor: NSViewRepresentable {
+    let isActive: Bool
+    let onEscape: () -> Void
+
+    final class Coordinator {
+        var monitor: Any?
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        updateMonitor(context: context)
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        updateMonitor(context: context)
+    }
+
+    private func updateMonitor(context: Context) {
+        if !isActive, let monitor = context.coordinator.monitor {
+            NSEvent.removeMonitor(monitor)
+            context.coordinator.monitor = nil
+        } else if isActive, context.coordinator.monitor == nil {
+            context.coordinator.monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                guard event.keyCode == 53 else { return event }
+                Task { @MainActor in onEscape() }
+                return nil
+            }
+        }
+    }
+
+    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
+        if let monitor = coordinator.monitor { NSEvent.removeMonitor(monitor) }
+    }
+}
+
+private struct UpNextTrackRow: View {
+    let number: Int
+    let track: Music
+    let onRemove: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(String(format: "%02d", number))
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundColor(.white.opacity(0.45))
+                .frame(width: 22, alignment: .leading)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(track.title)
+                    .font(ResonantFont.display(17, weight: .light))
+                    .lineLimit(1)
+                Text(track.albumArtist ?? track.artist ?? "Unknown Artist")
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.5))
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(ResonantSynth.runtime(seconds: track.duration))
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundColor(.white.opacity(0.55))
+            if hover {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .medium))
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Remove \(track.title) from Up Next")
+            }
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 4)
+        .background(Color.white.opacity(hover ? 0.045 : 0))
+        .contentShape(Rectangle())
+        .onHover { hover = $0 }
+    }
+}
+#endif
 
 // Helper — kept separate so we don't reach into the existing builder.
 enum MusicTileBuilderHelper {

@@ -51,12 +51,7 @@ public struct ResonantApp: View {
 
     private var spacing: ResonantSpacing { ResonantSpacing.for(density) }
 
-    private var upNext: [Music] {
-        let q = engine.queue
-        guard !q.isEmpty, let current = engine.currentItem,
-              let idx = q.firstIndex(where: { $0.id == current.id }) else { return [] }
-        return Array(q[(idx + 1)...].prefix(8))
-    }
+    private var upNext: [Music] { engine.upNext }
 
     public var body: some View {
         innerBody
