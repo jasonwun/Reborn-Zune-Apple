@@ -10,6 +10,7 @@ public struct PlaylistScreen: View {
     // macOS-only consumer: end-of-scroll clearance below the track
     // list (M15 R2). Unused in the iPad branch — bit-identical there.
     @Environment(\.resonantLayout) private var layout
+    @State private var headerHover = false
 
     public init(playlist: StoredPlaylist,
                 library: ResonantLibrary,
@@ -106,8 +107,17 @@ public struct PlaylistScreen: View {
                             .padding(.leading, 8)
                         #endif
                         Spacer()
+                        #if os(macOS)
+                        if headerHover {
+                            QueueHoverMenu(
+                                onPlayNext: { engine.playNext(resolvedTracks) },
+                                onPlayLater: { engine.playLater(resolvedTracks) }
+                            )
+                        }
+                        #else
                         Text("··· more")
                             .resonantTag(size: 10, tracking: 2.2)
+                        #endif
                     }
                     .padding(.top, 22)
                 }
@@ -115,6 +125,14 @@ public struct PlaylistScreen: View {
             }
             .padding(.top, 12)
             .padding(.bottom, 20)
+            #if os(macOS)
+            .contentShape(Rectangle())
+            .onHover { headerHover = $0 }
+            .queueContextMenu(
+                onPlayNext: { engine.playNext(resolvedTracks) },
+                onPlayLater: { engine.playLater(resolvedTracks) }
+            )
+            #endif
 
             ScrollView {
                 if resolvedTracks.isEmpty {
@@ -122,37 +140,18 @@ public struct PlaylistScreen: View {
                 } else {
                     LazyVStack(spacing: 0) {
                         Rectangle().fill(ResonantColors.ink4).frame(height: 0.5)
-                        ForEach(Array(resolvedTracks.enumerated()), id: \.offset) { idx, t in
-                            HStack(spacing: 18) {
-                                Text(String(format: "%02d", idx + 1))
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .tracking(0.8)
-                                    .foregroundColor(ResonantColors.ink3)
-                                    .frame(width: 32, alignment: .leading)
-                                if let alb = library.albums.first(where: { $0.tracks.contains { $0.id == t.id } }) {
-                                    CoverArt(entry: alb.coverEntry, bordered: false)
-                                        .frame(width: 32, height: 32)
-                                } else {
-                                    Rectangle().fill(ResonantColors.ink4).frame(width: 32, height: 32)
-                                }
-                                Text(t.title)
-                                    .font(ResonantFont.display(28, weight: .light))
-                                    .tracking(-0.28)
-                                    .lineLimit(1)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                Text(t.albumArtist ?? t.artist ?? "")
-                                    .resonantTag(size: 10, tracking: 1.4)
-                                Text(ResonantSynth.runtime(seconds: t.duration))
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundColor(ResonantColors.ink2)
-                            }
-                            .padding(.vertical, 14)
-                            .overlay(Rectangle().fill(ResonantColors.ink4).frame(height: 0.5), alignment: .bottom)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                engine.setQueue(resolvedTracks, startingAt: idx)
-                                engine.play()
-                            }
+                        ForEach(Array(resolvedTracks.enumerated()), id: \.offset) { idx, track in
+                            PlaylistTrackRow(
+                                number: idx + 1,
+                                track: track,
+                                album: library.albums.first(where: { $0.tracks.contains { $0.id == track.id } }),
+                                onPlay: {
+                                    engine.setQueue(resolvedTracks, startingAt: idx)
+                                    engine.play()
+                                },
+                                onPlayNext: { engine.playNext(track) },
+                                onPlayLater: { engine.playLater(track) }
+                            )
                         }
                     }
                     .padding(.top, 8)
@@ -189,5 +188,54 @@ public struct PlaylistScreen: View {
         }
         .padding(.top, 32)
         .frame(maxWidth: 640, alignment: .leading)
+    }
+}
+
+private struct PlaylistTrackRow: View {
+    let number: Int
+    let track: Music
+    let album: Album?
+    let onPlay: () -> Void
+    let onPlayNext: () -> Void
+    let onPlayLater: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        HStack(spacing: 18) {
+            Text(String(format: "%02d", number))
+                .font(.system(size: 11, design: .monospaced))
+                .tracking(0.8)
+                .foregroundColor(ResonantColors.ink3)
+                .frame(width: 32, alignment: .leading)
+            if let album {
+                CoverArt(entry: album.coverEntry, bordered: false)
+                    .frame(width: 32, height: 32)
+            } else {
+                Rectangle().fill(ResonantColors.ink4).frame(width: 32, height: 32)
+            }
+            Text(track.title)
+                .font(ResonantFont.display(28, weight: .light))
+                .tracking(-0.28)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(track.albumArtist ?? track.artist ?? "")
+                .resonantTag(size: 10, tracking: 1.4)
+            Text(ResonantSynth.runtime(seconds: track.duration))
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(ResonantColors.ink2)
+            #if os(macOS)
+            if hover {
+                QueueHoverMenu(onPlayNext: onPlayNext, onPlayLater: onPlayLater)
+            }
+            #endif
+        }
+        .padding(.vertical, 14)
+        .overlay(Rectangle().fill(ResonantColors.ink4).frame(height: 0.5), alignment: .bottom)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onPlay)
+        #if os(macOS)
+        .queueContextMenu(onPlayNext: onPlayNext, onPlayLater: onPlayLater)
+        #endif
+        .onHover { hover = $0 }
     }
 }

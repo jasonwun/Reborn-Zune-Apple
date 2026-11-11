@@ -8,10 +8,12 @@ struct RebornZuneMacApp: App {
     /// Failure to open falls back to an in-memory container so the app
     /// can still launch (the user just loses persistence).
     private let modelContainer = RebornZuneMacApp.sharedContainer
+    private let queueStore: QueueStore
     @State private var engine = PlaybackEngine()
     @State private var library: LibraryCoordinator
 
     init() {
+        queueStore = QueueStore(container: RebornZuneMacApp.sharedContainer)
         let root: URL
         if let override = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_LIBRARY_FOLDER"] {
             root = URL(fileURLWithPath: override)
@@ -62,7 +64,7 @@ struct RebornZuneMacApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(library: library, engine: engine)
+            ContentView(library: library, engine: engine, queueStore: queueStore)
                 // Window floor 900 × 600: below ~900pt the panorama's
                 // three-column bottom strip has no honest layout, so
                 // the window refuses to shrink further
