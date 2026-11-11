@@ -21,6 +21,19 @@ public final class PlaybackEngine {
     public private(set) var queue: [Music] = []
     public private(set) var currentTime: TimeInterval = 0
     public private(set) var duration: TimeInterval = 0
+    /// Active seconds observed for the current start event; never persisted continuously.
+    public private(set) var activePlaybackTime: TimeInterval = 0
+    /// Output volume in AVPlayer's normalized 0...1 range.
+    public var volume: Double = 1 {
+        didSet {
+            let clamped = min(max(volume, 0), 1)
+            if volume != clamped {
+                volume = clamped
+            } else {
+                player?.volume = volume
+            }
+        }
+    }
 
     public var isShuffling: Bool = false {
         didSet {
@@ -43,21 +56,16 @@ public final class PlaybackEngine {
     private var currentIndex: Int?
 
     @ObservationIgnored
-    private var player: AVQueuePlayer?
+    private var player: QueuePlayer?
 
     @ObservationIgnored
-    private var timeObserverToken: Any?
+    private let playerFactory: () -> QueuePlayer
 
     @ObservationIgnored
-    private var endObserver: NSObjectProtocol?
-
-    /// Starts a security scope for one file. Sessions live as long as the
-    /// player window because AVFoundation may open and read files lazily.
-    @ObservationIgnored
-    private let fileAccess: (@MainActor (URL) throws -> any LibraryBookmarkSession)?
+    private let timeSource: () -> TimeInterval
 
     @ObservationIgnored
-    private var fileAccessSessions: [any LibraryBookmarkSession] = []
+    private var lastActiveObservation: TimeInterval?
 
     @ObservationIgnored
     private let nowPlaying = NowPlayingCenter()
@@ -68,10 +76,25 @@ public final class PlaybackEngine {
     @ObservationIgnored
     private let logger = Logger(subsystem: "dev.yjd.rebornzune", category: "PlaybackEngine")
 
+    /// Receives explicit transitions instead of inferring them from item or position changes.
+    @ObservationIgnored
+    public var playbackSignalHandler: ((PlaybackSignal) -> Void)?
+
+    @ObservationIgnored
+    private var activeStartID: UUID?
+
     // MARK: - Init
 
-    public init(fileAccess: (@MainActor (URL) throws -> any LibraryBookmarkSession)? = nil) {
-        self.fileAccess = fileAccess
+    public convenience init(fileAccess: (@MainActor (URL) throws -> any LibraryBookmarkSession)? = nil) {
+        self.init(playerFactory: { AVQueuePlayerAdapter(fileAccess: fileAccess) })
+    }
+
+    init(
+        playerFactory: @escaping () -> QueuePlayer,
+        timeSource: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
+    ) {
+        self.playerFactory = playerFactory
+        self.timeSource = timeSource
         nowPlaying.registerCommands(
             play: { [weak self] in self?.play() },
             pause: { [weak self] in self?.pause() },
@@ -161,23 +184,26 @@ public final class PlaybackEngine {
     // MARK: - Transport
 
     public func play() {
-        guard let player else {
+        if player == nil {
             // No player but we have a queue and an index — rebuild and play.
-            if !queue.isEmpty, let i = currentIndex {
-                rebuildPlayer(startingAt: i)
-                self.player?.play()
-                transition(to: .playing)
-                publishNowPlaying()
-            }
-            return
+            guard !queue.isEmpty, let i = currentIndex else { return }
+            rebuildPlayer(startingAt: i)
         }
         configureSessionIfNeeded()
-        player.play()
+        if activeStartID == nil {
+            emitStart(reason: .actual)
+        } else if state != .playing {
+            emit(.resume(trackID: currentItem?.id ?? ""))
+        }
+        if state != .playing { lastActiveObservation = timeSource() }
+        player?.play()
         transition(to: .playing)
         publishNowPlaying()
     }
 
     public func pause() {
+        accumulateActivePlayback()
+        lastActiveObservation = nil
         player?.pause()
         if state == .playing {
             transition(to: .paused)
@@ -197,11 +223,9 @@ public final class PlaybackEngine {
     public func next() {
         guard !queue.isEmpty else { return }
 
-        if repeatMode == .one, let i = currentIndex {
-            // Repeat-one: do not advance the queue position.
-            seek(to: 0)
-            updateCurrentItem(to: queue[i])
-            publishNowPlaying()
+        if repeatMode == .one, currentIndex != nil {
+            // A transport restart is distinct from a natural repeat-one restart.
+            restartCurrentTrack(reason: .manualRestart)
             return
         }
 
@@ -213,7 +237,7 @@ public final class PlaybackEngine {
                 currentIndex = 0
                 rebuildPlayer(startingAt: 0)
                 updateCurrentItem(to: queue[0])
-                if state == .playing { player?.play() }
+                startLoadedItemIfPlaying()
                 publishNowPlaying()
             case .off, .one:
                 // End of queue with no repeat → stop.
@@ -228,7 +252,7 @@ public final class PlaybackEngine {
         currentIndex = nextIndex
         rebuildPlayer(startingAt: nextIndex)
         updateCurrentItem(to: queue[nextIndex])
-        if state == .playing { player?.play() }
+        startLoadedItemIfPlaying()
         publishNowPlaying()
     }
 
@@ -236,7 +260,7 @@ public final class PlaybackEngine {
         guard !queue.isEmpty, let i = currentIndex else { return }
 
         if repeatMode == .one {
-            seek(to: 0)
+            restartCurrentTrack(reason: .manualRestart)
             return
         }
 
@@ -248,10 +272,10 @@ public final class PlaybackEngine {
                 currentIndex = last
                 rebuildPlayer(startingAt: last)
                 updateCurrentItem(to: queue[last])
-                if state == .playing { player?.play() }
+                startLoadedItemIfPlaying()
             case .off, .one:
                 // Conventional: previous at index 0 restarts current track.
-                seek(to: 0)
+                restartCurrentTrack(reason: .manualRestart)
             }
             publishNowPlaying()
             return
@@ -259,7 +283,7 @@ public final class PlaybackEngine {
         currentIndex = prevIndex
         rebuildPlayer(startingAt: prevIndex)
         updateCurrentItem(to: queue[prevIndex])
-        if state == .playing { player?.play() }
+        startLoadedItemIfPlaying()
         publishNowPlaying()
     }
 
@@ -269,17 +293,18 @@ public final class PlaybackEngine {
         currentIndex = idx
         rebuildPlayer(startingAt: idx)
         updateCurrentItem(to: queue[idx])
-        if state == .playing { player?.play() }
+        startLoadedItemIfPlaying()
         publishNowPlaying()
     }
 
     /// Seek to a position in the current item (clamped to 0...duration).
     public func seek(to seconds: TimeInterval) {
+        accumulateActivePlayback()
         let clamped = max(0, min(seconds, duration))
         currentTime = clamped
-        guard let player else { return }
-        let cmTime = CMTime(seconds: clamped, preferredTimescale: 600)
-        player.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero)
+        player?.seek(to: clamped)
+        if let currentItem { emit(.seek(trackID: currentItem.id)) }
+        publishNowPlaying()
     }
 
     // MARK: - Internal helpers
@@ -290,9 +315,45 @@ public final class PlaybackEngine {
     }
 
     private func updateCurrentItem(to item: Music?) {
+        accumulateActivePlayback()
+        activeStartID = nil
+        activePlaybackTime = 0
+        lastActiveObservation = nil
         currentItem = item
         duration = item?.duration ?? 0
         currentTime = 0
+        if let item { emit(.load(trackID: item.id)) }
+    }
+
+    private func emitStart(reason: PlaybackStartReason) {
+        guard let currentItem else { return }
+        let id = UUID()
+        activeStartID = id
+        activePlaybackTime = 0
+        lastActiveObservation = timeSource()
+        emit(.start(id: id, trackID: currentItem.id, reason: reason))
+    }
+
+    private func accumulateActivePlayback() {
+        guard state == .playing, let activeStartID, let currentItem else {
+            lastActiveObservation = nil
+            return
+        }
+        let now = timeSource()
+        if let lastActiveObservation {
+            activePlaybackTime += max(0, now - lastActiveObservation)
+        }
+        lastActiveObservation = now
+        emit(.activePlayback(
+            id: activeStartID,
+            trackID: currentItem.id,
+            elapsed: activePlaybackTime,
+            duration: duration > 0 ? duration : nil
+        ))
+    }
+
+    private func emit(_ signal: PlaybackSignal) {
+        playbackSignalHandler?(signal)
     }
 
     private func publishNowPlaying() {
@@ -354,94 +415,49 @@ public final class PlaybackEngine {
         tearDownPlayer()
         guard !queue.isEmpty, startIndex >= 0, startIndex < queue.count else { return }
 
-        let slice = Array(queue.suffix(from: startIndex))
-        let items = slice.compactMap { music -> AVPlayerItem? in
-            let url = music.url
-            do {
-                let session = try fileAccess?(url)
-                // Validate reachability only after starting access: without the
-                // security scope, Sandbox can make an authorized file look absent.
-                guard !url.isFileURL || FileManager.default.fileExists(atPath: url.path) else {
-                    session?.stop()
-                    logger.error("Skipping unreachable item: \(music.title, privacy: .public)")
-                    return nil
-                }
-                if let session { fileAccessSessions.append(session) }
-                return AVPlayerItem(url: url)
-            } catch {
-                logger.error("Skipping inaccessible item: \(music.title, privacy: .public)")
-                return nil
+        let player = playerFactory()
+        player.onTimeUpdate = { [weak self] seconds, duration in
+            self?.accumulateActivePlayback()
+            self?.currentTime = seconds
+            if let duration, abs(duration - (self?.duration ?? 0)) > 0.01 {
+                self?.duration = duration
             }
         }
-
-        let avPlayer = AVQueuePlayer(items: items)
-        // Default rate is 1.0; we keep automaticallyWaitsToMinimizeStalling on.
-        self.player = avPlayer
-        installPeriodicTimeObserver()
-        installEndOfQueueObserver()
+        player.onItemEnd = { [weak self] in self?.handleItemEnd() }
+        self.player = player
+        player.volume = volume
+        player.replaceItems(with: queue.suffix(from: startIndex).map(\.url))
     }
 
-    private func installPeriodicTimeObserver() {
-        guard let player else { return }
-        let interval = CMTime(seconds: 0.2, preferredTimescale: 600) // ~5 Hz
-        timeObserverToken = player.addPeriodicTimeObserver(
-            forInterval: interval, queue: .main
-        ) { [weak self] time in
-            // Hop back onto the main actor explicitly so Swift 6 strict
-            // concurrency is satisfied — the closure runs on .main but
-            // isn't tagged @MainActor.
-            Task { @MainActor in
-                guard let self else { return }
-                let seconds = time.seconds
-                if seconds.isFinite {
-                    self.currentTime = seconds
-                }
-                if let item = player.currentItem {
-                    let d = item.duration.seconds
-                    if d.isFinite, d > 0, abs(d - self.duration) > 0.01 {
-                        self.duration = d
-                    }
-                }
-            }
-        }
+    private func startLoadedItemIfPlaying() {
+        guard state == .playing else { return }
+        player?.play()
+        emitStart(reason: .actual)
     }
 
-    private func installEndOfQueueObserver() {
-        endObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.handleItemEnd()
-            }
-        }
+    private func restartCurrentTrack(reason: PlaybackStartReason) {
+        accumulateActivePlayback()
+        activeStartID = nil
+        seek(to: 0)
+        if state == .playing { emitStart(reason: reason) }
+        publishNowPlaying()
     }
 
     private func handleItemEnd() {
         // Repeat-one wraps the same track. Otherwise advance.
         if repeatMode == .one {
+            accumulateActivePlayback()
+            activeStartID = nil
             seek(to: 0)
             player?.play()
+            emitStart(reason: .repeatOneRestart)
             return
         }
         next()
     }
 
     private func tearDownPlayer() {
-        if let token = timeObserverToken, let player {
-            player.removeTimeObserver(token)
-        }
-        timeObserverToken = nil
-        if let observer = endObserver {
-            NotificationCenter.default.removeObserver(observer)
-        }
-        endObserver = nil
-        player?.pause()
-        player?.removeAllItems()
+        player?.invalidate()
         player = nil
-        let sessions = fileAccessSessions
-        fileAccessSessions.removeAll()
-        for session in sessions { session.stop() }
     }
 }

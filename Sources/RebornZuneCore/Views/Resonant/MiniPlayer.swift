@@ -145,6 +145,16 @@ public struct MiniPlayer: View {
     }
 
     @State private var pulseOpacity: Double = 1.0
+    @State private var draggedTime: TimeInterval?
+
+    private var displayedTime: TimeInterval {
+        draggedTime ?? engine.currentTime
+    }
+
+    private var displayedProgress: CGFloat {
+        guard engine.duration > 0 else { return 0 }
+        return CGFloat(min(max(displayedTime / engine.duration, 0), 1))
+    }
 
     private func metaLine(for track: Music?) -> String {
         guard let t = track else { return "" }
@@ -161,7 +171,7 @@ public struct MiniPlayer: View {
         // thicker bar makes the drag target friendlier for fingers.
         let barH: CGFloat = isTouch ? 3 : 2
         return HStack(spacing: 10) {
-            Text(format(engine.currentTime))
+            Text(format(displayedTime))
                 .resonantScaledFont(10, design: .monospaced, tracking: 0.8)
                 .foregroundColor(ResonantColors.ink2)
             GeometryReader { geo in
@@ -169,9 +179,7 @@ public struct MiniPlayer: View {
                     Rectangle()
                         .fill(ResonantColors.ink4)
                         .frame(height: barH)
-                    let prog: CGFloat = engine.duration > 0
-                        ? CGFloat(min(max(engine.currentTime / engine.duration, 0), 1))
-                        : 0
+                    let prog = displayedProgress
                     ZStack(alignment: .trailing) {
                         Rectangle()
                             .fill(ResonantColors.magenta)
@@ -184,12 +192,31 @@ public struct MiniPlayer: View {
                     .frame(width: max(8, geo.size.width * prog), alignment: .leading)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                #if os(macOS)
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            draggedTime = time(at: value.location.x, width: geo.size.width)
+                        }
+                        .onEnded { value in
+                            let time = time(at: value.location.x, width: geo.size.width)
+                            draggedTime = nil
+                            engine.seek(to: time)
+                        }
+                )
+                #endif
             }
-            .frame(height: 8)
-            Text("-\(format(max(0, engine.duration - engine.currentTime)))")
+            .frame(height: 20)
+            Text("-\(format(max(0, engine.duration - displayedTime)))")
                 .resonantScaledFont(10, design: .monospaced, tracking: 0.8)
                 .foregroundColor(ResonantColors.ink2)
         }
+    }
+
+    private func time(at x: CGFloat, width: CGFloat) -> TimeInterval {
+        guard width > 0, engine.duration > 0 else { return 0 }
+        return TimeInterval(min(max(x / width, 0), 1)) * engine.duration
     }
 
     private func format(_ seconds: TimeInterval) -> String {
@@ -202,11 +229,26 @@ public struct MiniPlayer: View {
 
     private var transport: some View {
         HStack(spacing: 22 * elastic) {
+            #if os(macOS)
+            iconButton(symbol: "shuffle", active: engine.isShuffling) { engine.isShuffling.toggle() }
+            #else
             iconButton(symbol: "shuffle")
+            #endif
             iconButton(symbol: "backward.fill") { engine.previous() }
             playButton
             iconButton(symbol: "forward.fill") { engine.next() }
+            #if os(macOS)
+            iconButton(symbol: engine.repeatMode == .one ? "repeat.1" : "repeat", active: engine.repeatMode != .off) {
+                engine.repeatMode = engine.repeatMode.next
+            }
+            InlineVolumeControl(
+                engine: engine,
+                foregroundColor: ResonantColors.ink2,
+                accentColor: ResonantColors.magenta
+            )
+            #else
             iconButton(symbol: "repeat")
+            #endif
         }
         .foregroundColor(ResonantColors.ink)
     }
@@ -220,17 +262,21 @@ public struct MiniPlayer: View {
                 .foregroundColor(ResonantColors.paper)
                 .frame(width: playSize, height: playSize)
                 .background(Circle().fill(ResonantColors.ink))
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(engine.state == .playing ? "Pause" : "Play")
     }
 
-    private func iconButton(symbol: String, action: (() -> Void)? = nil) -> some View {
+    private func iconButton(symbol: String, active: Bool = false, action: (() -> Void)? = nil) -> some View {
         Button {
             action?()
         } label: {
             Image(systemName: symbol)
                 .font(.system(size: ctrlGlyph, weight: .regular))
+                .foregroundColor(active ? ResonantColors.magenta : ResonantColors.ink)
                 .frame(width: ctrlSize, height: ctrlSize)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

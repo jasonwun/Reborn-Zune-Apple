@@ -9,15 +9,20 @@ public struct NowPlayingScreen: View {
     let onBack: () -> Void
 
     @State private var liked = false
+    #if !os(macOS)
     @State private var shuffle = false
     @State private var repeatMode: RepeatMode = .off
     @State private var volume: Double = 72
+    #endif
+    @State private var draggedTime: TimeInterval?
     @State private var backHover = false
     @Environment(\.resonantLayout) private var layout
     @Environment(\.resonantWindowSize) private var windowSize
     @Environment(\.resonantScreenSize) private var screenSize
 
+    #if !os(macOS)
     enum RepeatMode { case off, all, one }
+    #endif
 
     public init(tiles: [TileWallEntry],
                 lightingAnimator: LightingAnimator?,
@@ -31,6 +36,15 @@ public struct NowPlayingScreen: View {
         self.upNext = upNext
         self.spacing = spacing
         self.onBack = onBack
+    }
+
+    private var displayedTime: TimeInterval {
+        draggedTime ?? engine.currentTime
+    }
+
+    private var displayedProgress: CGFloat {
+        guard engine.duration > 0 else { return 0 }
+        return CGFloat(min(max(displayedTime / engine.duration, 0), 1))
     }
 
     public var body: some View {
@@ -253,7 +267,7 @@ public struct NowPlayingScreen: View {
 
     private var scrubberRow: some View {
         HStack(spacing: 18) {
-            Text(format(engine.currentTime))
+            Text(format(displayedTime))
                 .font(.system(size: 11, design: .monospaced))
                 .tracking(0.88)
                 .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.8))
@@ -262,9 +276,7 @@ public struct NowPlayingScreen: View {
                     Rectangle()
                         .fill(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.25))
                         .frame(height: 2)
-                    let prog: CGFloat = engine.duration > 0
-                        ? CGFloat(min(max(engine.currentTime / engine.duration, 0), 1))
-                        : 0
+                    let prog = displayedProgress
                     Rectangle()
                         .fill(ResonantColors.magenta)
                         .frame(width: geo.size.width * prog, height: 2)
@@ -275,9 +287,23 @@ public struct NowPlayingScreen: View {
                         .offset(x: geo.size.width * prog - 5)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                #if os(macOS)
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            draggedTime = time(at: value.location.x, width: geo.size.width)
+                        }
+                        .onEnded { value in
+                            let time = time(at: value.location.x, width: geo.size.width)
+                            draggedTime = nil
+                            engine.seek(to: time)
+                        }
+                )
+                #endif
             }
-            .frame(height: 10)
-            Text("-\(format(max(0, engine.duration - engine.currentTime)))")
+            .frame(height: 20)
+            Text("-\(format(max(0, engine.duration - displayedTime)))")
                 .font(.system(size: 11, design: .monospaced))
                 .tracking(0.88)
                 .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.8))
@@ -287,10 +313,17 @@ public struct NowPlayingScreen: View {
     private var transportRow: some View {
         HStack {
             HStack(spacing: 22) {
+                #if os(macOS)
+                npButton(symbol: "shuffle", active: engine.isShuffling) { engine.isShuffling.toggle() }
+                npButton(symbol: repeatSymbol, active: engine.repeatMode != .off) {
+                    engine.repeatMode = engine.repeatMode.next
+                }
+                #else
                 npButton(symbol: "shuffle", active: shuffle) { shuffle.toggle() }
                 npButton(symbol: repeatSymbol, active: repeatMode != .off) {
                     repeatMode = repeatMode == .off ? .all : (repeatMode == .all ? .one : .off)
                 }
+                #endif
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -305,8 +338,10 @@ public struct NowPlayingScreen: View {
                         .frame(width: 52, height: 52)
                         .background(Circle().fill(ResonantColors.magenta))
                         .overlay(Circle().stroke(ResonantColors.magenta.opacity(0.18), lineWidth: 8))
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(engine.state == .playing ? "Pause" : "Play")
                 npButton(symbol: "forward.fill", active: false) { engine.next() }
             }
 
@@ -319,6 +354,13 @@ public struct NowPlayingScreen: View {
     }
 
     private var volumeWidget: some View {
+        #if os(macOS)
+        InlineVolumeControl(
+            engine: engine,
+            foregroundColor: Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.85),
+            accentColor: ResonantColors.magenta
+        )
+        #else
         HStack(spacing: 10) {
             Image(systemName: volume > 50 ? "speaker.wave.2" : (volume > 0 ? "speaker.wave.1" : "speaker"))
                 .font(.system(size: 14))
@@ -337,13 +379,21 @@ public struct NowPlayingScreen: View {
                 .foregroundColor(Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.7))
                 .frame(width: 22, alignment: .trailing)
         }
+        #endif
     }
 
     private var repeatSymbol: String {
+        #if os(macOS)
+        switch engine.repeatMode {
+        case .one: return "repeat.1"
+        default: return "repeat"
+        }
+        #else
         switch repeatMode {
         case .one: return "repeat.1"
         default: return "repeat"
         }
+        #endif
     }
 
     private func npButton(symbol: String, active: Bool, action: @escaping () -> Void) -> some View {
@@ -352,8 +402,14 @@ public struct NowPlayingScreen: View {
                 .font(.system(size: 18))
                 .foregroundColor(active ? ResonantColors.magenta : Color(red: 244/255, green: 241/255, blue: 236/255).opacity(0.85))
                 .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func time(at x: CGFloat, width: CGFloat) -> TimeInterval {
+        guard width > 0, engine.duration > 0 else { return 0 }
+        return TimeInterval(min(max(x / width, 0), 1)) * engine.duration
     }
 
     private func format(_ seconds: TimeInterval) -> String {
