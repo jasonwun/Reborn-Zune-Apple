@@ -33,8 +33,7 @@ public final class MacDockMenuController: NSObject {
 
     private func makeRecentMenu() -> NSMenu {
         let menu = NSMenu()
-        var seen = Set<String>()
-        let tracks = recentTracks().filter { seen.insert($0.id).inserted }.prefix(10)
+        let tracks = recentTracks()
         guard !tracks.isEmpty else {
             let empty = NSMenuItem(title: "No Recent Tracks", action: nil, keyEquivalent: "")
             empty.isEnabled = false

@@ -230,6 +230,32 @@ final class LibraryCoordinatorTests: XCTestCase {
         XCTAssertEqual(try ModelContext(container).fetch(FetchDescriptor<StoredPlaylist>()).count, 1)
     }
 
+    func testConfirmedMissingDeletesHistoryAndStatsButFailedScanPreservesThem() async throws {
+        let container = try container()
+        let source = FakeSource()
+        source.files = [file("a.mp3"), file("b.mp3")]
+        let coordinator = coordinator(container, source)
+        await coordinator.start()
+        let a = try XCTUnwrap(coordinator.tracks.first { $0.title == "a.mp3" }?.id)
+        let b = try XCTUnwrap(coordinator.tracks.first { $0.title == "b.mp3" }?.id)
+        let history = PlayHistory(container: container, now: { self.t0 })
+        for id in [a, b] {
+            try history.record(.start(id: UUID(), trackID: id, reason: .actual))
+        }
+
+        source.error = Boom()
+        source.files = []
+        await coordinator.refresh()
+        XCTAssertEqual(try history.historyEntries().count, 2)
+        XCTAssertEqual(try history.playbackStats().count, 2)
+
+        source.error = nil
+        source.files = [file("b.mp3")]
+        await coordinator.refresh()
+        XCTAssertEqual(try history.historyEntries().map(\.trackID), [UUID(uuidString: b)])
+        XCTAssertEqual(try history.playbackStats().map(\.trackID), [UUID(uuidString: b)])
+    }
+
     func testLegacyHashEntriesRekeyOnExactPathMatchOnly() async throws {
         let container = try container()
         let ctx = ModelContext(container)

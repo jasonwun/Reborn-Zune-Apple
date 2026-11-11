@@ -111,7 +111,9 @@ public enum RebornZunePersistence {
         StoredTrack.self,
         StoredTrackArtwork.self,
         StoredLibraryState.self,
-        StoredLibrarySource.self
+        StoredLibrarySource.self,
+        StoredPlayHistoryEntry.self,
+        StoredTrackPlaybackStats.self
     ])
 
     /// In-memory container, useful for tests + previews.

@@ -413,6 +413,69 @@ final class PlaybackEngineTests: XCTestCase {
         XCTAssertEqual(signals.filter { if case .seek = $0 { true } else { false } }.count, 1)
     }
 
+    func testPlayHistoryRecordsOnlyActualStartsAcrossTransportActions() throws {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        let id = UUID()
+        let track = Music(id: id.uuidString, url: URL(fileURLWithPath: "/tmp/history.m4a"),
+                          title: "History", artist: nil, albumArtist: nil, albumTitle: nil,
+                          year: nil, duration: 100, artworkData: nil)
+        var wallTime = Date(timeIntervalSince1970: 60_000)
+        let history = PlayHistory(
+            container: try RebornZunePersistence.makeInMemoryContainer(), now: { wallTime })
+        engine.playbackSignalHandler = { try! history.record($0) }
+
+        engine.setQueue([track])
+        XCTAssertEqual(try history.historyEntries().count, 0, "loading is not listening")
+        engine.play()
+        engine.pause()
+        wallTime = wallTime.addingTimeInterval(1)
+        engine.play()
+        engine.seek(to: 50)
+        XCTAssertEqual(try history.historyEntries().count, 1, "resume and seek reuse the start")
+
+        wallTime = wallTime.addingTimeInterval(1)
+        engine.previous()
+        wallTime = wallTime.addingTimeInterval(1)
+        engine.repeatMode = .one
+        player.finishCurrentItem()
+
+        let entries = try history.historyEntries()
+        XCTAssertEqual(entries.count, 3)
+        XCTAssertEqual(Set(entries.map(\.id)).count, 3)
+        XCTAssertTrue(entries.allSatisfy { $0.trackID == id })
+        XCTAssertEqual(try history.playbackStats().first?.lastPlayedAt, wallTime)
+    }
+
+    func testPlayHistoryQualificationIgnoresPausedTimeAndSeekJumps() throws {
+        let player = FakeQueuePlayer()
+        var activeNow: TimeInterval = 0
+        let engine = makeEngine(player: player, now: { activeNow })
+        let id = UUID()
+        let track = Music(id: id.uuidString, url: URL(fileURLWithPath: "/tmp/active-history.m4a"),
+                          title: "Active History", artist: nil, albumArtist: nil, albumTitle: nil,
+                          year: nil, duration: 100, artworkData: nil)
+        let history = PlayHistory(container: try RebornZunePersistence.makeInMemoryContainer())
+        engine.playbackSignalHandler = { try! history.record($0) }
+        engine.setQueue([track])
+        engine.play()
+
+        activeNow = 10
+        player.onTimeUpdate?(10, 100)
+        engine.pause()
+        activeNow = 40
+        engine.play()
+        engine.seek(to: 80)
+        activeNow = 59
+        player.onTimeUpdate?(80, 100)
+
+        XCTAssertEqual(try history.playbackStats().first?.playCount, 0)
+        activeNow = 60
+        engine.pause()
+        XCTAssertEqual(try history.playbackStats().first?.playCount, 1)
+        XCTAssertEqual(try history.historyEntries().count, 1)
+    }
+
     func testVolumeCommandsChangeFivePercentAndClampAtEndpoints() {
         let engine = makeEngine(player: FakeQueuePlayer())
         engine.volume = 0.5

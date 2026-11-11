@@ -13,6 +13,7 @@ struct RebornZuneMacApp: App {
     private let modelContainer = RebornZuneMacApp.sharedContainer
     @State private var engine: PlaybackEngine
     @State private var library: LibraryCoordinator
+    @State private var history: PlayHistory
 
     init() {
         let root: URL
@@ -26,10 +27,16 @@ struct RebornZuneMacApp: App {
             container: RebornZuneMacApp.sharedContainer,
             sources: [FolderFileSource(root: root)])
         _library = State(initialValue: library)
-        _engine = State(initialValue: PlaybackEngine(fileAccess: { [weak library] url in
+        let history = PlayHistory(container: RebornZuneMacApp.sharedContainer)
+        _history = State(initialValue: history)
+        let engine = PlaybackEngine(fileAccess: { [weak library] url in
             guard let library else { throw LibraryBookmarkError.accessDenied(url.path) }
             return try library.startPlaybackAccess(for: url)
-        }))
+        })
+        engine.playbackSignalHandler = { [weak history] signal in
+            try? history?.record(signal)
+        }
+        _engine = State(initialValue: engine)
     }
 
     /// One container shared by SwiftUI (`.modelContainer`) and the Library
@@ -70,7 +77,8 @@ struct RebornZuneMacApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(library: library, engine: engine, router: router, appDelegate: appDelegate)
+            ContentView(library: library, engine: engine, history: history,
+                        router: router, appDelegate: appDelegate)
                 // Window floor 900 × 600: below ~900pt the panorama's
                 // three-column bottom strip has no honest layout, so
                 // the window refuses to shrink further

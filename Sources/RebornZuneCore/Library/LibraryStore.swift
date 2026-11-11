@@ -182,6 +182,16 @@ public actor LibraryStore {
                 modelContext.delete(track)
             }
         }
+        for chunk in Array(missing).chunked(500) {
+            for entry in try modelContext.fetch(FetchDescriptor<StoredPlayHistoryEntry>(
+                predicate: #Predicate { chunk.contains($0.trackID) })) {
+                modelContext.delete(entry)
+            }
+            for stats in try modelContext.fetch(FetchDescriptor<StoredTrackPlaybackStats>(
+                predicate: #Predicate { chunk.contains($0.trackID) })) {
+                modelContext.delete(stats)
+            }
+        }
         let linked = try modelContext.fetch(
             FetchDescriptor<StoredPlaylistEntry>(predicate: #Predicate { $0.trackID != nil }))
         for entry in linked {
