@@ -22,7 +22,7 @@ public struct ResonantApp: View {
     let onRetry: () -> Void
     let onGrantAccess: (() -> Void)?
 
-    @State private var router = ResonantRouter(initial: ResonantRouter.envInitialRoute())
+    @State private var router: ResonantRouter
     @State private var showCreatePlaylist = false
     @Environment(\.modelContext) private var modelContext
 
@@ -37,7 +37,8 @@ public struct ResonantApp: View {
                 libraryStatus: LibraryStatus? = nil,
                 scanBanner: String? = nil,
                 onRetry: @escaping () -> Void = {},
-                onGrantAccess: (() -> Void)? = nil) {
+                onGrantAccess: (() -> Void)? = nil,
+                router: ResonantRouter? = nil) {
         self.engine = engine
         self.library = library
         self.tiles = tiles
@@ -50,6 +51,7 @@ public struct ResonantApp: View {
         self.scanBanner = scanBanner
         self.onRetry = onRetry
         self.onGrantAccess = onGrantAccess
+        _router = State(initialValue: router ?? ResonantRouter(initial: ResonantRouter.envInitialRoute()))
     }
 
     private var spacing: ResonantSpacing { ResonantSpacing.for(density) }
@@ -212,7 +214,7 @@ public struct ResonantApp: View {
                     Text("Artist not found.").foregroundColor(ResonantColors.ink2)
                 }
             case .search:
-                SearchScreen(library: library, spacing: spacing,
+                SearchScreen(library: library, spacing: spacing, router: router,
                              onOpen: { router.go(.album($0.id)) })
             case .nowPlaying:
                 NowPlayingScreen(tiles: tiles,

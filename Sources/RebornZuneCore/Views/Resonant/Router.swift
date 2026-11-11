@@ -41,6 +41,8 @@ public final class ResonantRouter {
     }
 
     public private(set) var route: Route = .home
+    /// Changes on every explicit Search-focus command, including repeated Cmd-F.
+    public private(set) var searchFocusRequestID: UInt = 0
     private var history: [Route] = []
     private let historyMax = 50
 
@@ -88,6 +90,12 @@ public final class ResonantRouter {
             history.removeFirst(history.count - historyMax)
         }
         route = next
+    }
+
+    /// Open Search and ask its field to take focus, even when already selected.
+    public func focusSearch() {
+        go(.search)
+        searchFocusRequestID &+= 1
     }
 
     public func back() {

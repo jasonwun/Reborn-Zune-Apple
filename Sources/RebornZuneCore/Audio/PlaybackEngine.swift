@@ -68,7 +68,7 @@ public final class PlaybackEngine {
     private var lastActiveObservation: TimeInterval?
 
     @ObservationIgnored
-    private let nowPlaying = NowPlayingCenter()
+    private let nowPlaying: any NowPlayingCentering
 
     @ObservationIgnored
     private var sessionConfigured = false
@@ -91,17 +91,22 @@ public final class PlaybackEngine {
 
     init(
         playerFactory: @escaping () -> QueuePlayer,
-        timeSource: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
+        timeSource: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+        nowPlaying: any NowPlayingCentering = NowPlayingCenter()
     ) {
         self.playerFactory = playerFactory
         self.timeSource = timeSource
-        nowPlaying.registerCommands(
+        self.nowPlaying = nowPlaying
+        nowPlaying.registerCommands(RemoteCommandHandlers(
             play: { [weak self] in self?.play() },
             pause: { [weak self] in self?.pause() },
             toggle: { [weak self] in self?.togglePlayPause() },
             next: { [weak self] in self?.next() },
-            previous: { [weak self] in self?.previous() }
-        )
+            previous: { [weak self] in self?.previous() },
+            seek: { [weak self] position in self?.seek(to: position) },
+            shuffle: { [weak self] isShuffling in self?.isShuffling = isShuffling },
+            repeat: { [weak self] mode in self?.repeatMode = mode }
+        ))
     }
 
     // No deinit observer cleanup: under Swift 6 strict concurrency a
@@ -205,6 +210,10 @@ public final class PlaybackEngine {
         accumulateActivePlayback()
         lastActiveObservation = nil
         player?.pause()
+        if let player {
+            let exactPosition = max(player.currentTime, 0)
+            currentTime = duration > 0 ? min(exactPosition, duration) : exactPosition
+        }
         if state == .playing {
             transition(to: .paused)
         }
@@ -307,6 +316,26 @@ public final class PlaybackEngine {
         publishNowPlaying()
     }
 
+    /// Skip forward by the standard fifteen-second keyboard/menu increment.
+    public func skipForward() {
+        seek(to: currentTime + 15)
+    }
+
+    /// Skip backward by the standard fifteen-second keyboard/menu increment.
+    public func skipBackward() {
+        seek(to: currentTime - 15)
+    }
+
+    /// Raise output volume by five percentage points.
+    public func increaseVolume() {
+        volume += 0.05
+    }
+
+    /// Lower output volume by five percentage points.
+    public func decreaseVolume() {
+        volume -= 0.05
+    }
+
     // MARK: - Internal helpers
 
     private func transition(to newState: PlaybackState) {
@@ -356,8 +385,8 @@ public final class PlaybackEngine {
         playbackSignalHandler?(signal)
     }
 
-    private func publishNowPlaying() {
-        let rate: Double = (state == .playing) ? 1.0 : 0.0
+    private func publishNowPlaying(rate actualRate: Double? = nil) {
+        let rate = actualRate ?? ((state == .playing) ? 1.0 : 0.0)
         nowPlaying.update(item: currentItem, currentTime: currentTime, duration: duration, rate: rate)
     }
 
@@ -422,6 +451,24 @@ public final class PlaybackEngine {
             if let duration, abs(duration - (self?.duration ?? 0)) > 0.01 {
                 self?.duration = duration
             }
+        }
+        player.onPlaybackStatusChange = { [weak self] status in
+            guard let self else { return }
+            if self.state == .playing && (status.isBuffering || status.rate == 0) {
+                self.accumulateActivePlayback()
+                self.lastActiveObservation = nil
+            } else if self.state != .playing && !status.isBuffering && status.rate > 0 {
+                self.lastActiveObservation = self.timeSource()
+            }
+            self.currentTime = max(0, status.position)
+            if status.isBuffering {
+                self.transition(to: .buffering)
+            } else if status.rate > 0 {
+                self.transition(to: .playing)
+            } else if self.state != .stopped {
+                self.transition(to: .paused)
+            }
+            self.publishNowPlaying(rate: status.isBuffering ? 0 : status.rate)
         }
         player.onItemEnd = { [weak self] in self?.handleItemEnd() }
         self.player = player

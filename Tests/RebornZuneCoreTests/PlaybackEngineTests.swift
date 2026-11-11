@@ -28,7 +28,9 @@ final class PlaybackEngineTests: XCTestCase {
         var seekPositions: [TimeInterval] = []
         var volume: Double = 1
         var isPlaying = false
+        var currentTime: TimeInterval = 0
         var onTimeUpdate: ((TimeInterval, TimeInterval?) -> Void)?
+        var onPlaybackStatusChange: ((QueuePlaybackStatus) -> Void)?
         var onItemEnd: (() -> Void)?
 
         func replaceItems(with urls: [URL]) { itemURLs = urls }
@@ -39,11 +41,32 @@ final class PlaybackEngineTests: XCTestCase {
         func finishCurrentItem() { onItemEnd?() }
     }
 
+    @MainActor
+    private final class FakeNowPlayingCenter: NowPlayingCentering {
+        var handlers: RemoteCommandHandlers?
+
+        func registerCommands(_ handlers: RemoteCommandHandlers) {
+            self.handlers = handlers
+        }
+
+        func update(item: Music?, currentTime: TimeInterval, duration: TimeInterval, rate: Double) {}
+
+        func seek(to position: TimeInterval) { handlers?.seek(position) }
+        func shuffle(_ isShuffling: Bool) { handlers?.shuffle(isShuffling) }
+        func repeatMode(_ mode: RepeatMode) { handlers?.repeat(mode) }
+    }
+
     private func makeEngine(
         player: FakeQueuePlayer,
-        now: @escaping () -> TimeInterval = { 0 }
+        now: @escaping () -> TimeInterval = { 0 },
+        nowPlaying: FakeNowPlayingCenter? = nil
     ) -> PlaybackEngine {
-        PlaybackEngine(playerFactory: { player }, timeSource: now)
+        let center: any NowPlayingCentering = nowPlaying ?? NowPlayingCenter()
+        return PlaybackEngine(
+            playerFactory: { player },
+            timeSource: now,
+            nowPlaying: center
+        )
     }
 
     private func makeSilenceTrack(_ name: String) -> Music {
@@ -390,6 +413,119 @@ final class PlaybackEngineTests: XCTestCase {
         XCTAssertEqual(signals.filter { if case .seek = $0 { true } else { false } }.count, 1)
     }
 
+    func testVolumeCommandsChangeFivePercentAndClampAtEndpoints() {
+        let engine = makeEngine(player: FakeQueuePlayer())
+        engine.volume = 0.5
+
+        engine.increaseVolume()
+        XCTAssertEqual(engine.volume, 0.55, accuracy: 0.0001)
+        engine.decreaseVolume()
+        engine.decreaseVolume()
+        XCTAssertEqual(engine.volume, 0.45, accuracy: 0.0001)
+        engine.volume = 0.99
+        engine.increaseVolume()
+        XCTAssertEqual(engine.volume, 1, accuracy: 0.0001)
+        engine.volume = 0.01
+        engine.decreaseVolume()
+        XCTAssertEqual(engine.volume, 0, accuracy: 0.0001)
+    }
+
+    func testRelativeSkipsMoveFifteenSecondsWithinTrackBounds() {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        engine.setQueue([makeMusic("relative-skip", duration: 100)])
+        engine.seek(to: 10)
+
+        engine.skipForward()
+        XCTAssertEqual(engine.currentTime, 25, accuracy: 0.0001)
+        engine.skipBackward()
+        engine.skipBackward()
+        XCTAssertEqual(engine.currentTime, 0, accuracy: 0.0001)
+        engine.seek(to: 95)
+        engine.skipForward()
+        XCTAssertEqual(engine.currentTime, 100, accuracy: 0.0001)
+    }
+
+    func testRemoteSeekShuffleAndRepeatDrivePublicPlaybackState() {
+        let center = FakeNowPlayingCenter()
+        let engine = makeEngine(player: FakeQueuePlayer(), nowPlaying: center)
+        engine.setQueue([makeMusic("remote-modes", duration: 100)])
+
+        center.seek(to: 42)
+        center.shuffle(true)
+        center.repeatMode(.one)
+
+        XCTAssertEqual(engine.currentTime, 42, accuracy: 0.0001)
+        XCTAssertTrue(engine.isShuffling)
+        XCTAssertEqual(engine.repeatMode, .one)
+    }
+
+    func testPlayerRateAndBufferingChangesPublishImmediately() {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        engine.setQueue([makeMusic("player-events", duration: 100)])
+        engine.play()
+
+        player.onPlaybackStatusChange?(QueuePlaybackStatus(position: 18.25, rate: 0.5, isBuffering: false))
+
+        var info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        XCTAssertEqual(info?[MPNowPlayingInfoPropertyElapsedPlaybackTime] as? TimeInterval, 18.25)
+        XCTAssertEqual(info?[MPNowPlayingInfoPropertyPlaybackRate] as? Double, 0.5)
+
+        player.onPlaybackStatusChange?(QueuePlaybackStatus(position: 18.25, rate: 0, isBuffering: true))
+        info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        XCTAssertEqual(engine.state, .buffering)
+        XCTAssertEqual(info?[MPNowPlayingInfoPropertyPlaybackRate] as? Double, 0)
+    }
+
+    func testPeriodicTimeUpdatesDoNotRepublishNowPlayingProgress() {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        engine.setQueue([makeMusic("event-driven", duration: 100)])
+        engine.play()
+        let publishedPosition = MPNowPlayingInfoCenter.default().nowPlayingInfo?[
+            MPNowPlayingInfoPropertyElapsedPlaybackTime
+        ] as? TimeInterval
+
+        player.onTimeUpdate?(25, 100)
+
+        XCTAssertEqual(engine.currentTime, 25, accuracy: 0.0001)
+        XCTAssertEqual(MPNowPlayingInfoCenter.default().nowPlayingInfo?[
+            MPNowPlayingInfoPropertyElapsedPlaybackTime
+        ] as? TimeInterval, publishedPosition)
+
+        engine.seek(to: 40)
+        XCTAssertEqual(MPNowPlayingInfoCenter.default().nowPlayingInfo?[
+            MPNowPlayingInfoPropertyElapsedPlaybackTime
+        ] as? TimeInterval, 40)
+    }
+
+    func testPausePublishesExactPlayerPositionAtZeroRate() {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        engine.setQueue([makeMusic("exact-pause", duration: 100)])
+        engine.play()
+        player.currentTime = 12.345678
+
+        engine.pause()
+
+        let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        XCTAssertEqual(info?[MPNowPlayingInfoPropertyElapsedPlaybackTime] as? TimeInterval, 12.345678)
+        XCTAssertEqual(info?[MPNowPlayingInfoPropertyPlaybackRate] as? Double, 0)
+    }
+
+    func testPausedRealItemDoesNotEnterBuffering() async throws {
+        let engine = PlaybackEngine()
+        engine.setQueue([makeSilenceTrack("paused-buffer")])
+
+        try await Task.sleep(nanoseconds: 500_000_000)
+
+        XCTAssertEqual(engine.state, .paused)
+        XCTAssertEqual(MPNowPlayingInfoCenter.default().nowPlayingInfo?[
+            MPNowPlayingInfoPropertyPlaybackRate
+        ] as? Double, 0)
+    }
+
     func testRealAudioPlaybackAdvancesTime() async throws {
         let track = makeSilenceTrack("Silence")
         let engine = PlaybackEngine()
@@ -409,7 +545,7 @@ final class PlaybackEngineTests: XCTestCase {
         engine.setQueue(tracks)
         engine.play()
 
-        for _ in 0..<70 where engine.currentItem?.id != tracks[1].id {
+        for _ in 0..<70 where engine.currentItem?.id != tracks[1].id || engine.state != .playing {
             try await Task.sleep(nanoseconds: 100_000_000)
         }
 

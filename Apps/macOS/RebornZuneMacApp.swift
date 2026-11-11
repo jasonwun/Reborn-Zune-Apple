@@ -4,6 +4,9 @@ import SwiftData
 
 @main
 struct RebornZuneMacApp: App {
+    @NSApplicationDelegateAdaptor(MacAppDelegate.self) private var appDelegate
+    @State private var router = ResonantRouter(initial: ResonantRouter.envInitialRoute())
+
     /// Persistent SwiftData container holding playlists + app settings.
     /// Failure to open falls back to an in-memory container so the app
     /// can still launch (the user just loses persistence).
@@ -67,7 +70,7 @@ struct RebornZuneMacApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(library: library, engine: engine)
+            ContentView(library: library, engine: engine, router: router, appDelegate: appDelegate)
                 // Window floor 900 × 600: below ~900pt the panorama's
                 // three-column bottom strip has no honest layout, so
                 // the window refuses to shrink further
@@ -88,6 +91,9 @@ struct RebornZuneMacApp: App {
         // the canvas extends to the top of the window; native traffic
         // lights stay (functional necessity) and float over content.
         .windowStyle(.hiddenTitleBar)
+        .commands {
+            MacSystemCommands(engine: engine, router: router)
+        }
 
         Settings {
             LibrarySourcesSettingsView(library: library)

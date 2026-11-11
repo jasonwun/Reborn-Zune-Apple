@@ -3,15 +3,18 @@ import SwiftUI
 public struct SearchScreen: View {
     let library: ResonantLibrary
     let spacing: ResonantSpacing
+    let router: ResonantRouter
     let onOpen: (Album) -> Void
 
     @State private var query: String = ""
     @FocusState private var focused: Bool
     @Environment(\.resonantLayout) private var layout
 
-    public init(library: ResonantLibrary, spacing: ResonantSpacing, onOpen: @escaping (Album) -> Void) {
+    public init(library: ResonantLibrary, spacing: ResonantSpacing, router: ResonantRouter,
+                onOpen: @escaping (Album) -> Void) {
         self.library = library
         self.spacing = spacing
+        self.router = router
         self.onOpen = onOpen
     }
 
@@ -55,6 +58,7 @@ public struct SearchScreen: View {
                 .foregroundColor(ResonantColors.ink)
                 .focused($focused)
                 .onAppear { focused = true }
+                .onChange(of: router.searchFocusRequestID) { _, _ in focused = true }
 
             ScrollView {
                 if query.trimmingCharacters(in: .whitespaces).isEmpty {
