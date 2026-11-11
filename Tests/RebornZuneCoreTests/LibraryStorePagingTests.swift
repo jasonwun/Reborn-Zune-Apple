@@ -69,6 +69,27 @@ final class LibraryStorePagingTests: XCTestCase {
         XCTAssertEqual(tracks.map(\.title), ["Zulu", "Alpha"])
     }
 
+    func testSearchMatchesEverySupportedMetadataFieldCaseInsensitively() async throws {
+        let context = ModelContext(container)
+        insertTrack(
+            context, path: "/fake/a.mp3", title: "TitleNeedle",
+            artist: "ArtistNeedle", genre: "GenreNeedle", albumTitle: "AlbumNeedle",
+            albumArtist: "AlbumArtistNeedle")
+        try context.save()
+        let store = LibraryStore(modelContainer: container)
+
+        for searchText in ["titleneedle", "artistneedle", "albumartistneedle", "albumneedle", "genreneedle"] {
+            let query = LibraryTrackQuery(searchText: searchText)
+            let tracks = try await store.snapshots(matching: query, offset: 0, limit: 10)
+            let count = try await store.count(matching: query)
+            XCTAssertEqual(count, 1, searchText)
+            XCTAssertEqual(tracks.map(\.title), ["TitleNeedle"], searchText)
+        }
+        let albumArtist = try await store.snapshots(
+            matching: LibraryTrackQuery(searchText: "albumartistneedle"), offset: 0, limit: 10)
+        XCTAssertEqual(albumArtist.map(\.albumArtist), ["AlbumArtistNeedle"])
+    }
+
     func testZeroLimitDoesNotTurnIntoAnUnboundedFetch() async throws {
         let context = ModelContext(container)
         insertTrack(context, path: "/fake/a.mp3", title: "Alpha", artist: "Beta", genre: "Rock")
@@ -99,13 +120,14 @@ final class LibraryStorePagingTests: XCTestCase {
         artist: String,
         genre: String,
         year: Int = 2024,
-        albumTitle: String = "Album"
+        albumTitle: String = "Album",
+        albumArtist: String? = nil
     ) {
         context.insert(StoredTrack(
             id: UUID(), path: path, sourcePath: path.hasPrefix("/other/") ? "/other" : "/fake",
             modificationDate: Date(timeIntervalSince1970: 1), fileSize: 1,
             volumeID: nil, fileID: nil, title: title, artist: artist,
-            albumArtist: artist, albumTitle: albumTitle, year: year,
+            albumArtist: albumArtist ?? artist, albumTitle: albumTitle, year: year,
             genre: genre, duration: 60, hasArtwork: false,
             metadataVersion: currentMetadataVersion))
     }
