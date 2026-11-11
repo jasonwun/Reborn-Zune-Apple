@@ -41,6 +41,10 @@ not just by green builds and tests:
     permission has been granted to the harness terminal, so this works. macOS
     native captures show the actual Metal output; the snapshot harness's
     `ImageRenderer` does NOT, so only use it for layout-only verification.
+  - When other apps or system dialogs obscure the target, capture only its
+    window with `screencapture -x -l <windowID> output.png`. Obtain the target
+    window ID through accessibility tooling, and isolate it rather than
+    changing system privacy settings for visual evidence.
 - For animated content, capture at least two screenshots separated by enough
   time to expose the animation, and confirm they differ. For longer cycles
   (e.g. the 120 s lighting orbit) use
