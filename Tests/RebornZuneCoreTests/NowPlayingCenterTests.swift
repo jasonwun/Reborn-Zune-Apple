@@ -20,6 +20,25 @@ final class NowPlayingCenterTests: XCTestCase {
         )
     }
 
+    func testRegisterEnablesAllSupportedRemoteCommands() {
+        let center = NowPlayingCenter()
+
+        center.registerCommands(RemoteCommandHandlers(
+            play: {}, pause: {}, toggle: {}, next: {}, previous: {},
+            seek: { _ in }, shuffle: { _ in }, repeat: { _ in }
+        ))
+
+        let commands = MPRemoteCommandCenter.shared()
+        XCTAssertTrue(commands.playCommand.isEnabled)
+        XCTAssertTrue(commands.pauseCommand.isEnabled)
+        XCTAssertTrue(commands.togglePlayPauseCommand.isEnabled)
+        XCTAssertTrue(commands.nextTrackCommand.isEnabled)
+        XCTAssertTrue(commands.previousTrackCommand.isEnabled)
+        XCTAssertTrue(commands.changePlaybackPositionCommand.isEnabled)
+        XCTAssertTrue(commands.changeShuffleModeCommand.isEnabled)
+        XCTAssertTrue(commands.changeRepeatModeCommand.isEnabled)
+    }
+
     func testUpdateProducesExpectedKeys() {
         let center = NowPlayingCenter()
         let music = makeMusic("My Song", artist: "Artist X", album: "Album Y")

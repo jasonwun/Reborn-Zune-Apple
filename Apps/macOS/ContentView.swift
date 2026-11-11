@@ -6,16 +6,18 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     let library: LibraryCoordinator
     let engine: PlaybackEngine
+    let router: ResonantRouter
+    let appDelegate: MacAppDelegate
 
     var body: some View {
         #if DEBUG
         if let path = SnapshotHarness.requestedOutputPath {
             SnapshotView(outputPath: path)
         } else {
-            ResonantHost(library: library, engine: engine)
+            ResonantHost(library: library, engine: engine, router: router, appDelegate: appDelegate)
         }
         #else
-        ResonantHost(library: library, engine: engine)
+        ResonantHost(library: library, engine: engine, router: router, appDelegate: appDelegate)
         #endif
     }
 }
@@ -57,6 +59,8 @@ private struct SnapshotView: View {
 private struct ResonantHost: View {
     let library: LibraryCoordinator
     let engine: PlaybackEngine
+    let router: ResonantRouter
+    let appDelegate: MacAppDelegate
     @Environment(\.openSettings) private var openSettings
     /// Hardware screen size backing the M15.1 screen-fixed scale tokens.
     /// Re-derived only when the window moves to another screen — never
@@ -105,7 +109,8 @@ private struct ResonantHost: View {
                 onRetry: { Task { await library.retry() } },
                 onGrantAccess: library.sourcePathsRequiringAuthorization.isEmpty
                     ? nil
-                    : { grantAccess() }
+                    : { grantAccess() },
+                router: router
             )
             .environment(\.resonantLayout, .mac(screen: screenSize))
             .environment(\.resonantWindowSize, proxy.size)
@@ -137,6 +142,8 @@ private struct ResonantHost: View {
         }
         .task {
             updateScreenSize()
+            // Issue #25 owns persistent history and supplies this provider.
+            appDelegate.configureDock(engine: engine, recentTracks: { [] })
             await library.start()
         }
     }

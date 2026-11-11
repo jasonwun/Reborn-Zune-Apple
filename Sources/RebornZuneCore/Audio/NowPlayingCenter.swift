@@ -7,35 +7,38 @@ import UIKit
 import AppKit
 #endif
 
+struct RemoteCommandHandlers {
+    let play: () -> Void
+    let pause: () -> Void
+    let toggle: () -> Void
+    let next: () -> Void
+    let previous: () -> Void
+    let seek: (TimeInterval) -> Void
+    let shuffle: (Bool) -> Void
+    let `repeat`: (RepeatMode) -> Void
+}
+
+@MainActor
+protocol NowPlayingCentering: AnyObject {
+    func registerCommands(_ handlers: RemoteCommandHandlers)
+    func update(item: Music?, currentTime: TimeInterval, duration: TimeInterval, rate: Double)
+}
+
 /// Wraps `MPNowPlayingInfoCenter` + `MPRemoteCommandCenter` so the engine
 /// can publish track info and receive remote commands (lock-screen,
 /// AirPods, Siri Remote, Control Center). Intentionally `internal` —
 /// engine owns the lifecycle; external callers don't touch it.
 @MainActor
-final class NowPlayingCenter {
+final class NowPlayingCenter: NowPlayingCentering {
     private var registered = false
-    private var playHandler: (() -> Void)?
-    private var pauseHandler: (() -> Void)?
-    private var toggleHandler: (() -> Void)?
-    private var nextHandler: (() -> Void)?
-    private var previousHandler: (() -> Void)?
+    private var handlers: RemoteCommandHandlers?
 
     init() {}
 
     /// Wire remote command handlers. Idempotent — safe to call repeatedly;
     /// the second call replaces handlers without registering twice.
-    func registerCommands(
-        play: @escaping () -> Void,
-        pause: @escaping () -> Void,
-        toggle: @escaping () -> Void,
-        next: @escaping () -> Void,
-        previous: @escaping () -> Void
-    ) {
-        playHandler = play
-        pauseHandler = pause
-        toggleHandler = toggle
-        nextHandler = next
-        previousHandler = previous
+    func registerCommands(_ handlers: RemoteCommandHandlers) {
+        self.handlers = handlers
 
         if registered { return }
         registered = true
@@ -46,32 +49,68 @@ final class NowPlayingCenter {
         center.togglePlayPauseCommand.isEnabled = true
         center.nextTrackCommand.isEnabled = true
         center.previousTrackCommand.isEnabled = true
+        #if os(macOS)
+        center.changePlaybackPositionCommand.isEnabled = true
+        center.changeShuffleModeCommand.isEnabled = true
+        center.changeRepeatModeCommand.isEnabled = true
+        #endif
 
         center.playCommand.addTarget { [weak self] _ in
             guard let self else { return .commandFailed }
-            Task { @MainActor in self.playHandler?() }
+            Task { @MainActor in self.handlers?.play() }
             return .success
         }
         center.pauseCommand.addTarget { [weak self] _ in
             guard let self else { return .commandFailed }
-            Task { @MainActor in self.pauseHandler?() }
+            Task { @MainActor in self.handlers?.pause() }
             return .success
         }
         center.togglePlayPauseCommand.addTarget { [weak self] _ in
             guard let self else { return .commandFailed }
-            Task { @MainActor in self.toggleHandler?() }
+            Task { @MainActor in self.handlers?.toggle() }
             return .success
         }
         center.nextTrackCommand.addTarget { [weak self] _ in
             guard let self else { return .commandFailed }
-            Task { @MainActor in self.nextHandler?() }
+            Task { @MainActor in self.handlers?.next() }
             return .success
         }
         center.previousTrackCommand.addTarget { [weak self] _ in
             guard let self else { return .commandFailed }
-            Task { @MainActor in self.previousHandler?() }
+            Task { @MainActor in self.handlers?.previous() }
             return .success
         }
+        #if os(macOS)
+        center.changePlaybackPositionCommand.addTarget { [weak self] event in
+            guard let self, let event = event as? MPChangePlaybackPositionCommandEvent else {
+                return .commandFailed
+            }
+            let position = event.positionTime
+            Task { @MainActor in self.handlers?.seek(position) }
+            return .success
+        }
+        center.changeShuffleModeCommand.addTarget { [weak self] event in
+            guard let self, let event = event as? MPChangeShuffleModeCommandEvent else {
+                return .commandFailed
+            }
+            let isShuffling = event.shuffleType != .off
+            Task { @MainActor in self.handlers?.shuffle(isShuffling) }
+            return .success
+        }
+        center.changeRepeatModeCommand.addTarget { [weak self] event in
+            guard let self, let event = event as? MPChangeRepeatModeCommandEvent else {
+                return .commandFailed
+            }
+            let mode: RepeatMode = switch event.repeatType {
+            case .off: .off
+            case .one: .one
+            case .all: .all
+            @unknown default: .off
+            }
+            Task { @MainActor in self.handlers?.repeat(mode) }
+            return .success
+        }
+        #endif
     }
 
     /// Update Now Playing info on track change. Pass nil to clear.
