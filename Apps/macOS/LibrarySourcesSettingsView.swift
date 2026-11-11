@@ -95,6 +95,10 @@ struct LibrarySourcesSettingsView: View {
                     .foregroundStyle(source.isAvailable ? Color.secondary : Color.orange)
             }
             Spacer(minLength: 16)
+            if library.sourcePathsRequiringAuthorization.contains(source.path) || !source.isAvailable {
+                Button("Grant Access…") { grantAccess(to: source) }
+                    .disabled(library.isScanning)
+            }
             Button("Remove…", role: .destructive) {
                 sourceToRemove = source
             }
@@ -109,6 +113,12 @@ struct LibrarySourcesSettingsView: View {
 
     private var errorBinding: Binding<Bool> {
         Binding(get: { operationError != nil }, set: { if !$0 { operationError = nil } })
+    }
+
+    private func grantAccess(to source: LibrarySourceState) {
+        MacLibraryAuthorization.requestAccess(to: source.path, library: library) {
+            operationError = $0
+        }
     }
 
     private func addSource() {

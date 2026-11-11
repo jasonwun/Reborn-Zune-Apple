@@ -51,6 +51,14 @@ public final class PlaybackEngine {
     @ObservationIgnored
     private var endObserver: NSObjectProtocol?
 
+    /// Starts a security scope for one file. Sessions live as long as the
+    /// player window because AVFoundation may open and read files lazily.
+    @ObservationIgnored
+    private let fileAccess: (@MainActor (URL) throws -> any LibraryBookmarkSession)?
+
+    @ObservationIgnored
+    private var fileAccessSessions: [any LibraryBookmarkSession] = []
+
     @ObservationIgnored
     private let nowPlaying = NowPlayingCenter()
 
@@ -62,7 +70,8 @@ public final class PlaybackEngine {
 
     // MARK: - Init
 
-    public init() {
+    public init(fileAccess: (@MainActor (URL) throws -> any LibraryBookmarkSession)? = nil) {
+        self.fileAccess = fileAccess
         nowPlaying.registerCommands(
             play: { [weak self] in self?.play() },
             pause: { [weak self] in self?.pause() },
@@ -347,13 +356,22 @@ public final class PlaybackEngine {
 
         let slice = Array(queue.suffix(from: startIndex))
         let items = slice.compactMap { music -> AVPlayerItem? in
-            // Validate URL is reachable; if not, log + skip.
             let url = music.url
-            if !url.isFileURL || FileManager.default.fileExists(atPath: url.path) {
+            do {
+                let session = try fileAccess?(url)
+                // Validate reachability only after starting access: without the
+                // security scope, Sandbox can make an authorized file look absent.
+                guard !url.isFileURL || FileManager.default.fileExists(atPath: url.path) else {
+                    session?.stop()
+                    logger.error("Skipping unreachable item: \(music.title, privacy: .public)")
+                    return nil
+                }
+                if let session { fileAccessSessions.append(session) }
                 return AVPlayerItem(url: url)
+            } catch {
+                logger.error("Skipping inaccessible item: \(music.title, privacy: .public)")
+                return nil
             }
-            logger.error("Skipping unreachable item: \(music.title, privacy: .public)")
-            return nil
         }
 
         let avPlayer = AVQueuePlayer(items: items)
@@ -422,5 +440,8 @@ public final class PlaybackEngine {
         player?.pause()
         player?.removeAllItems()
         player = nil
+        let sessions = fileAccessSessions
+        fileAccessSessions.removeAll()
+        for session in sessions { session.stop() }
     }
 }

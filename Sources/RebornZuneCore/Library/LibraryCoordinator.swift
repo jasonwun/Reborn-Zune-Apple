@@ -110,6 +110,8 @@ public final class LibraryCoordinator {
     public private(set) var discoveredTrackCount = 0
     public private(set) var sourcePath = ""
     public private(set) var sources: [LibrarySourceState] = []
+    /// Sources whose saved bookmark was denied or which still need an Open Panel grant.
+    public private(set) var sourcePathsRequiringAuthorization: Set<String> = []
 
     @ObservationIgnored private let store: LibraryStore
     @ObservationIgnored private let initialSources: [any LibraryFileSource]
@@ -153,6 +155,7 @@ public final class LibraryCoordinator {
         isScanning = true
         discoveredTrackCount = 0
         scanError = nil
+        sourcePathsRequiringAuthorization.removeAll()
         let store = store, sources = activeSources
         let task = Task { [weak self] in
             do {
@@ -163,6 +166,12 @@ public final class LibraryCoordinator {
                 await self?.publishCommitted()
             } catch is CancellationError {
                 self?.scanError = "The scan was interrupted. Your Library is unchanged."
+            } catch LibraryBookmarkError.accessDenied(let path) {
+                self?.sourcePathsRequiringAuthorization.insert(path)
+                self?.scanError = LibraryBookmarkError.accessDenied(path).localizedDescription
+            } catch LibraryScanError.incompleteEnumeration(let path) {
+                self?.sourcePathsRequiringAuthorization.insert(path)
+                self?.scanError = LibraryScanError.incompleteEnumeration(path).localizedDescription
             } catch {
                 self?.scanError = error.localizedDescription
             }
@@ -180,6 +189,35 @@ public final class LibraryCoordinator {
         }
         let bookmark = try bookmarkAccess.createBookmark(for: root)
         try await store.addSource(LibrarySourceState(path: candidate, bookmarkData: bookmark))
+        await loadSources()
+        await refresh()
+    }
+
+    /// Starts a playback-owned security scope using the bookmark of the source
+    /// that owns this file. The caller must stop the returned session.
+    public func startPlaybackAccess(for url: URL) throws -> any LibraryBookmarkSession {
+        let path = LibrarySourcePath.normalize(url)
+        guard let state = sources.first(where: { LibrarySourcePath.contains(path, in: $0.path) }),
+              let bookmark = state.bookmarkData else {
+            throw LibraryBookmarkError.accessDenied(path)
+        }
+        let session = try bookmarkAccess.startAccessing(
+            bookmark: bookmark, at: URL(fileURLWithPath: state.path))
+        if let refreshed = session.refreshedBookmark {
+            let store = store
+            Task { try? await store.updateBookmark(path: state.path, data: refreshed) }
+        }
+        return session
+    }
+
+    /// Replaces one source's bookmark with a folder explicitly chosen in an Open Panel.
+    public func grantAccess(to sourcePath: String, selectedURL: URL) async throws {
+        let selectedPath = LibrarySourcePath.normalize(selectedURL)
+        guard selectedPath == LibrarySourcePath.normalize(URL(fileURLWithPath: sourcePath)) else {
+            throw LibrarySourceError.grantMismatch(selected: selectedPath, expected: sourcePath)
+        }
+        let bookmark = try bookmarkAccess.createBookmark(for: selectedURL)
+        try await store.updateBookmark(path: sourcePath, data: bookmark)
         await loadSources()
         await refresh()
     }
@@ -207,29 +245,33 @@ public final class LibraryCoordinator {
         do {
             if try await store.needsSourceSeed() {
                 let initialStates = try initialSources.map {
-                    LibrarySourceState(path: $0.sourcePath,
-                                       bookmarkData: try bookmarkAccess.createBookmark(
-                                        for: URL(fileURLWithPath: $0.sourcePath)))
+                    LibrarySourceState(
+                        path: $0.sourcePath,
+                        bookmarkData: bookmarkAccess.allowsAutomaticBookmarkCreation
+                            ? try bookmarkAccess.createBookmark(for: URL(fileURLWithPath: $0.sourcePath))
+                            : nil)
                 }
                 try await store.seedSourcesIfNeeded(initialStates)
             }
             var states = try await store.sourceStates()
-            for state in states where state.bookmarkData == nil {
-                let bookmark = try bookmarkAccess.createBookmark(for: URL(fileURLWithPath: state.path))
-                try await store.updateBookmark(path: state.path, data: bookmark)
+            if bookmarkAccess.allowsAutomaticBookmarkCreation {
+                for state in states where state.bookmarkData == nil {
+                    let bookmark = try bookmarkAccess.createBookmark(for: URL(fileURLWithPath: state.path))
+                    try await store.updateBookmark(path: state.path, data: bookmark)
+                }
             }
             states = try await store.sourceStates()
+            let configuredPaths = Set(states.map(\.path))
+            sourcePathsRequiringAuthorization.formIntersection(configuredPaths)
+            sourcePathsRequiringAuthorization.formUnion(states.filter { $0.bookmarkData == nil }.map(\.path))
             sources = states
             sourcePath = states.first?.path ?? ""
             let store = store
-            activeSources = try states.map { state in
-                guard let bookmark = state.bookmarkData else {
-                    throw LibraryBookmarkError.accessDenied(state.path)
-                }
+            activeSources = states.map { state in
                 let injected = initialSources.first { $0.sourcePath == state.path }
                 let factory = sourceFactory
                 return BookmarkedFileSource(
-                    sourcePath: state.path, bookmark: bookmark, access: bookmarkAccess,
+                    sourcePath: state.path, bookmark: state.bookmarkData, access: bookmarkAccess,
                     makeSource: { url in injected ?? factory(url) },
                     persistBookmark: { data in
                         try? await store.updateBookmark(path: state.path, data: data)

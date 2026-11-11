@@ -41,6 +41,7 @@ final class FakeBookmarkAccess: LibraryBookmarkAccessing, @unchecked Sendable {
     private var _stops = 0
     private var _startError: Error?
 
+    var allowsAutomaticBookmarkCreation = true
     var created: [String] { lock.withLock { _created } }
     var starts: Int { lock.withLock { _starts } }
     var stops: Int { lock.withLock { _stops } }
@@ -199,6 +200,89 @@ final class MultipleLibrarySourcesTests: XCTestCase {
         XCTAssertEqual(coordinator.sources[0].committedTrackCount, 1)
     }
 
+    func testDefaultSourceWithoutUserSelectionRequiresGrantInsteadOfAutomaticBookmark() async throws {
+        let source = MultiFakeSource("/fake/Music")
+        source.files = [file(source.sourcePath, "one.mp3")]
+        let bookmarks = FakeBookmarkAccess()
+        bookmarks.allowsAutomaticBookmarkCreation = false
+        let coordinator = coordinator(try container(), sources: [source], bookmarks: bookmarks)
+
+        await coordinator.start()
+
+        XCTAssertEqual(coordinator.phase, .failed)
+        XCTAssertTrue(coordinator.tracks.isEmpty)
+        XCTAssertEqual(coordinator.sources.map(\.bookmarkData), [nil])
+        XCTAssertTrue(bookmarks.created.isEmpty)
+        XCTAssertEqual(coordinator.scanError,
+                       LibraryBookmarkError.accessDenied(source.sourcePath).localizedDescription)
+    }
+
+    func testOpenPanelGrantPersistsPerSourceBookmarkAcrossRelaunch() async throws {
+        let source = MultiFakeSource("/fake/Music")
+        source.files = [file(source.sourcePath, "one.mp3")]
+        let bookmarks = FakeBookmarkAccess()
+        bookmarks.allowsAutomaticBookmarkCreation = false
+        let container = try container()
+        let coordinator = coordinator(container, sources: [source], bookmarks: bookmarks)
+        await coordinator.start()
+
+        try await coordinator.grantAccess(
+            to: source.sourcePath,
+            selectedURL: URL(fileURLWithPath: source.sourcePath))
+
+        XCTAssertEqual(coordinator.phase, .ready)
+        XCTAssertEqual(coordinator.tracks.count, 1)
+        XCTAssertEqual(bookmarks.created, [source.sourcePath])
+        XCTAssertNotNil(coordinator.sources[0].bookmarkData)
+        XCTAssertEqual(bookmarks.starts, bookmarks.stops)
+
+        let relaunched = self.coordinator(container, sources: [source], bookmarks: bookmarks)
+        await relaunched.start()
+
+        XCTAssertEqual(relaunched.phase, .ready)
+        XCTAssertEqual(relaunched.tracks.map(\.id), coordinator.tracks.map(\.id))
+        XCTAssertEqual(bookmarks.created, [source.sourcePath], "relaunch resolves the saved bookmark without a new grant")
+        XCTAssertEqual(bookmarks.starts, bookmarks.stops)
+    }
+
+    func testDeniedBookmarkMarksSourceForGrantAndSuccessfulGrantClearsIt() async throws {
+        let source = MultiFakeSource("/fake/Music")
+        source.files = [file(source.sourcePath, "one.mp3")]
+        let bookmarks = FakeBookmarkAccess()
+        let coordinator = coordinator(try container(), sources: [source], bookmarks: bookmarks)
+        await coordinator.start()
+
+        bookmarks.startError = LibraryBookmarkError.accessDenied(source.sourcePath)
+        await coordinator.refresh()
+
+        XCTAssertEqual(coordinator.sourcePathsRequiringAuthorization, [source.sourcePath])
+        XCTAssertEqual(coordinator.phase, .ready, "the last committed Library remains browsable")
+        XCTAssertEqual(coordinator.tracks.count, 1)
+
+        bookmarks.startError = nil
+        try await coordinator.grantAccess(
+            to: source.sourcePath,
+            selectedURL: URL(fileURLWithPath: source.sourcePath))
+
+        XCTAssertTrue(coordinator.sourcePathsRequiringAuthorization.isEmpty)
+        XCTAssertNil(coordinator.scanError)
+    }
+
+    func testUnreadableDefaultSourceAlsoOffersOpenPanelGrant() async throws {
+        let source = MultiFakeSource("/fake/Music")
+        source.files = [file(source.sourcePath, "one.mp3")]
+        let bookmarks = FakeBookmarkAccess()
+        let coordinator = coordinator(try container(), sources: [source], bookmarks: bookmarks)
+        await coordinator.start()
+
+        source.error = LibraryScanError.incompleteEnumeration(source.sourcePath)
+        await coordinator.refresh()
+
+        XCTAssertEqual(coordinator.sourcePathsRequiringAuthorization, [source.sourcePath])
+        XCTAssertEqual(coordinator.tracks.count, 1, "read failure preserves the committed Library")
+        XCTAssertNotNil(coordinator.scanError)
+    }
+
     func testBookmarksAreIndependentRefreshedAndBalancedOnSuccessFailureAndCancellation() async throws {
         let first = MultiFakeSource("/fake/A")
         let second = MultiFakeSource("/fake/B")
@@ -224,6 +308,27 @@ final class MultipleLibrarySourcesTests: XCTestCase {
         coordinator.cancelScan()
         await scan.value
         XCTAssertEqual(bookmarks.starts, bookmarks.stops, "cancellation must stop access")
+    }
+
+    func testPlaybackAccessResolvesTheOwningSourceBookmark() async throws {
+        let first = MultiFakeSource("/fake/A")
+        let second = MultiFakeSource("/fake/B")
+        first.files = [file(first.sourcePath, "one.mp3")]
+        second.files = [file(second.sourcePath, "two.mp3")]
+        let bookmarks = FakeBookmarkAccess()
+        let coordinator = coordinator(
+            try container(), sources: [first, second], bookmarks: bookmarks)
+        await coordinator.start()
+        let startsAfterScanning = bookmarks.starts
+        let stopsAfterScanning = bookmarks.stops
+
+        let session = try coordinator.startPlaybackAccess(
+            for: URL(fileURLWithPath: "/fake/B/album/two.mp3"))
+
+        XCTAssertEqual(session.url.path, second.sourcePath)
+        XCTAssertEqual(bookmarks.starts, startsAfterScanning + 1)
+        session.stop()
+        XCTAssertEqual(bookmarks.stops, stopsAfterScanning + 1)
     }
 
     func testProgressCountsUniqueNormalizedURLsAcrossSources() async throws {

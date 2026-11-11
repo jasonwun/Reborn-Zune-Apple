@@ -9,8 +9,14 @@ public protocol LibraryBookmarkSession: Sendable {
 /// Security-scope boundary. Every successful start produces exactly one session
 /// whose `stop` is called by `BookmarkedFileSource` on every exit path.
 public protocol LibraryBookmarkAccessing: Sendable {
+    /// Whether a configured source may be bookmarked without an Open Panel selection.
+    var allowsAutomaticBookmarkCreation: Bool { get }
     func createBookmark(for url: URL) throws -> Data
     func startAccessing(bookmark: Data, at url: URL) throws -> any LibraryBookmarkSession
+}
+
+extension LibraryBookmarkAccessing {
+    public var allowsAutomaticBookmarkCreation: Bool { true }
 }
 
 public enum LibraryBookmarkError: LocalizedError {
@@ -26,6 +32,14 @@ public enum LibraryBookmarkError: LocalizedError {
 
 public struct SystemLibraryBookmarkAccess: LibraryBookmarkAccessing {
     public init() {}
+
+    public var allowsAutomaticBookmarkCreation: Bool {
+        #if os(macOS)
+        false
+        #else
+        true
+        #endif
+    }
 
     public func createBookmark(for url: URL) throws -> Data {
         #if os(macOS)
@@ -91,7 +105,7 @@ private struct NoLibraryBookmarkSession: LibraryBookmarkSession {
 
 struct BookmarkedFileSource: LibraryFileSource, Sendable {
     let sourcePath: String
-    let bookmark: Data
+    let bookmark: Data?
     let access: any LibraryBookmarkAccessing
     let makeSource: @Sendable (URL) -> any LibraryFileSource
     let persistBookmark: @Sendable (Data) async -> Void
@@ -109,8 +123,11 @@ struct BookmarkedFileSource: LibraryFileSource, Sendable {
     ) async throws -> T {
         let session: any LibraryBookmarkSession
         do {
+            guard let bookmark else { throw LibraryBookmarkError.accessDenied(sourcePath) }
             session = try access.startAccessing(bookmark: bookmark,
                                                 at: URL(fileURLWithPath: sourcePath))
+        } catch let error as LibraryBookmarkError {
+            throw error
         } catch {
             throw LibraryScanError.rootFailure(at: sourcePath, error: error)
         }
