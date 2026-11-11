@@ -15,6 +15,9 @@ struct MetadataExtractor {
             albumArtist: meta.albumArtist,
             albumTitle: meta.albumTitle,
             year: meta.year,
+            trackNumber: meta.trackNumber,
+            discNumber: meta.discNumber,
+            genre: meta.genre,
             duration: meta.duration,
             artworkData: meta.artworkData
         )
@@ -35,6 +38,39 @@ struct MetadataExtractor {
         let albumArtist = try await firstStringValue(metadata, identifier: .iTunesMetadataAlbumArtist)
         let albumTitle = try await firstStringValue(metadata, commonKey: .commonKeyAlbumName)
         let year = try await parseYear(metadata)
+        let trackNumber = try await extractNumber(
+            metadata,
+            id3Identifier: .id3MetadataTrackNumber,
+            iTunesIdentifier: .iTunesMetadataTrackNumber,
+            vorbisIdentifier: AVMetadataIdentifier(rawValue: "vorb/TRACKNUMBER")
+        )
+        let discNumber = try await extractNumber(
+            metadata,
+            id3Identifier: .id3MetadataPartOfASet,
+            iTunesIdentifier: .iTunesMetadataDiscNumber,
+            vorbisIdentifier: AVMetadataIdentifier(rawValue: "vorb/DISCNUMBER")
+        )
+        let genre: String?
+        if let id3Genre = try await firstStringValue(metadata, identifier: .id3MetadataContentType) {
+            genre = id3Genre
+        } else if let coreAudioGenre = try await firstStringValue(
+            metadata,
+            identifier: AVMetadataIdentifier(rawValue: "caaf/info-genre")
+        ) {
+            genre = coreAudioGenre
+        } else if let userGenre = try await firstStringValue(metadata, identifier: .iTunesMetadataUserGenre) {
+            genre = userGenre
+        } else if let predefinedGenre = try await firstStringValue(
+            metadata,
+            identifier: .iTunesMetadataPredefinedGenre
+        ) {
+            genre = predefinedGenre
+        } else {
+            genre = try await firstStringValue(
+                metadata,
+                identifier: AVMetadataIdentifier(rawValue: "vorb/GENRE")
+            )
+        }
         let artworkData = try await firstDataValue(metadata, commonKey: .commonKeyArtwork)
 
         return ExtractedMetadata(
@@ -43,6 +79,9 @@ struct MetadataExtractor {
             albumArtist: albumArtist,
             albumTitle: albumTitle,
             year: year,
+            trackNumber: trackNumber,
+            discNumber: discNumber,
+            genre: genre,
             duration: duration,
             artworkData: artworkData
         )
@@ -89,6 +128,47 @@ struct MetadataExtractor {
             if let n = try await item.load(.numberValue) { return n.intValue }
         }
         return nil
+    }
+
+    private static func extractNumber(
+        _ items: [AVMetadataItem],
+        id3Identifier: AVMetadataIdentifier,
+        iTunesIdentifier: AVMetadataIdentifier,
+        vorbisIdentifier: AVMetadataIdentifier
+    ) async throws -> Int? {
+        if let value = parseNumber(try await firstStringValue(items, identifier: id3Identifier)) {
+            return value
+        }
+        if let value = try await binaryITunesNumber(items, identifier: iTunesIdentifier) {
+            return value
+        }
+        return parseNumber(try await firstStringValue(items, identifier: vorbisIdentifier))
+    }
+
+    private static func binaryITunesNumber(
+        _ items: [AVMetadataItem],
+        identifier: AVMetadataIdentifier
+    ) async throws -> Int? {
+        for item in AVMetadataItem.metadataItems(from: items, filteredByIdentifier: identifier) {
+            if let data = try await item.load(.dataValue), data.count >= 4 {
+                let start = data.index(data.startIndex, offsetBy: 2)
+                let high = Int(data[start])
+                let low = Int(data[data.index(after: start)])
+                let value = high << 8 | low
+                if value > 0 { return value }
+            }
+            if let string = try await item.load(.stringValue), let value = parseNumber(string) {
+                return value
+            }
+        }
+        return nil
+    }
+
+    private static func parseNumber(_ string: String?) -> Int? {
+        guard let prefix = string?.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "/").first else {
+            return nil
+        }
+        return Int(prefix)
     }
 
     private static func extractYear(from string: String) -> Int? {

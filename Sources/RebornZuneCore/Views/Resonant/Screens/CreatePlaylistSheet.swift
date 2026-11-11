@@ -59,6 +59,7 @@ public struct CreatePlaylistSheet: View {
                 .frame(height: 1)
                 .padding(.top, 8)
 
+            #if !os(macOS)
             VStack(alignment: .leading, spacing: 12) {
                 Text("PICK A MOOD")
                     .resonantTag(size: 10, tracking: 2.2)
@@ -80,6 +81,7 @@ public struct CreatePlaylistSheet: View {
                 }
             }
             .padding(.top, 28)
+            #endif
 
             HStack {
                 Text("↵ ENTER TO CREATE · ESC TO CANCEL")

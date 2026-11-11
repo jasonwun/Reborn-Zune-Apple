@@ -26,6 +26,9 @@ public final class StoredTrack {
     public var albumArtist: String?
     public var albumTitle: String?
     public var year: Int?
+    public var trackNumber: Int?
+    public var discNumber: Int?
+    public var genre: String?
     public var duration: Double
     public var hasArtwork: Bool
     /// Version of the metadata extractor that produced the fields above.
@@ -47,6 +50,9 @@ public final class StoredTrack {
         albumArtist: String?,
         albumTitle: String?,
         year: Int?,
+        trackNumber: Int? = nil,
+        discNumber: Int? = nil,
+        genre: String? = nil,
         duration: Double,
         hasArtwork: Bool,
         metadataVersion: Int
@@ -63,6 +69,9 @@ public final class StoredTrack {
         self.albumArtist = albumArtist
         self.albumTitle = albumTitle
         self.year = year
+        self.trackNumber = trackNumber
+        self.discNumber = discNumber
+        self.genre = genre
         self.duration = duration
         self.hasArtwork = hasArtwork
         self.metadataVersion = metadataVersion

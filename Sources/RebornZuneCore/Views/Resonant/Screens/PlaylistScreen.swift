@@ -58,15 +58,29 @@ public struct PlaylistScreen: View {
         return names.isEmpty ? "" : "Tracks from \(names)…"
     }
 
+    private var emptyInstructions: String {
+        #if os(macOS)
+        "Hop over to albums or artists and find songs you like, then use + add tracks to build this list."
+        #else
+        "Hop over to albums or artists, find a song you like, and drop it here. Or click + add tracks above to build one from a daily mix."
+        #endif
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .bottom, spacing: 48) {
                 CoverMosaic(entries: coverEntries)
                     .frame(width: 240, height: 240)
                 VStack(alignment: .leading, spacing: 0) {
+                    #if os(macOS)
+                    Text("PLAYLIST · \(resolvedTracks.count) TRACKS · \(totalRuntime)")
+                        .resonantTag(size: 10, tracking: 2.2)
+                        .padding(.bottom, 14)
+                    #else
                     Text("PLAYLIST · \(resolvedTracks.count) TRACKS · \(totalRuntime) · \(mood.uppercased())")
                         .resonantTag(size: 10, tracking: 2.2)
                         .padding(.bottom, 14)
+                    #endif
                     Text(playlist.name)
                         .font(ResonantFont.display(130, weight: .ultraLight))
                         .tracking(-2.6)
@@ -86,9 +100,11 @@ public struct PlaylistScreen: View {
                             }
                         }
                         secondaryButton(label: "+ add tracks") {}
+                        #if !os(macOS)
                         Text("· share")
                             .resonantTag(size: 10, tracking: 2.2)
                             .padding(.leading, 8)
+                        #endif
                         Spacer()
                         Text("··· more")
                             .resonantTag(size: 10, tracking: 2.2)
@@ -165,7 +181,7 @@ public struct PlaylistScreen: View {
                 .font(ResonantFont.display(84, weight: .ultraLight))
                 .tracking(-1.7)
                 .foregroundColor(ResonantColors.ink2)
-            Text("Hop over to albums or artists, find a song you like, and drop it here. Or click + add tracks above to build one from a daily mix.")
+            Text(emptyInstructions)
                 .font(.system(size: 13))
                 .foregroundColor(ResonantColors.ink2)
                 .lineSpacing(4)

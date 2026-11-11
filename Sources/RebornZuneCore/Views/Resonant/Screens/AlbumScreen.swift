@@ -48,6 +48,27 @@ public struct AlbumScreen: View {
                     Rectangle()
                         .fill(ResonantColors.ink4)
                         .frame(height: 0.5)
+                    #if os(macOS)
+                    ForEach(album.trackPresentation) { row in
+                        if let heading = row.discHeading {
+                            Text(heading.uppercased())
+                                .resonantTag(size: 10, tracking: 2.2)
+                                .padding(.top, 24)
+                                .padding(.bottom, 8)
+                        }
+                        TrackRow(
+                            number: row.displayNumber,
+                            title: row.track.title,
+                            meta: row.track.genre ?? "—",
+                            time: ResonantSynth.runtime(seconds: row.track.duration),
+                            playing: engine.currentItem?.id == row.track.id,
+                            onPlay: {
+                                engine.setQueue(album.tracks, startingAt: row.queueIndex)
+                                engine.play()
+                            }
+                        )
+                    }
+                    #else
                     ForEach(Array(album.tracks.enumerated()), id: \.offset) { idx, track in
                         TrackRow(
                             number: idx + 1,
@@ -61,6 +82,7 @@ public struct AlbumScreen: View {
                             }
                         )
                     }
+                    #endif
                 }
                 .padding(.top, 8)
                 #if os(macOS)
@@ -81,9 +103,16 @@ public struct AlbumScreen: View {
     /// out beside or below the cover depending on window width (M15.1).
     private var headerInfo: some View {
         VStack(alignment: .leading, spacing: 0) {
+            #if os(macOS)
+            Text(["ALBUM", album.year.map(String.init), album.genre?.uppercased()]
+                .compactMap { $0 }.joined(separator: " · "))
+                .resonantTag(size: 10, tracking: 2.2)
+                .padding(.bottom, 14)
+            #else
             Text("ALBUM · \(album.year.map(String.init) ?? "—") · \(album.resonantGenre.uppercased())")
                 .resonantTag(size: 10, tracking: 2.2)
                 .padding(.bottom, 14)
+            #endif
 
             Text(album.title)
                 .font(ResonantFont.display(140, weight: .ultraLight))
@@ -109,7 +138,9 @@ public struct AlbumScreen: View {
                     engine.setQueue(album.tracks)
                     engine.play()
                 }
+                #if !os(macOS)
                 secondaryButton(label: "+ add to library") {}
+                #endif
                 Text("\(album.tracks.count) TRACKS · \(album.resonantRuntime)")
                     .resonantTag(size: 10, tracking: 2.2)
                     .padding(.leading, 16)

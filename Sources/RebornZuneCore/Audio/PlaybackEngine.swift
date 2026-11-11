@@ -114,6 +114,14 @@ public final class PlaybackEngine {
         publishNowPlaying()
     }
 
+    /// Play an Artist's complete Track collection in shuffled order.
+    public func shuffleArtist(_ tracks: [Music]) {
+        guard !tracks.isEmpty else { return }
+        isShuffling = true
+        setQueue(tracks)
+        play()
+    }
+
     /// Removes deleted Library Tracks while preserving every unrelated Queue entry.
     /// Removing the current Track stops playback without selecting a replacement.
     public func removeTracks(withIDs ids: Set<String>) {

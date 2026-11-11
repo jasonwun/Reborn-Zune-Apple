@@ -9,12 +9,16 @@ public struct Music: Identifiable, Hashable, Sendable {
     public let albumArtist: String?
     public let albumTitle: String?
     public let year: Int?
+    public let trackNumber: Int?
+    public let discNumber: Int?
+    public let genre: String?
     public let duration: TimeInterval  // seconds; 0 if unknown
     public let artworkData: Data?      // raw image bytes from the file's metadata; nil if absent
 
     public init(
         id: String, url: URL, title: String, artist: String?,
         albumArtist: String?, albumTitle: String?, year: Int?,
+        trackNumber: Int? = nil, discNumber: Int? = nil, genre: String? = nil,
         duration: TimeInterval, artworkData: Data?
     ) {
         self.id = id
@@ -24,6 +28,9 @@ public struct Music: Identifiable, Hashable, Sendable {
         self.albumArtist = albumArtist
         self.albumTitle = albumTitle
         self.year = year
+        self.trackNumber = trackNumber
+        self.discNumber = discNumber
+        self.genre = genre
         self.duration = duration
         self.artworkData = artworkData
     }

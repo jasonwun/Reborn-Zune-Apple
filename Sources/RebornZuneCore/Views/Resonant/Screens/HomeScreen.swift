@@ -72,6 +72,24 @@ public struct HomeScreen: View {
     }
 
     private var picks: [Pick] {
+        #if os(macOS)
+        return RealLibraryPresentation.homePanels(in: library).map { panel in
+            Pick(
+                id: "album-\(panel.id)",
+                eyebrow: panel.eyebrow,
+                title: panel.title,
+                sub: panel.subtitle,
+                meta: panel.meta,
+                reason: panel.reason,
+                visual: .cover(panel.album),
+                primaryLabel: "▶ Play album",
+                secondaryLabel: "View tracks",
+                onPrimary: { engine.setQueue(panel.album.tracks); engine.play() },
+                onSecondary: { onOpen(panel.album) },
+                rail: panel.details.map { ($0.label, $0.lines) }
+            )
+        }
+        #else
         var list: [Pick] = []
         if let a0 = library.albums.first {
             let (titleHead, titleTail) = Self.splitTitleForPanorama(a0.title)
@@ -177,6 +195,7 @@ public struct HomeScreen: View {
             ))
         }
         return list
+        #endif
     }
 
     /// Width of the next-panel peek strip on the right. A 1440pt-canvas

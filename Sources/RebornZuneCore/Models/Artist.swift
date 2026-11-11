@@ -6,6 +6,10 @@ public struct Artist: Identifiable, Hashable, Sendable {
     public let name: String
     public let albums: [Album]
 
+    public var genre: String? {
+        Album.commonGenre(in: albums.flatMap(\.tracks))
+    }
+
     public init(id: String, name: String, albums: [Album]) {
         self.id = id
         self.name = name

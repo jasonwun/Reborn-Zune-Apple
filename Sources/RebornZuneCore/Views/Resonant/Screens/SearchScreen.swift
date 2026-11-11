@@ -16,6 +16,9 @@ public struct SearchScreen: View {
     }
 
     private var matches: [Album] {
+        #if os(macOS)
+        return RealLibraryPresentation.albums(matching: query, in: library)
+        #else
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return [] }
         return library.albums.filter {
@@ -23,12 +26,19 @@ public struct SearchScreen: View {
             $0.albumArtist.lowercased().contains(q) ||
             $0.resonantGenre.lowercased().contains(q)
         }
+        #endif
     }
 
-    private static let genrePool: [String] = [
-        "Indie","Ambient","Electronic","Pop","Hip-hop","Experimental",
-        "World","R&B","Rock","Folk","Jazz","Classical","Punk","House","Soul"
-    ]
+    private var genrePool: [String] {
+        #if os(macOS)
+        return RealLibraryPresentation.genres(in: library)
+        #else
+        return [
+            "Indie","Ambient","Electronic","Pop","Hip-hop","Experimental",
+            "World","R&B","Rock","Folk","Jazz","Classical","Punk","House","Soul"
+        ]
+        #endif
+    }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -52,7 +62,7 @@ public struct SearchScreen: View {
                         columns: [GridItem(.adaptive(minimum: 180 * layout.windowScale), spacing: 12)],
                         spacing: 12
                     ) {
-                        ForEach(Array(Self.genrePool.enumerated()), id: \.offset) { idx, g in
+                        ForEach(Array(genrePool.enumerated()), id: \.offset) { idx, g in
                             GenreTile(name: g, idx: idx, onTap: { query = g })
                         }
                     }
@@ -78,9 +88,15 @@ public struct SearchScreen: View {
                                         .tracking(-0.22)
                                         .foregroundColor(ResonantColors.ink)
                                         .lineLimit(1)
+                                    #if os(macOS)
+                                    Text(RealLibraryPresentation.albumSubtitle(for: album))
+                                        .resonantTag(size: 10, tracking: 1.2)
+                                        .padding(.top, 4)
+                                    #else
                                     Text("\(album.albumArtist) · \(album.year.map(String.init) ?? "—")")
                                         .resonantTag(size: 10, tracking: 1.2)
                                         .padding(.top, 4)
+                                    #endif
                                 }
                             }
                             .buttonStyle(.plain)
