@@ -78,15 +78,19 @@ public final class StoredAppSettings {
     public var lastShufflePolicy: String
     public var lastRepeatMode: String
     public var updatedAt: Date
+    /// Distinguishes first launch from an intentional zero-source Library.
+    public var hasSeededLibrarySources: Bool
 
     public init(
         lastShufflePolicy: String = "off",
         lastRepeatMode: String = "off",
-        updatedAt: Date = .now
+        updatedAt: Date = .now,
+        hasSeededLibrarySources: Bool = false
     ) {
         self.lastShufflePolicy = lastShufflePolicy
         self.lastRepeatMode = lastRepeatMode
         self.updatedAt = updatedAt
+        self.hasSeededLibrarySources = hasSeededLibrarySources
     }
 }
 
@@ -106,7 +110,8 @@ public enum RebornZunePersistence {
         StoredAppSettings.self,
         StoredTrack.self,
         StoredTrackArtwork.self,
-        StoredLibraryState.self
+        StoredLibraryState.self,
+        StoredLibrarySource.self
     ])
 
     /// In-memory container, useful for tests + previews.

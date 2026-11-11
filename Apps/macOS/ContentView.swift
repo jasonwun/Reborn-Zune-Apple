@@ -4,15 +4,18 @@ import RebornZuneCore
 import UniformTypeIdentifiers
 
 struct ContentView: View {
+    let library: LibraryCoordinator
+    let engine: PlaybackEngine
+
     var body: some View {
         #if DEBUG
         if let path = SnapshotHarness.requestedOutputPath {
             SnapshotView(outputPath: path)
         } else {
-            ResonantHost()
+            ResonantHost(library: library, engine: engine)
         }
         #else
-        ResonantHost()
+        ResonantHost(library: library, engine: engine)
         #endif
     }
 }
@@ -52,30 +55,15 @@ private struct SnapshotView: View {
 
 @MainActor
 private struct ResonantHost: View {
-    @State private var engine = PlaybackEngine()
-    @State private var library: LibraryCoordinator
-    @Environment(\.modelContext) private var modelContext
+    let library: LibraryCoordinator
+    let engine: PlaybackEngine
+    @Environment(\.openSettings) private var openSettings
     /// Hardware screen size backing the M15.1 screen-fixed scale tokens.
     /// Re-derived only when the window moves to another screen — never
     /// on window resize. M16.3: initialized synchronously (was a
     /// 1440×900 placeholder until `.task` ran) so the tile wall's
     /// first-layout freeze never sees a stale screen size.
     @State private var screenSize = NSScreen.main?.frame.size ?? CGSize(width: 1440, height: 900)
-
-    init() {
-        // DEBUG override lets verification point the default Library Source
-        // at a prepared folder instead of ~/Music.
-        let root: URL
-        if let override = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_LIBRARY_FOLDER"] {
-            root = URL(fileURLWithPath: override)
-        } else {
-            root = FileManager.default.urls(for: .musicDirectory, in: .userDomainMask).first
-                ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Music")
-        }
-        _library = State(initialValue: LibraryCoordinator(
-            container: RebornZuneMacApp.sharedContainer,
-            source: FolderFileSource(root: root)))
-    }
 
     var body: some View {
         let _ = PerfProbe.once("app.body")
@@ -93,7 +81,7 @@ private struct ResonantHost: View {
             switch library.phase {
             case .ready: return nil
             case .loading: return .loading
-            case .empty: return .empty(path: library.sourcePath)
+            case .empty: return library.sources.isEmpty ? nil : .empty(path: library.sourcePath)
             case .failed: return .failed(message: library.scanError ?? "The scan did not finish.")
             }
         }()
@@ -109,6 +97,8 @@ private struct ResonantHost: View {
                 tiles: tilesToShow,
                 lightingAnimator: lighting,
                 density: .cozy,
+                needsLibraryFolder: library.sources.isEmpty && status == nil,
+                onPickFolder: { openSettings() },
                 libraryStatus: status,
                 scanBanner: banner,
                 onRetry: { Task { await library.retry() } }
@@ -123,10 +113,15 @@ private struct ResonantHost: View {
             for: NSWindow.didChangeScreenNotification)) { _ in
             updateScreenSize()
         }
-        .onChange(of: library.tracks) { _, tracks in
-            // Adopt the Library as the playback queue only when nothing is
-            // queued; a refresh must never disturb current playback.
-            if engine.queue.isEmpty, !tracks.isEmpty { engine.setQueue(tracks) }
+        .onChange(of: library.tracks) { previous, tracks in
+            let remainingIDs = Set(tracks.map(\.id))
+            let removedIDs = Set(previous.filter { !remainingIDs.contains($0.id) }.map(\.id))
+            engine.removeTracks(withIDs: removedIDs)
+            // Adopt the initial Library only. After cleanup, an empty Queue
+            // must stay stopped rather than selecting a replacement track.
+            if previous.isEmpty, engine.queue.isEmpty, !tracks.isEmpty {
+                engine.setQueue(tracks)
+            }
         }
         .task {
             updateScreenSize()

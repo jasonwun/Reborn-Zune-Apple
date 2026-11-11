@@ -92,6 +92,7 @@ public final class PlaybackEngine {
             updateCurrentItem(to: nil)
             transition(to: .stopped)
             tearDownPlayer()
+            publishNowPlaying()
             return
         }
 
@@ -111,6 +112,33 @@ public final class PlaybackEngine {
         // Engine starts paused after setQueue; caller decides when to play.
         transition(to: .paused)
         publishNowPlaying()
+    }
+
+    /// Removes deleted Library Tracks while preserving every unrelated Queue entry.
+    /// Removing the current Track stops playback without selecting a replacement.
+    public func removeTracks(withIDs ids: Set<String>) {
+        guard !ids.isEmpty else { return }
+        let removesCurrent = currentItem.map { ids.contains($0.id) } ?? false
+        originalQueue.removeAll { ids.contains($0.id) }
+        queue.removeAll { ids.contains($0.id) }
+
+        if removesCurrent {
+            currentIndex = nil
+            updateCurrentItem(to: nil)
+            transition(to: .stopped)
+            tearDownPlayer()
+            publishNowPlaying()
+        } else if let currentItem, let index = queue.firstIndex(of: currentItem) {
+            currentIndex = index
+            if player != nil {
+                let position = currentTime
+                let resumesPlayback = state == .playing
+                rebuildPlayer(startingAt: index)
+                seek(to: position)
+                if resumesPlayback { player?.play() }
+                publishNowPlaying()
+            }
+        }
     }
 
     // MARK: - Transport

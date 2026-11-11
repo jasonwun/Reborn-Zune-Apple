@@ -1,4 +1,5 @@
 import XCTest
+import MediaPlayer
 @testable import RebornZuneCore
 
 @MainActor
@@ -132,6 +133,35 @@ final class PlaybackEngineTests: XCTestCase {
         XCTAssertEqual(engine.state, .stopped)
         XCTAssertNil(engine.currentItem)
         XCTAssertEqual(engine.queue, [])
+    }
+
+    func testRemovingCurrentTrackStopsAndPreservesUnrelatedQueueEntries() {
+        let engine = PlaybackEngine()
+        let a = makeMusic("a"), b = makeMusic("b"), c = makeMusic("c")
+        engine.setQueue([a, b, c], startingAt: 1)
+        engine.play()
+
+        engine.removeTracks(withIDs: [b.id])
+
+        XCTAssertEqual(engine.state, .stopped)
+        XCTAssertNil(engine.currentItem)
+        XCTAssertEqual(engine.queue, [a, c])
+        XCTAssertTrue(MPNowPlayingInfoCenter.default().nowPlayingInfo?.isEmpty != false)
+    }
+
+    func testRemovingOtherTrackKeepsCurrentPlaybackAndQueueOrder() {
+        let engine = PlaybackEngine()
+        let a = makeMusic("a"), b = makeMusic("b"), c = makeMusic("c")
+        engine.setQueue([a, b, c], startingAt: 1)
+        engine.play()
+        engine.seek(to: 0.5)
+
+        engine.removeTracks(withIDs: [a.id])
+
+        XCTAssertEqual(engine.state, .playing)
+        XCTAssertEqual(engine.currentItem, b)
+        XCTAssertEqual(engine.currentTime, 0.5)
+        XCTAssertEqual(engine.queue, [b, c])
     }
 
     func testTogglePlayPauseFromPaused() {

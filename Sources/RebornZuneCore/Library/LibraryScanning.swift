@@ -80,6 +80,19 @@ public enum LibraryScanError: LocalizedError, Equatable {
             return "Some files in \(path) could not be read, so the scan was not applied. Your existing Library is unchanged."
         }
     }
+
+    static func rootFailure(at path: String, error: Error) -> LibraryScanError {
+        let nsError = error as NSError
+        let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? NSError
+        let posixCode = underlying?.domain == NSPOSIXErrorDomain
+            ? underlying.map { Int($0.code) } : nil
+        let cocoaMissing = nsError.domain == NSCocoaErrorDomain
+            && (nsError.code == NSFileNoSuchFileError || nsError.code == NSFileReadNoSuchFileError)
+        let osStatusMissing = underlying?.domain == NSOSStatusErrorDomain && underlying?.code == -43 // fnfErr
+        let isMissing = cocoaMissing || osStatusMissing
+            || posixCode == Optional(Int(ENOENT)) || posixCode == Optional(Int(ENOTDIR))
+        return isMissing ? .sourceUnavailable(path) : .incompleteEnumeration(path)
+    }
 }
 
 /// Recursively enumerates one folder.
@@ -95,13 +108,11 @@ public struct FolderFileSource: LibraryFileSource {
 
     public func discover() async throws -> [DiscoveredFile] {
         let fm = FileManager.default
-        var isDir: ObjCBool = false
-        guard fm.fileExists(atPath: root.path, isDirectory: &isDir), isDir.boolValue else {
-            throw LibraryScanError.sourceUnavailable(root.path)
-        }
-        // A permission denial surfaces here rather than as an empty folder.
+        // Ask for the contents directly: `fileExists` cannot distinguish a
+        // missing root from an access error. Only ENOENT/ENOTDIR authorizes
+        // unavailable-source cleanup; every other failure preserves the Library.
         do { _ = try fm.contentsOfDirectory(atPath: root.path) } catch {
-            throw LibraryScanError.sourceUnavailable(root.path)
+            throw LibraryScanError.rootFailure(at: root.path, error: error)
         }
 
         return try Self.walk(root)
@@ -120,7 +131,7 @@ public struct FolderFileSource: LibraryFileSource {
             includingPropertiesForKeys: keys,
             options: [.skipsHiddenFiles],
             errorHandler: { _, _ in failures.set(); return true }
-        ) else { throw LibraryScanError.sourceUnavailable(root.path) }
+        ) else { throw LibraryScanError.incompleteEnumeration(root.path) }
 
         var files: [DiscoveredFile] = []
         for case let url as URL in enumerator {

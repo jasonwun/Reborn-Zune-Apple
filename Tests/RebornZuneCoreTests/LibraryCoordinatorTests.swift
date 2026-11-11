@@ -329,7 +329,32 @@ final class FolderFileSourceIdentityTests: XCTestCase {
 
     func testMissingRootThrowsInsteadOfReportingEmpty() async {
         let src = FolderFileSource(root: root.appendingPathComponent("nope"))
-        do { _ = try await src.discover(); XCTFail("expected throw") } catch {}
+        do {
+            _ = try await src.discover()
+            XCTFail("expected throw")
+        } catch let error as LibraryScanError {
+            guard case .sourceUnavailable = error else {
+                return XCTFail("A missing root must authorize unavailable cleanup, got \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testPermissionFailureIsNotSourceUnavailable() async throws {
+        let url = root.appendingPathComponent("one.mp3")
+        try Data("abc".utf8).write(to: url)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: root.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: root.path) }
+
+        do {
+            _ = try await FolderFileSource(root: root).discover()
+            XCTFail("Expected a permission failure")
+        } catch let error as LibraryScanError {
+            guard case .incompleteEnumeration = error else {
+                return XCTFail("Permission/read failures must preserve the Library, got \(error)")
+            }
+        }
     }
 
     func testEmptyRootIsEmptyNotAnError() async throws {
