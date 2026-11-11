@@ -4,19 +4,52 @@ public struct AlbumsScreen: View {
     let library: ResonantLibrary
     let spacing: ResonantSpacing
     let onOpen: (Album) -> Void
+    let totalTrackCount: Int?
+    let hasMoreTracks: Bool
+    let loadedTrackCount: Int
+    let usesStoreOrdering: Bool
+    let onLoadMore: () -> Void
+    let onSort: (AlbumSort) async -> Void
 
     @State private var sort: AlbumSort = .title
     @Environment(\.resonantLayout) private var layout
 
-    enum AlbumSort: Hashable { case title, artist, year }
+    public enum AlbumSort: Hashable, Sendable {
+        case title, artist, year
 
-    public init(library: ResonantLibrary, spacing: ResonantSpacing, onOpen: @escaping (Album) -> Void) {
+        var trackSort: LibraryTrackSort {
+            switch self {
+            case .title: return .albumTitle
+            case .artist: return .artist
+            case .year: return .year
+            }
+        }
+    }
+
+    public init(
+        library: ResonantLibrary,
+        spacing: ResonantSpacing,
+        totalTrackCount: Int? = nil,
+        hasMoreTracks: Bool = false,
+        loadedTrackCount: Int = 0,
+        usesStoreOrdering: Bool = false,
+        onLoadMore: @escaping () -> Void = {},
+        onSort: @escaping (AlbumSort) async -> Void = { _ in },
+        onOpen: @escaping (Album) -> Void
+    ) {
         self.library = library
         self.spacing = spacing
+        self.totalTrackCount = totalTrackCount
+        self.hasMoreTracks = hasMoreTracks
+        self.loadedTrackCount = loadedTrackCount
+        self.usesStoreOrdering = usesStoreOrdering
+        self.onLoadMore = onLoadMore
+        self.onSort = onSort
         self.onOpen = onOpen
     }
 
     private var sorted: [Album] {
+        if usesStoreOrdering { return library.albums }
         switch sort {
         case .title:
             return library.albums.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
@@ -39,7 +72,9 @@ public struct AlbumsScreen: View {
         let scale = layout.displayFontScale
         return VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
-                Text("COLLECTION · \(library.albums.count) ALBUMS · \(sortLabel)")
+                Text(usesStoreOrdering
+                     ? "COLLECTION · \(totalTrackCount ?? 0) TRACKS · \(sortLabel)"
+                     : "COLLECTION · \(library.albums.count) ALBUMS · \(sortLabel)")
                     .resonantTag(size: 10, tracking: 2.2)
                     .padding(.leading, 12)
                     .padding(.bottom, 12 * scale)
@@ -56,7 +91,12 @@ public struct AlbumsScreen: View {
                 label: "SORT",
                 value: sort,
                 options: [(.title, "A → Z"), (.artist, "Artist"), (.year, "Year")],
-                onChange: { sort = $0 }
+                onChange: { newSort in
+                    sort = newSort
+                    if usesStoreOrdering {
+                        Task { await onSort(newSort) }
+                    }
+                }
             )
             .padding(.leading, 12)
             .padding(.top, 4 * scale)
@@ -67,14 +107,19 @@ public struct AlbumsScreen: View {
                 // scale on Mac, 1.0 on bucketed surfaces) so tiles stay
                 // readable at the 900pt window floor instead of
                 // squeezing to a hard 200pt minimum.
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 200 * layout.windowScale,
-                                                 maximum: 280 * layout.windowScale),
-                                       spacing: spacing.gap)],
-                    spacing: 48
-                ) {
-                    ForEach(sorted) { album in
-                        AlbumTile(album: album, onClick: { onOpen(album) })
+                LazyVStack {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 200 * layout.windowScale,
+                                                     maximum: 280 * layout.windowScale),
+                                           spacing: spacing.gap)],
+                        spacing: 48
+                    ) {
+                        ForEach(sorted) { album in
+                            AlbumTile(album: album, onClick: { onOpen(album) })
+                        }
+                    }
+                    if hasMoreTracks {
+                        StoreLoadMoreSentinel(loadedTrackCount: loadedTrackCount, onLoadMore: onLoadMore)
                     }
                 }
                 .padding(.top, 4)
@@ -91,6 +136,18 @@ public struct AlbumsScreen: View {
         .padding(.top, 8 * scale)
         .padding(.horizontal, spacing.padX)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+struct StoreLoadMoreSentinel: View {
+    let loadedTrackCount: Int
+    let onLoadMore: () -> Void
+
+    var body: some View {
+        ProgressView()
+            .controlSize(.small)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .task(id: loadedTrackCount) { onLoadMore() }
     }
 }
 

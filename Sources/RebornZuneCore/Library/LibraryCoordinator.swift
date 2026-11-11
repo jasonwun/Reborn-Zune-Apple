@@ -21,7 +21,6 @@ public enum LibraryScanner {
 
     static func prepare(sources: [any LibraryFileSource], store: LibraryStore,
                         progress: @MainActor (Int) -> Void = { _ in }) async throws -> [LibrarySourceScan] {
-        let known = try await store.snapshots()
         var discoveredBySource: [(source: any LibraryFileSource, files: [DiscoveredFile], available: Bool)] = []
         var uniquePaths = Set<String>()
 
@@ -46,8 +45,8 @@ public enum LibraryScanner {
         var scans: [LibrarySourceScan] = []
         for entry in discoveredBySource {
             try Task.checkCancellation()
-            let sourceKnown = known.filter { $0.sourcePath == entry.source.sourcePath }
-            let plan = LibraryReconciler.plan(known: sourceKnown, discovered: entry.files)
+            let known = try await store.snapshots(sourcePath: entry.source.sourcePath)
+            let plan = LibraryReconciler.plan(known: known, discovered: entry.files)
             let extracted = entry.available
                 ? try await extract(plan.tracks.filter(\.needsExtraction).map(\.file), from: entry.source)
                 : [:]
@@ -91,6 +90,8 @@ public enum LibraryScanner {
 @MainActor
 @Observable
 public final class LibraryCoordinator {
+    private static let pageSize = 100
+
     public enum Phase: Equatable, Sendable {
         /// First scan in progress and nothing committed yet.
         case loading
@@ -103,7 +104,17 @@ public final class LibraryCoordinator {
     }
 
     public private(set) var phase: Phase = .loading
+    /// Tracks loaded explicitly for the current browsing window. Launch never
+    /// materializes pages beyond `pageSize`.
     public private(set) var tracks: [Music] = []
+    public private(set) var totalTrackCount = 0
+    public private(set) var hasMoreTracks = false
+    /// Changes only after a committed scan or source removal, never for a
+    /// browsing predicate or pagination change.
+    public private(set) var committedRevision = 0
+    @ObservationIgnored private var isLoadingPage = false
+    @ObservationIgnored private var browseQuery = LibraryTrackQuery()
+    @ObservationIgnored private var browseRevision = 0
     /// Message from the latest failed scan; cleared when a scan starts.
     public private(set) var scanError: String?
     public private(set) var isScanning = false
@@ -163,6 +174,7 @@ public final class LibraryCoordinator {
                     self?.updateDiscoveredCount(count)
                 }
                 try await store.commit(scans: scans)
+                await self?.noteCommittedChange()
                 await self?.publishCommitted()
             } catch is CancellationError {
                 self?.scanError = "The scan was interrupted. Your Library is unchanged."
@@ -228,12 +240,100 @@ public final class LibraryCoordinator {
             await running.value
         }
         try await store.removeSource(path: path)
+        committedRevision += 1
         await loadSources()
         await publishCommitted()
         updatePhase(scanSucceeded: true)
     }
 
     public func retry() async { await refresh() }
+
+    /// Replaces the browsing window with the first page for this store query.
+    public func browse(matching query: LibraryTrackQuery) async {
+        browseQuery = query
+        await publishCommitted()
+    }
+
+    /// Fetches and appends the next sorted page from the committed store.
+    public func loadNextPage() async {
+        guard hasMoreTracks, !isLoadingPage else { return }
+        isLoadingPage = true
+        defer { isLoadingPage = false }
+        let revision = browseRevision
+        let query = browseQuery
+        do {
+            let built = try await fetchMusicPage(offset: tracks.count, matching: query)
+            guard revision == browseRevision else { return }
+            tracks.append(contentsOf: built)
+            hasMoreTracks = tracks.count < totalTrackCount
+        } catch {
+            guard revision == browseRevision else { return }
+            scanError = "Your Library could not be loaded: \(error.localizedDescription)"
+        }
+    }
+
+    /// Returns the requested UUID strings that still exist. A read failure
+    /// preserves every requested ID so a transient error cannot clear playback.
+    public func existingTrackIDs(among ids: Set<String>) async -> Set<String> {
+        let uuids = Set(ids.compactMap(UUID.init(uuidString:)))
+        do {
+            return Set(try await store.existingTrackIDs(among: uuids).map(\.uuidString))
+        } catch {
+            return ids
+        }
+    }
+
+    private func noteCommittedChange() async {
+        committedRevision += 1
+    }
+
+    /// Loads a complete Album through a predicate rather than relying on the
+    /// subset that happens to be present in the browsing pages.
+    public func loadAlbum(_ album: Album) async -> Album? {
+        let query = LibraryTrackQuery(albumTitle: album.title, albumArtist: album.albumArtist)
+        do {
+            let snapshots = try await allSnapshots(matching: query)
+            let music = await makeMusic(from: snapshots)
+            return LibraryGrouping.albums(from: music).first { $0.id == album.id }
+        } catch {
+            scanError = "The Album could not be loaded: \(error.localizedDescription)"
+            return nil
+        }
+    }
+
+    /// Loads every Track belonging to an Artist through a Store predicate.
+    public func loadArtist(_ artist: Artist) async -> Artist? {
+        let query = LibraryTrackQuery(artistName: artist.name)
+        do {
+            var snapshots = try await allSnapshots(matching: query)
+            if artist.name == "Unknown Artist" {
+                snapshots += try await allSnapshots(
+                    matching: LibraryTrackQuery(includeUnattributedArtist: true))
+            }
+            snapshots = Dictionary(snapshots.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                .map(\.value)
+            let music = await makeMusic(from: snapshots)
+            let albums = LibraryGrouping.albums(from: music)
+            return LibraryGrouping.artists(from: albums).first { $0.id == artist.id }
+        } catch {
+            scanError = "The Artist could not be loaded: \(error.localizedDescription)"
+            return nil
+        }
+    }
+
+    /// Loads selected Tracks for a Playlist and restores their requested order.
+    public func loadTracks(withIDs ids: [String]) async -> [Music] {
+        let uuids = ids.compactMap(UUID.init(uuidString:))
+        do {
+            let snapshots = try await store.snapshots(withIDs: uuids)
+            let byID = Dictionary(uniqueKeysWithValues: snapshots.map { ($0.id, $0) })
+            let ordered = uuids.compactMap { byID[$0] }
+            return await makeMusic(from: ordered)
+        } catch {
+            scanError = "The Playlist Tracks could not be loaded: \(error.localizedDescription)"
+            return []
+        }
+    }
 
     public func cancelScan() { scanTask?.cancel() }
 
@@ -289,22 +389,44 @@ public final class LibraryCoordinator {
     }
 
     private func updatePhase(scanSucceeded: Bool) {
-        if !tracks.isEmpty { phase = .ready }
+        if totalTrackCount > 0 { phase = .ready }
         else if scanSucceeded { phase = .empty }
         else { phase = .failed }
     }
 
     private func publishCommitted() async {
-        let snapshots: [TrackSnapshot]
-        do { snapshots = try await store.snapshots() } catch {
+        browseRevision += 1
+        let revision = browseRevision
+        let query = browseQuery
+        do {
+            let count = try await store.count(matching: query)
+            let built = try await fetchMusicPage(offset: 0, matching: query)
+            guard revision == browseRevision else { return }
+            totalTrackCount = count
+            tracks = built
+            hasMoreTracks = tracks.count < totalTrackCount
+            if totalTrackCount > 0 { phase = .ready }
+        } catch {
+            guard revision == browseRevision else { return }
             scanError = "Your Library could not be loaded: \(error.localizedDescription)"
-            return
         }
+    }
+
+    private func fetchMusicPage(offset: Int, matching query: LibraryTrackQuery) async throws -> [Music] {
+        let snapshots = try await store.snapshots(
+            matching: query, offset: offset, limit: Self.pageSize)
+        return await makeMusic(from: snapshots)
+    }
+
+    private func allSnapshots(matching query: LibraryTrackQuery) async throws -> [TrackSnapshot] {
+        let count = try await store.count(matching: query)
+        return try await store.snapshots(matching: query, offset: 0, limit: count)
+    }
+
+    private func makeMusic(from snapshots: [TrackSnapshot]) async -> [Music] {
         let ids = Self.artworkRepresentatives(snapshots)
         let artwork = (try? await store.artwork(for: ids)) ?? [:]
-        let built = await Self.buildMusic(snapshots, artwork: artwork)
-        tracks = built
-        if !built.isEmpty { phase = .ready }
+        return await Self.buildMusic(snapshots, artwork: artwork)
     }
 
     /// One artwork-bearing Track per album; its bytes are shared by every
@@ -336,6 +458,6 @@ public final class LibraryCoordinator {
                   year: s.year, trackNumber: s.trackNumber, discNumber: s.discNumber,
                   genre: s.genre, duration: s.duration, artworkData: byAlbum[albumKey(s)])
         }
-        return music.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        return music
     }
 }

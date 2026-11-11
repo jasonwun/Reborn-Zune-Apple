@@ -1,18 +1,53 @@
 import Foundation
 import SwiftData
 
+public enum LibraryTrackSort: Sendable, Equatable {
+    case title
+    case albumTitle
+    case artist
+    case year
+}
+
+public struct LibraryTrackQuery: Sendable, Equatable {
+    public var searchText: String?
+    public var albumTitle: String?
+    public var albumArtist: String?
+    public var artistName: String?
+    /// Matches rows whose artist and albumArtist are both absent.
+    public var includeUnattributedArtist: Bool
+    public var sort: LibraryTrackSort
+
+    public init(
+        searchText: String? = nil,
+        albumTitle: String? = nil,
+        albumArtist: String? = nil,
+        artistName: String? = nil,
+        includeUnattributedArtist: Bool = false,
+        sort: LibraryTrackSort = .title
+    ) {
+        self.searchText = searchText
+        self.albumTitle = albumTitle
+        self.albumArtist = albumArtist
+        self.artistName = artistName
+        self.includeUnattributedArtist = includeUnattributedArtist
+        self.sort = sort
+    }
+}
+
 /// Background owner of all Library reads and writes. Hands lightweight
 /// `Sendable` DTOs across the actor boundary; model objects never leave.
 @ModelActor
 public actor LibraryStore {
     private static let batchSize = 1000
 
-    /// All committed Tracks, fetched in batches. Artwork is never touched.
-    public func snapshots() throws -> [TrackSnapshot] {
+    /// Known rows for one source, fetched in batches for reconciliation.
+    public func snapshots(sourcePath: String) throws -> [TrackSnapshot] {
         var result: [TrackSnapshot] = []
         var offset = 0
         while true {
-            var descriptor = FetchDescriptor<StoredTrack>(sortBy: [SortDescriptor(\.path)])
+            var descriptor = FetchDescriptor<StoredTrack>(
+                predicate: #Predicate { $0.sourcePath == sourcePath },
+                sortBy: [SortDescriptor(\.path)])
             descriptor.fetchLimit = Self.batchSize
             descriptor.fetchOffset = offset
             let batch = try modelContext.fetch(descriptor)
@@ -20,6 +55,100 @@ public actor LibraryStore {
             result.append(contentsOf: batch.map(Self.snapshot))
             offset += batch.count
             if batch.count < Self.batchSize { break }
+        }
+        return result
+    }
+
+    /// One deterministic, title-sorted page. The predicate and pagination are
+    /// evaluated by SwiftData; artwork remains in its separate store.
+    public func snapshots(
+        matching query: LibraryTrackQuery,
+        offset: Int,
+        limit: Int
+    ) throws -> [TrackSnapshot] {
+        // SwiftData treats fetchLimit == 0 as unlimited, not as an empty page.
+        guard limit > 0 else { return [] }
+        var descriptor = trackDescriptor(matching: query)
+        switch query.sort {
+        case .title:
+            descriptor.sortBy = [SortDescriptor(\.title), SortDescriptor(\.path)]
+        case .albumTitle:
+            descriptor.sortBy = [
+                SortDescriptor(\.albumTitle), SortDescriptor(\.title), SortDescriptor(\.path),
+            ]
+        case .artist:
+            descriptor.sortBy = [
+                SortDescriptor(\.albumArtist), SortDescriptor(\.artist),
+                SortDescriptor(\.albumTitle), SortDescriptor(\.title), SortDescriptor(\.path),
+            ]
+        case .year:
+            descriptor.sortBy = [
+                SortDescriptor(\.year, order: .reverse), SortDescriptor(\.albumTitle),
+                SortDescriptor(\.title), SortDescriptor(\.path),
+            ]
+        }
+        descriptor.fetchOffset = max(0, offset)
+        descriptor.fetchLimit = max(0, limit)
+        return try modelContext.fetch(descriptor).map(Self.snapshot)
+    }
+
+    public func count(matching query: LibraryTrackQuery) throws -> Int {
+        try modelContext.fetchCount(trackDescriptor(matching: query))
+    }
+
+    private func trackDescriptor(matching query: LibraryTrackQuery) -> FetchDescriptor<StoredTrack> {
+        let searchText = query.searchText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let hasSearch = !searchText.isEmpty
+        let hasAlbum = query.albumTitle != nil && query.albumArtist != nil
+        let albumTitle = query.albumTitle ?? ""
+        let albumArtist = query.albumArtist ?? ""
+        if hasAlbum {
+            let unknownAlbum = albumTitle == "Unknown Album"
+            let unknownArtist = albumArtist == "Unknown Artist"
+            if unknownArtist || unknownAlbum {
+                // Grouping applies the privileged-artist fallback after the
+                // fetch, so this predicate intentionally includes every
+                // artist for the requested title and lets grouping select it.
+                return FetchDescriptor<StoredTrack>(predicate: #Predicate {
+                    unknownAlbum
+                        ? ($0.albumTitle == nil || $0.albumTitle == albumTitle)
+                        : $0.albumTitle == albumTitle
+                })
+            }
+            return FetchDescriptor<StoredTrack>(predicate: #Predicate {
+                $0.albumTitle == albumTitle
+                    && ($0.albumArtist == albumArtist
+                        || ($0.albumArtist == nil && $0.artist == albumArtist))
+            })
+        }
+        if query.includeUnattributedArtist {
+            return FetchDescriptor<StoredTrack>(predicate: #Predicate {
+                $0.albumArtist == nil && $0.artist == nil
+            })
+        }
+        if let artistName = query.artistName {
+            return FetchDescriptor<StoredTrack>(predicate: #Predicate {
+                $0.albumArtist == artistName || $0.artist == artistName
+            })
+        }
+        guard hasSearch else { return FetchDescriptor<StoredTrack>() }
+        return FetchDescriptor<StoredTrack>(predicate: #Predicate {
+            $0.title.localizedStandardContains(searchText)
+                || $0.artist?.localizedStandardContains(searchText) == true
+                || $0.albumArtist?.localizedStandardContains(searchText) == true
+                || $0.albumTitle?.localizedStandardContains(searchText) == true
+                || $0.genre?.localizedStandardContains(searchText) == true
+        })
+    }
+
+    /// Selected Track Identities for detail surfaces such as Playlists.
+    public func snapshots(withIDs ids: [UUID]) throws -> [TrackSnapshot] {
+        var result: [TrackSnapshot] = []
+        for chunk in ids.chunked(500) {
+            let tracks = try modelContext.fetch(FetchDescriptor<StoredTrack>(
+                predicate: #Predicate { chunk.contains($0.id) },
+                sortBy: [SortDescriptor(\.title), SortDescriptor(\.path)]))
+            result.append(contentsOf: tracks.map(Self.snapshot))
         }
         return result
     }
@@ -89,6 +218,18 @@ public actor LibraryStore {
             modelContext.rollback()
             throw error
         }
+    }
+
+    /// Checks only requested identities, used to reconcile an explicit Queue
+    /// after a committed deletion without fetching the whole Library.
+    public func existingTrackIDs(among ids: Set<UUID>) throws -> Set<UUID> {
+        var result: Set<UUID> = []
+        for chunk in Array(ids).chunked(500) {
+            let tracks = try modelContext.fetch(
+                FetchDescriptor<StoredTrack>(predicate: #Predicate { chunk.contains($0.id) }))
+            result.formUnion(tracks.map(\.id))
+        }
+        return result
     }
 
     /// Artwork bytes for the given Tracks (on demand).

@@ -84,6 +84,97 @@ final class LibraryCoordinatorTests: XCTestCase {
         XCTAssertEqual(second.scanError, "Boom")
     }
 
+    func testLaunchPublishesOnePageAndLoadsMoreOnDemand() async throws {
+        let source = FakeSource()
+        source.files = (0..<101).map { file(String(format: "%03d.mp3", $0)) }
+        let c = coordinator(try container(), source)
+
+        await c.start()
+
+        XCTAssertEqual(c.totalTrackCount, 101)
+        XCTAssertEqual(c.tracks.count, 100)
+        XCTAssertTrue(c.hasMoreTracks)
+
+        await c.loadNextPage()
+
+        XCTAssertEqual(c.tracks.count, 101)
+        XCTAssertFalse(c.hasMoreTracks)
+        XCTAssertEqual(Set(c.tracks.map(\.id)).count, 101)
+    }
+
+    func testBrowsingUsesStorePredicateInsteadOfFilteringLoadedPage() async throws {
+        let source = FakeSource()
+        source.files = (0..<101).map { file(String(format: "%03d.mp3", $0)) }
+        let c = coordinator(try container(), source)
+        await c.start()
+        XCTAssertFalse(c.tracks.contains { $0.title == "100.mp3" })
+
+        await c.browse(matching: LibraryTrackQuery(searchText: "100"))
+
+        XCTAssertEqual(c.totalTrackCount, 1)
+        XCTAssertEqual(c.tracks.map(\.title), ["100.mp3"])
+        XCTAssertFalse(c.hasMoreTracks)
+    }
+
+    func testNewerBrowseQueryDoesNotAcceptOlderPageResults() async throws {
+        let source = FakeSource()
+        source.files = (0..<101).map { file(String(format: "%03d.mp3", $0)) }
+        let c = coordinator(try container(), source)
+        await c.start()
+
+        let oldPage = Task { await c.loadNextPage() }
+        await Task.yield()
+        await c.browse(matching: LibraryTrackQuery(searchText: "100"))
+        await oldPage.value
+
+        XCTAssertEqual(c.totalTrackCount, 1)
+        XCTAssertEqual(c.tracks.map(\.title), ["100.mp3"])
+    }
+
+    func testAlbumDetailLoadsTracksBeyondTheBrowsingPage() async throws {
+        let source = FakeSource()
+        source.files = (0..<101).map { file(String(format: "%03d.mp3", $0)) }
+        let c = coordinator(try container(), source)
+        await c.start()
+        let partial = try XCTUnwrap(ResonantLibrary.from(tracks: c.tracks).albums.first)
+        XCTAssertEqual(partial.tracks.count, 100)
+
+        let loaded = await c.loadAlbum(partial)
+        let album = try XCTUnwrap(loaded)
+
+        XCTAssertEqual(album.id, partial.id)
+        XCTAssertEqual(album.tracks.count, 101)
+    }
+
+    func testArtistDetailLoadsTracksBeyondTheBrowsingPage() async throws {
+        let source = FakeSource()
+        source.files = (0..<101).map { file(String(format: "%03d.mp3", $0)) }
+        let c = coordinator(try container(), source)
+        await c.start()
+        let partial = try XCTUnwrap(ResonantLibrary.from(tracks: c.tracks).artists.first)
+        XCTAssertEqual(partial.albums.flatMap(\.tracks).count, 100)
+
+        let loaded = await c.loadArtist(partial)
+
+        XCTAssertEqual(loaded?.id, partial.id)
+        XCTAssertEqual(loaded?.albums.flatMap(\.tracks).count, 101)
+    }
+
+    func testUnknownAlbumDetailUsesTheSameFallbackGroupingRules() async throws {
+        let source = FakeSource()
+        source.files = [file("a.mp3")]
+        source.metadata = ExtractedMetadata(title: "Untitled", duration: 60)
+        let c = coordinator(try container(), source)
+        await c.start()
+        let partial = try XCTUnwrap(ResonantLibrary.from(tracks: c.tracks).albums.first)
+        XCTAssertEqual(partial.title, "Unknown Album")
+        XCTAssertEqual(partial.albumArtist, "Unknown Artist")
+
+        let loaded = await c.loadAlbum(partial)
+
+        XCTAssertEqual(loaded?.tracks.map(\.title), ["Untitled"])
+    }
+
     func testInitialImportPersistsTrackDiscAndGenreAcrossRelaunch() async throws {
         let container = try container()
         let source = FakeSource()
@@ -254,6 +345,34 @@ final class LibraryCoordinatorTests: XCTestCase {
         await coordinator.refresh()
         XCTAssertEqual(try history.historyEntries().map(\.trackID), [UUID(uuidString: b)])
         XCTAssertEqual(try history.playbackStats().map(\.trackID), [UUID(uuidString: b)])
+    }
+
+    func testPlaylistTracksLoadByIdentityOutsideTheBrowsingPage() async throws {
+        let container = try container()
+        let source = FakeSource()
+        source.files = (0..<101).map { file(String(format: "%03d.mp3", $0)) }
+        let c = coordinator(container, source)
+        await c.start()
+        let store = LibraryStore(modelContainer: container)
+        let stored = try await store.snapshots(sourcePath: "/fake")
+        let target = try XCTUnwrap(stored.first { $0.title == "100.mp3" })
+
+        let tracks = await c.loadTracks(withIDs: [target.id.uuidString])
+
+        XCTAssertEqual(tracks.map(\.title), ["100.mp3"])
+        XCTAssertEqual(tracks.map(\.id), [target.id.uuidString])
+    }
+
+    func testCommittedIdentityLookupOnlyReturnsRequestedExistingTracks() async throws {
+        let source = FakeSource()
+        source.files = [file("a.mp3"), file("b.mp3")]
+        let c = coordinator(try container(), source)
+        await c.start()
+        let requested = Set(c.tracks.map(\.id) + [UUID().uuidString])
+
+        let existing = await c.existingTrackIDs(among: requested)
+
+        XCTAssertEqual(existing, Set(c.tracks.map(\.id)))
     }
 
     func testLegacyHashEntriesRekeyOnExactPathMatchOnly() async throws {

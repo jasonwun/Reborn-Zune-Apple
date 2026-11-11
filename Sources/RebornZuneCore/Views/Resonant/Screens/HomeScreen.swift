@@ -6,6 +6,7 @@ public struct HomeScreen: View {
     let engine: PlaybackEngine
     let onOpen: (Album) -> Void
     let onArtist: (Artist) -> Void
+    let onPlayAlbum: ((Album) -> Void)?
     let showArrows: Bool
 
     @State private var idx: Int = 0
@@ -17,13 +18,15 @@ public struct HomeScreen: View {
                 engine: PlaybackEngine,
                 showArrows: Bool = true,
                 onOpen: @escaping (Album) -> Void,
-                onArtist: @escaping (Artist) -> Void) {
+                onArtist: @escaping (Artist) -> Void,
+                onPlayAlbum: ((Album) -> Void)? = nil) {
         self.library = library
         self.spacing = spacing
         self.engine = engine
         self.showArrows = showArrows
         self.onOpen = onOpen
         self.onArtist = onArtist
+        self.onPlayAlbum = onPlayAlbum
     }
 
     fileprivate struct Pick: Identifiable {
@@ -84,7 +87,10 @@ public struct HomeScreen: View {
                 visual: .cover(panel.album),
                 primaryLabel: "▶ Play album",
                 secondaryLabel: "View tracks",
-                onPrimary: { engine.setQueue(panel.album.tracks); engine.play() },
+                onPrimary: {
+                    if let onPlayAlbum { onPlayAlbum(panel.album) }
+                    else { engine.setQueue(panel.album.tracks); engine.play() }
+                },
                 onSecondary: { onOpen(panel.album) },
                 rail: panel.details.map { ($0.label, $0.lines) }
             )

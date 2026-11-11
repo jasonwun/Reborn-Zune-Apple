@@ -21,9 +21,20 @@ public struct ResonantApp: View {
     let scanBanner: String?
     let onRetry: () -> Void
     let onGrantAccess: (() -> Void)?
+    let usesStoreBrowsing: Bool
+    let loadedTrackCount: Int
+    let totalTrackCount: Int?
+    let hasMoreTracks: Bool
+    let onLoadMore: () -> Void
+    let onBrowse: (LibraryTrackQuery) async -> Void
+    let resolveAlbum: (Album) async -> Album?
+    let resolveArtist: (Artist) async -> Artist?
+    let resolveTracks: (([String]) async -> [Music])?
 
     @State private var router: ResonantRouter
     @State private var showCreatePlaylist = false
+    @State private var resolvedAlbums: [String: Album] = [:]
+    @State private var resolvedArtists: [String: Artist] = [:]
     @Environment(\.modelContext) private var modelContext
 
     public init(engine: PlaybackEngine,
@@ -38,7 +49,16 @@ public struct ResonantApp: View {
                 scanBanner: String? = nil,
                 onRetry: @escaping () -> Void = {},
                 onGrantAccess: (() -> Void)? = nil,
-                router: ResonantRouter? = nil) {
+                router: ResonantRouter? = nil,
+                usesStoreBrowsing: Bool = false,
+                loadedTrackCount: Int = 0,
+                totalTrackCount: Int? = nil,
+                hasMoreTracks: Bool = false,
+                onLoadMore: @escaping () -> Void = {},
+                onBrowse: @escaping (LibraryTrackQuery) async -> Void = { _ in },
+                resolveAlbum: @escaping (Album) async -> Album? = { $0 },
+                resolveArtist: @escaping (Artist) async -> Artist? = { $0 },
+                resolveTracks: (([String]) async -> [Music])? = nil) {
         self.engine = engine
         self.library = library
         self.tiles = tiles
@@ -52,6 +72,45 @@ public struct ResonantApp: View {
         self.onRetry = onRetry
         self.onGrantAccess = onGrantAccess
         _router = State(initialValue: router ?? ResonantRouter(initial: ResonantRouter.envInitialRoute()))
+        self.usesStoreBrowsing = usesStoreBrowsing
+        self.loadedTrackCount = loadedTrackCount
+        self.totalTrackCount = totalTrackCount
+        self.hasMoreTracks = hasMoreTracks
+        self.onLoadMore = onLoadMore
+        self.onBrowse = onBrowse
+        self.resolveAlbum = resolveAlbum
+        self.resolveArtist = resolveArtist
+        self.resolveTracks = resolveTracks
+    }
+
+    private func openAlbum(_ album: Album) {
+        Task {
+            let resolved = await resolveAlbum(album) ?? album
+            resolvedAlbums[resolved.id] = resolved
+            router.go(.album(resolved.id))
+        }
+    }
+
+    private func openArtist(_ artist: Artist) {
+        Task {
+            let resolved = await resolveArtist(artist) ?? artist
+            resolvedArtists[resolved.name] = resolved
+            router.go(.artist(resolved.name))
+        }
+    }
+
+    private func openArtist(named name: String) {
+        openArtist(resolvedArtists[name]
+            ?? library.artists.first { $0.name == name }
+            ?? Artist(id: Artist.makeID(name: name), name: name, albums: []))
+    }
+
+    private func playAlbum(_ album: Album) {
+        Task {
+            let resolved = await resolveAlbum(album) ?? album
+            engine.setQueue(resolved.tracks)
+            engine.play()
+        }
     }
 
     private var spacing: ResonantSpacing { ResonantSpacing.for(density) }
@@ -67,6 +126,24 @@ public struct ResonantApp: View {
         innerBody
             .preferredColorScheme(.dark)
             .task { await runAutoNav() }
+            .task {
+                guard usesStoreBrowsing else { return }
+                if router.route == .albums {
+                    await onBrowse(LibraryTrackQuery(sort: .albumTitle))
+                } else if router.route == .artists {
+                    await onBrowse(LibraryTrackQuery(sort: .artist))
+                }
+            }
+            .onChange(of: router.route) { previous, current in
+                guard usesStoreBrowsing else { return }
+                if current == .artists && previous.pivot != .artists {
+                    Task { await onBrowse(LibraryTrackQuery(sort: .artist)) }
+                } else if current == .albums && previous.pivot != .albums {
+                    Task { await onBrowse(LibraryTrackQuery(sort: .albumTitle)) }
+                } else if previous == .search && current != .search {
+                    Task { await onBrowse(LibraryTrackQuery()) }
+                }
+            }
     }
 
     /// DEBUG perf hook: `REBORN_ZUNE_DEBUG_AUTO_NAV=<route>:<delaySeconds>`
@@ -161,21 +238,31 @@ public struct ResonantApp: View {
                            spacing: spacing,
                            engine: engine,
                            showArrows: platform == .mac,
-                           onOpen: { router.go(.album($0.id)) },
-                           onArtist: { router.go(.artist($0.name)) })
+                           onOpen: openAlbum,
+                           onArtist: openArtist,
+                           onPlayAlbum: playAlbum)
             case .albums:
                 AlbumsScreen(library: library, spacing: spacing,
-                             onOpen: { router.go(.album($0.id)) })
+                             totalTrackCount: totalTrackCount,
+                             hasMoreTracks: hasMoreTracks,
+                             loadedTrackCount: loadedTrackCount,
+                             usesStoreOrdering: usesStoreBrowsing,
+                             onLoadMore: onLoadMore,
+                             onSort: { sort in
+                                 await onBrowse(LibraryTrackQuery(sort: sort.trackSort))
+                             },
+                             onOpen: openAlbum)
             case .album(let id):
                 // Resolve by exact id, fall back to title prefix match (for
                 // env-driven test routes), then to the first album so the
                 // screen always renders when the library has content.
-                let resolved = library.albums.first(where: { $0.id == id })
+                let resolved = resolvedAlbums[id]
+                    ?? library.albums.first(where: { $0.id == id })
                     ?? library.albums.first(where: { $0.title.lowercased().contains(id.lowercased()) })
                     ?? library.albums.first
                 if let album = resolved {
                     AlbumScreen(album: album, spacing: spacing, engine: engine,
-                                onArtist: { router.go(.artist($0)) })
+                                onArtist: openArtist(named:))
                 } else {
                     Text("Album not found.").foregroundColor(ResonantColors.ink2)
                 }
@@ -187,35 +274,49 @@ public struct ResonantApp: View {
                 PlaylistByIDScreen(idString: id,
                                    library: library,
                                    spacing: spacing,
-                                   engine: engine)
+                                   engine: engine,
+                                   resolveTracks: resolveTracks)
             case .artists:
                 #if os(macOS)
                 MacArtistsScreen(library: library, spacing: spacing,
-                                 onOpen: { router.go(.artist($0.name)) })
+                                 totalTrackCount: totalTrackCount,
+                                 hasMoreTracks: hasMoreTracks,
+                                 loadedTrackCount: loadedTrackCount,
+                                 onLoadMore: onLoadMore,
+                                 onOpen: openArtist)
                 #else
                 ArtistsScreen(library: library, spacing: spacing,
                               onOpen: { router.go(.artist($0.name)) })
                 #endif
             case .artist(let name):
-                let resolved = library.artists.first(where: { $0.name == name })
+                let resolved = resolvedArtists[name]
+                    ?? library.artists.first(where: { $0.name == name })
                     ?? library.artists.first(where: { $0.name.lowercased().contains(name.lowercased()) })
                     ?? library.artists.first
                 if let artist = resolved {
                     #if os(macOS)
                     MacArtistScreen(artist: artist, library: library, spacing: spacing, engine: engine,
-                                    onAlbum: { router.go(.album($0.id)) },
-                                    onArtist: { router.go(.artist($0.name)) })
+                                    onAlbum: openAlbum,
+                                    onArtist: openArtist)
                     #else
                     ArtistScreen(artist: artist, library: library, spacing: spacing,
-                                 onAlbum: { router.go(.album($0.id)) },
-                                 onArtist: { router.go(.artist($0.name)) })
+                                 onAlbum: openAlbum,
+                                 onArtist: openArtist)
                     #endif
                 } else {
                     Text("Artist not found.").foregroundColor(ResonantColors.ink2)
                 }
             case .search:
                 SearchScreen(library: library, spacing: spacing, router: router,
-                             onOpen: { router.go(.album($0.id)) })
+                             totalTrackCount: totalTrackCount,
+                             hasMoreTracks: hasMoreTracks,
+                             loadedTrackCount: loadedTrackCount,
+                             usesStoreBrowsing: usesStoreBrowsing,
+                             onLoadMore: onLoadMore,
+                             onSearch: { query in
+                                 await onBrowse(LibraryTrackQuery(searchText: query))
+                             },
+                             onOpen: openAlbum)
             case .nowPlaying:
                 NowPlayingScreen(tiles: tiles,
                                  lightingAnimator: lightingAnimator,
@@ -236,11 +337,29 @@ private struct PlaylistByIDScreen: View {
     let library: ResonantLibrary
     let spacing: ResonantSpacing
     let engine: PlaybackEngine
+    let resolveTracks: (([String]) async -> [Music])?
     @Query var playlists: [StoredPlaylist]
+    @State private var resolvedLibrary: ResonantLibrary?
 
     var body: some View {
         if let playlist = playlists.first(where: { $0.id.uuidString == idString }) {
-            PlaylistScreen(playlist: playlist, library: library, spacing: spacing, engine: engine)
+            let entryIDs = playlist.entries.sorted { $0.orderIndex < $1.orderIndex }.map(\.resolvedTrackID)
+            PlaylistScreen(
+                playlist: playlist,
+                library: resolvedLibrary ?? library,
+                spacing: spacing,
+                engine: engine
+            )
+            .task(id: entryIDs) {
+                guard let resolveTracks else { return }
+                guard !entryIDs.isEmpty else {
+                    resolvedLibrary = nil
+                    return
+                }
+                let tracks = await resolveTracks(entryIDs)
+                let albums = await Task.detached { LibraryGrouping.albums(from: tracks) }.value
+                resolvedLibrary = ResonantLibrary(albums: albums, artists: [])
+            }
         } else {
             VStack {
                 Text("Playlist not found.")

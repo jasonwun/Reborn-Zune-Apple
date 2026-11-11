@@ -73,6 +73,10 @@ private struct ResonantHost: View {
     /// first-layout freeze never sees a stale screen size.
     @State private var screenSize = NSScreen.main?.frame.size ?? CGSize(width: 1440, height: 900)
     @State private var grantError: String?
+    @State private var didAdoptInitialQueue = false
+    @State private var resonantLibrary = ResonantLibrary(albums: [], artists: [])
+    @State private var libraryTiles: [TileWallEntry] = []
+    @State private var derivationTask: Task<Void, Never>?
 
     var body: some View {
         let _ = PerfProbe.once("app.body")
@@ -81,10 +85,9 @@ private struct ResonantHost: View {
             ? nil
             : LightingAnimator()
 
-        let tilesToShow = library.tracks.isEmpty
+        let tilesToShow = library.totalTrackCount == 0
             ? SyntheticTiles.sample(count: 250)
-            : MusicTileBuilder.tiles(from: library.tracks)
-        let resonantLibrary = ResonantLibrary.from(tracks: library.tracks)
+            : libraryTiles
 
         let status: LibraryStatus? = {
             switch library.phase {
@@ -114,7 +117,16 @@ private struct ResonantHost: View {
                 onGrantAccess: library.sourcePathsRequiringAuthorization.isEmpty
                     ? nil
                     : { grantAccess() },
-                router: router
+                router: router,
+                usesStoreBrowsing: true,
+                loadedTrackCount: library.tracks.count,
+                totalTrackCount: library.totalTrackCount,
+                hasMoreTracks: library.hasMoreTracks,
+                onLoadMore: { Task { await library.loadNextPage() } },
+                onBrowse: { query in await library.browse(matching: query) },
+                resolveAlbum: { album in await library.loadAlbum(album) },
+                resolveArtist: { artist in await library.loadArtist(artist) },
+                resolveTracks: { ids in await library.loadTracks(withIDs: ids) }
             )
             .environment(\.resonantLayout, .mac(screen: screenSize))
             .environment(\.resonantWindowSize, proxy.size)
@@ -135,13 +147,19 @@ private struct ResonantHost: View {
             updateScreenSize()
         }
         .onChange(of: library.tracks) { previous, tracks in
-            let remainingIDs = Set(tracks.map(\.id))
-            let removedIDs = Set(previous.filter { !remainingIDs.contains($0.id) }.map(\.id))
-            engine.removeTracks(withIDs: removedIDs)
-            // Adopt the initial Library only. After cleanup, an empty Queue
-            // must stay stopped rather than selecting a replacement track.
-            if previous.isEmpty, engine.queue.isEmpty, !tracks.isEmpty {
+            // Adopt the initial browsing page only. After cleanup, an empty
+            // Queue must stay stopped rather than selecting a replacement.
+            if !didAdoptInitialQueue, previous.isEmpty, engine.queue.isEmpty, !tracks.isEmpty {
+                didAdoptInitialQueue = true
                 engine.setQueue(tracks)
+            }
+            derivePresentation(from: tracks)
+        }
+        .onChange(of: library.committedRevision) { _, _ in
+            let queuedIDs = Set(engine.queue.map(\.id))
+            Task {
+                let existing = await library.existingTrackIDs(among: queuedIDs)
+                engine.removeTracks(withIDs: queuedIDs.subtracting(existing))
             }
         }
         .task {
@@ -150,6 +168,22 @@ private struct ResonantHost: View {
                 (try? history.recentTracks(from: library.tracks)) ?? []
             })
             await library.start()
+        }
+    }
+
+    /// Album/Artist grouping and image decoding can grow with the number of
+    /// explicitly loaded pages. Keep both off the main thread, then publish
+    /// one immutable presentation snapshot for SwiftUI.
+    private func derivePresentation(from tracks: [Music]) {
+        derivationTask?.cancel()
+        derivationTask = Task {
+            let derived = await Task.detached(priority: .userInitiated) {
+                let albums = LibraryGrouping.albums(from: tracks)
+                return (albums, LibraryGrouping.artists(from: albums), MusicTileBuilder.tiles(from: tracks))
+            }.value
+            guard !Task.isCancelled else { return }
+            resonantLibrary = ResonantLibrary(albums: derived.0, artists: derived.1)
+            libraryTiles = derived.2
         }
     }
 
