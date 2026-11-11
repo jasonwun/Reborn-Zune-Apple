@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  issues: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,6 +17,45 @@ jobs:
   build-and-test:
     runs-on: macos-latest
     steps:
+      - name: Check linked issue dependencies
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          body="$(gh api "repos/${GH_REPO}/pulls/${PR_NUMBER}" --jq .body)"
+          issues="$(printf '%s\n' "$body" | grep -oE '#[0-9]+' | tr -d '#' | sort -un || true)"
+          failed=0
+
+          for issue in $issues; do
+            if blockers="$(gh api "repos/${GH_REPO}/issues/${issue}/dependencies/blocked_by" \
+              --jq '.[] | select(.state == "open") | "#\(.number) \(.title)"' 2>/dev/null)"; then
+              if [[ -n "$blockers" ]]; then
+                printf 'Issue #%s has open blockers:\n%s\n' "$issue" "$blockers"
+                failed=1
+              fi
+            else
+              # Older repositories without native dependencies use the documented fallback.
+              issue_body="$(gh api "repos/${GH_REPO}/issues/${issue}" --jq .body)"
+              fallback="$(printf '%s\n' "$issue_body" | grep -E '^Blocked by:' \
+                | grep -oE '#[0-9]+' | tr -d '#' | sort -un || true)"
+              for blocker in $fallback; do
+                state="$(gh api "repos/${GH_REPO}/issues/${blocker}" --jq .state)"
+                if [[ "$state" == "open" ]]; then
+                  printf 'Issue #%s has open fallback blocker #%s.\n' "$issue" "$blocker"
+                  failed=1
+                fi
+              done
+            fi
+          done
+
+          if [[ "$failed" -ne 0 ]]; then
+            echo 'Close the blockers before merging, or remove references that are not implementation dependencies.'
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
 
       - name: Install XcodeGen

@@ -34,6 +34,19 @@ Create a GitHub issue.
 
 Read it as in **Read an issue** above.
 
+## Implementation dependency gate
+
+Before implementing a specific issue, inspect its native blockers with compact output:
+
+```sh
+gh api repos/<owner>/<repo>/issues/<n>/dependencies/blocked_by \
+  --jq '.[] | select(.state == "open") | "#\(.number) \(.title)"'
+```
+
+Stop before editing when this prints any blockers. A request to implement the ticket is not an override; only a later instruction that explicitly accepts those reported blockers can unlock the work. Do not substitute placeholder behavior for an unfinished dependency. Use the symmetric `/dependencies/blocking` endpoint when checking downstream impact.
+
+Pull requests run the same gate in CI for issue references in their bodies. Keep implementation references in the body so the check can see them; retrospective or unrelated PRs should not add ticket references merely to satisfy it.
+
 ## Wayfinding operations
 
 Used by `/wayfinder`. The **map** is a single issue with **child** issues as tickets.
