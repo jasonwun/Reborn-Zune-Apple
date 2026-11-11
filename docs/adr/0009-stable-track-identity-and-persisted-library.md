@@ -16,9 +16,24 @@ files, and so Playlists can reference Tracks that survive moves.
   remains, and different-path copies all receive distinct UUIDs.
 - Incremental fingerprint = normalized path + modification date + size.
   Unchanged files skip AVFoundation extraction.
-- A scan commits in one save. Any failure (permission, IO, cancellation) commits
-  nothing and performs no cleanup. A successful scan deletes confirmed-missing
-  Tracks and their Playlist entries; files on disk are never touched.
+- The Library is the union of recursive, non-overlapping Library Sources. Exact
+  duplicates, ancestors, and descendants are rejected by normalized path-component
+  comparison, never raw string-prefix containment. Each Track has one owning
+  `sourcePath`; there is no Track–Source join table.
+- Each source persists an independent security-scoped bookmark. Stale bookmarks
+  are refreshed, and every security-scope start has a matching stop on success,
+  failure, and cancellation.
+- A multi-source scan discovers and normalizes all URLs before UUID assignment,
+  reports unique-URL progress, and commits the union plus source counts in one
+  save. Any failure (permission, IO, cancellation) commits nothing and performs
+  no cleanup. A successful scan deletes confirmed-missing Tracks and their
+  Playlist entries; files on disk are never touched.
+- Source removal and missing/unmounted roots delete only that source's Tracks
+  and linked app data. Missing roots retain unavailable configuration with a
+  zero count; failed scans retain the previous count. Removing the current
+  Track clears Now Playing without auto-starting another, while unrelated Queue
+  entries remain. Removing every source is persistent; the default never returns
+  automatically.
 - Legacy path-hash Playlist entries are re-keyed only on an exact current-path
   hash match; unmatched ones are confirmed-missing on a successful scan.
   `StoredLibraryState.identityMigrationVersion` and `metadataVersion` are

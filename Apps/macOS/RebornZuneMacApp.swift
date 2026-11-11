@@ -8,6 +8,21 @@ struct RebornZuneMacApp: App {
     /// Failure to open falls back to an in-memory container so the app
     /// can still launch (the user just loses persistence).
     private let modelContainer = RebornZuneMacApp.sharedContainer
+    @State private var engine = PlaybackEngine()
+    @State private var library: LibraryCoordinator
+
+    init() {
+        let root: URL
+        if let override = ProcessInfo.processInfo.environment["REBORN_ZUNE_DEBUG_LIBRARY_FOLDER"] {
+            root = URL(fileURLWithPath: override)
+        } else {
+            root = FileManager.default.urls(for: .musicDirectory, in: .userDomainMask).first
+                ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Music")
+        }
+        _library = State(initialValue: LibraryCoordinator(
+            container: RebornZuneMacApp.sharedContainer,
+            sources: [FolderFileSource(root: root)]))
+    }
 
     /// One container shared by SwiftUI (`.modelContainer`) and the Library
     /// coordinator, so both see the same store. DEBUG builds honor
@@ -47,7 +62,7 @@ struct RebornZuneMacApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(library: library, engine: engine)
                 // Window floor 900 × 600: below ~900pt the panorama's
                 // three-column bottom strip has no honest layout, so
                 // the window refuses to shrink further
@@ -68,5 +83,9 @@ struct RebornZuneMacApp: App {
         // the canvas extends to the top of the window; native traffic
         // lights stay (functional necessity) and float over content.
         .windowStyle(.hiddenTitleBar)
+
+        Settings {
+            LibrarySourcesSettingsView(library: library)
+        }
     }
 }

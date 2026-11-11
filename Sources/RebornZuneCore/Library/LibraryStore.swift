@@ -24,6 +24,73 @@ public actor LibraryStore {
         return result
     }
 
+    public func sourceStates() throws -> [LibrarySourceState] {
+        let stored = try modelContext.fetch(FetchDescriptor<StoredLibrarySource>(
+            sortBy: [SortDescriptor(\.path)]))
+        return stored.map {
+            LibrarySourceState(path: $0.path, bookmarkData: $0.bookmarkData,
+                               isAvailable: $0.isAvailable,
+                               committedTrackCount: $0.committedTrackCount)
+        }
+    }
+
+    public func needsSourceSeed() throws -> Bool {
+        try modelContext.fetch(FetchDescriptor<StoredAppSettings>()).first?.hasSeededLibrarySources != true
+    }
+
+    /// Seeds initial sources once. Later launches deliberately preserve zero sources.
+    public func seedSourcesIfNeeded(_ initial: [LibrarySourceState]) throws {
+        let settings = try modelContext.fetch(FetchDescriptor<StoredAppSettings>()).first
+            ?? StoredAppSettings()
+        if settings.modelContext == nil { modelContext.insert(settings) }
+        guard !settings.hasSeededLibrarySources else { return }
+        if try modelContext.fetch(FetchDescriptor<StoredLibrarySource>()).isEmpty {
+            for source in initial {
+                modelContext.insert(StoredLibrarySource(
+                    path: source.path, bookmarkData: source.bookmarkData,
+                    isAvailable: source.isAvailable,
+                    committedTrackCount: source.committedTrackCount))
+            }
+        }
+        settings.hasSeededLibrarySources = true
+        settings.updatedAt = .now
+        try modelContext.save()
+    }
+
+    public func addSource(_ source: LibrarySourceState) throws {
+        modelContext.insert(StoredLibrarySource(
+            path: source.path, bookmarkData: source.bookmarkData,
+            isAvailable: source.isAvailable,
+            committedTrackCount: source.committedTrackCount))
+        do { try modelContext.save() } catch {
+            modelContext.rollback()
+            throw error
+        }
+    }
+
+    public func updateBookmark(path: String, data: Data) throws {
+        let configurations = try modelContext.fetch(FetchDescriptor<StoredLibrarySource>(
+            predicate: #Predicate { $0.path == path }))
+        for configuration in configurations { configuration.bookmarkData = data }
+        try modelContext.save()
+    }
+
+    public func removeSource(path: String) throws {
+        modelContext.autosaveEnabled = false
+        do {
+            let tracks = try modelContext.fetch(FetchDescriptor<StoredTrack>(
+                predicate: #Predicate { $0.sourcePath == path }))
+            try deleteTracksAndLinkedData(Set(tracks.map(\.id)))
+            let configurations = try modelContext.fetch(FetchDescriptor<StoredLibrarySource>(
+                predicate: #Predicate { $0.path == path }))
+            for configuration in configurations { modelContext.delete(configuration) }
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            throw error
+        }
+    }
+
     /// Artwork bytes for the given Tracks (on demand).
     public func artwork(for ids: [UUID]) throws -> [UUID: Data] {
         var result: [UUID: Data] = [:]
@@ -43,9 +110,19 @@ public actor LibraryStore {
         extracted: [String: ExtractedMetadata],
         sourcePath: String
     ) throws {
+        try commit(scans: [LibrarySourceScan(sourcePath: sourcePath, plan: plan,
+                                             extracted: extracted, isAvailable: true)])
+    }
+
+    /// Commits a complete union snapshot and all source counts in one save.
+    func commit(scans: [LibrarySourceScan]) throws {
         modelContext.autosaveEnabled = false
         do {
-            try apply(plan: plan, extracted: extracted, sourcePath: sourcePath)
+            for scan in scans {
+                try apply(scan.plan, extracted: scan.extracted, sourcePath: scan.sourcePath)
+            }
+            try updateCommittedSources(scans)
+            try migrateLegacyEntries(scans)
             try modelContext.save()
         } catch {
             modelContext.rollback()
@@ -53,10 +130,8 @@ public actor LibraryStore {
         }
     }
 
-    private func apply(plan: ReconciliationPlan, extracted: [String: ExtractedMetadata],
+    private func apply(_ plan: ReconciliationPlan, extracted: [String: ExtractedMetadata],
                        sourcePath: String) throws {
-        let state = try libraryState()
-
         // Updates to existing Tracks.
         let touched = plan.tracks.filter { $0.kind != .added && $0.needsWrite }
         var existing: [UUID: StoredTrack] = [:]
@@ -96,47 +171,64 @@ public actor LibraryStore {
             Self.apply(meta, to: track)
         }
 
-        // Confirmed-missing cleanup: Tracks and their Playlist references.
-        let missing = Set(plan.missing)
-        if !missing.isEmpty {
-            for chunk in plan.missing.chunked(500) {
-                for t in try modelContext.fetch(
-                    FetchDescriptor<StoredTrack>(predicate: #Predicate { chunk.contains($0.id) })) {
-                    modelContext.delete(t)
-                }
-            }
-            let linked = try modelContext.fetch(
-                FetchDescriptor<StoredPlaylistEntry>(predicate: #Predicate { $0.trackID != nil }))
-            for entry in linked {
-                if let id = entry.trackID, missing.contains(id) { modelContext.delete(entry) }
+        try deleteTracksAndLinkedData(Set(plan.missing))
+    }
+
+    private func deleteTracksAndLinkedData(_ missing: Set<UUID>) throws {
+        guard !missing.isEmpty else { return }
+        for chunk in Array(missing).chunked(500) {
+            for track in try modelContext.fetch(
+                FetchDescriptor<StoredTrack>(predicate: #Predicate { chunk.contains($0.id) })) {
+                modelContext.delete(track)
             }
         }
+        let linked = try modelContext.fetch(
+            FetchDescriptor<StoredPlaylistEntry>(predicate: #Predicate { $0.trackID != nil }))
+        for entry in linked {
+            if let id = entry.trackID, missing.contains(id) { modelContext.delete(entry) }
+        }
+    }
 
-        // Legacy path-hash re-keying: exact current-path matches only, and only
-        // to Tracks that really exist. A current file whose extraction failed
-        // is left untouched so a later scan can still re-key it.
+    private func updateCommittedSources(_ scans: [LibrarySourceScan]) throws {
+        let stored = try modelContext.fetch(FetchDescriptor<StoredLibrarySource>())
+        let byPath = Dictionary(uniqueKeysWithValues: stored.map { ($0.path, $0) })
+        for scan in scans {
+            guard let source = byPath[scan.sourcePath] else { continue }
+            source.isAvailable = scan.isAvailable
+            source.committedTrackCount = scan.isAvailable
+                ? scan.plan.tracks.filter {
+                    $0.kind != .added || scan.extracted[$0.file.path] != nil
+                }.count
+                : 0
+        }
+    }
+
+    private func migrateLegacyEntries(_ scans: [LibrarySourceScan]) throws {
+        let state = try libraryState()
         let legacy = try modelContext.fetch(
             FetchDescriptor<StoredPlaylistEntry>(predicate: #Predicate { $0.trackID == nil }))
         if !legacy.isEmpty {
             var byHash: [String: UUID] = [:]
             var deferred = Set<String>()
-            for p in plan.tracks {
-                let paths = p.file.rawPath == p.file.path ? [p.file.path] : [p.file.path, p.file.rawPath]
-                let exists = p.kind != .added || extracted[p.file.path] != nil
-                for path in paths {
-                    let hash = Music.legacyID(forPath: path)
-                    if exists { byHash[hash] = p.id } else { deferred.insert(hash) }
+            for scan in scans {
+                for p in scan.plan.tracks {
+                    let paths = p.file.rawPath == p.file.path
+                        ? [p.file.path] : [p.file.path, p.file.rawPath]
+                    let exists = p.kind != .added || scan.extracted[p.file.path] != nil
+                    for path in paths {
+                        let hash = Music.legacyID(forPath: path)
+                        if exists { byHash[hash] = p.id } else { deferred.insert(hash) }
+                    }
                 }
             }
             for entry in legacy {
                 if let id = byHash[entry.musicID] {
                     entry.trackID = id
                 } else if !deferred.contains(entry.musicID) {
-                    // Successful scan, no current path matches: confirmed missing.
                     modelContext.delete(entry)
                 }
             }
-            if legacy.contains(where: { $0.trackID == nil && !$0.isDeleted }) == false {
+            if !legacy.contains(where: { $0.trackID == nil && !$0.isDeleted }) {
                 state.identityMigrationVersion = max(state.identityMigrationVersion, 1)
             }
         } else {

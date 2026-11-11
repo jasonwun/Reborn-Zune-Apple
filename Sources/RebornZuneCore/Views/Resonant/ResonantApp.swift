@@ -145,7 +145,7 @@ public struct ResonantApp: View {
     @ViewBuilder
     private var content: some View {
         if let libraryStatus {
-            LibraryStatusView(status: libraryStatus, onRetry: onRetry)
+            LibraryStatusView(status: libraryStatus, onRetry: onRetry, onPickFolder: onPickFolder)
         } else if needsLibraryFolder {
             FolderEmptyState(onPickFolder: onPickFolder)
         } else {
@@ -270,6 +270,7 @@ private struct ScanBanner: View {
 private struct LibraryStatusView: View {
     let status: LibraryStatus
     let onRetry: () -> Void
+    let onPickFolder: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -292,7 +293,16 @@ private struct LibraryStatusView: View {
                     .font(.system(size: 14))
                     .foregroundColor(ResonantColors.ink2)
                     .frame(maxWidth: 540, alignment: .leading)
-                retryButton("Scan again")
+                HStack(spacing: 18) {
+                    retryButton("Scan again")
+                    Button("Manage Sources", action: onPickFolder)
+                        .buttonStyle(.plain)
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .tracking(2.2)
+                        .textCase(.uppercase)
+                        .foregroundColor(ResonantColors.magenta)
+                        .padding(.top, 8)
+                }
             case .failed(let message):
                 Text("RESONANT · SCAN FAILED")
                     .resonantTag(size: 10, tracking: 2.2, color: ResonantColors.magenta)
