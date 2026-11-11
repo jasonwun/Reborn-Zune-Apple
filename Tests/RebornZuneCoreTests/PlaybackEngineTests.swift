@@ -124,6 +124,19 @@ final class PlaybackEngineTests: XCTestCase {
         XCTAssertEqual(engine.queue.count, items.count)
     }
 
+    func testShuffleArtistPlaysWholeArtistQueueInShuffledOrder() {
+        let engine = PlaybackEngine()
+        let tracks = (0..<8).map { makeMusic("artist-track-\($0)") }
+
+        engine.shuffleArtist(tracks)
+
+        XCTAssertTrue(engine.isShuffling)
+        XCTAssertEqual(Set(engine.queue), Set(tracks))
+        XCTAssertEqual(engine.queue.count, tracks.count)
+        XCTAssertEqual(engine.currentItem, engine.queue.first)
+        XCTAssertEqual(engine.state, .playing)
+    }
+
     func testEmptySetQueueResetsState() {
         let engine = PlaybackEngine()
         let a = makeMusic("a")

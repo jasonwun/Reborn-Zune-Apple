@@ -183,16 +183,27 @@ public struct ResonantApp: View {
                                    spacing: spacing,
                                    engine: engine)
             case .artists:
+                #if os(macOS)
+                MacArtistsScreen(library: library, spacing: spacing,
+                                 onOpen: { router.go(.artist($0.name)) })
+                #else
                 ArtistsScreen(library: library, spacing: spacing,
                               onOpen: { router.go(.artist($0.name)) })
+                #endif
             case .artist(let name):
                 let resolved = library.artists.first(where: { $0.name == name })
                     ?? library.artists.first(where: { $0.name.lowercased().contains(name.lowercased()) })
                     ?? library.artists.first
                 if let artist = resolved {
+                    #if os(macOS)
+                    MacArtistScreen(artist: artist, library: library, spacing: spacing, engine: engine,
+                                    onAlbum: { router.go(.album($0.id)) },
+                                    onArtist: { router.go(.artist($0.name)) })
+                    #else
                     ArtistScreen(artist: artist, library: library, spacing: spacing,
                                  onAlbum: { router.go(.album($0.id)) },
                                  onArtist: { router.go(.artist($0.name)) })
+                    #endif
                 } else {
                     Text("Artist not found.").foregroundColor(ResonantColors.ink2)
                 }
@@ -289,7 +300,7 @@ private struct LibraryStatusView: View {
                 Text("No music found")
                     .font(ResonantFont.display(96, weight: .ultraLight))
                     .tracking(-2.0)
-                Text("There are no supported audio files (MP3, M4A, MP4, AAC) in \(path). Add some and relaunch, or scan again.")
+                Text("There are no supported audio files (MP3, M4A, MP4, AAC, FLAC, WAV, AIFF) in \(path). Add some and relaunch, or scan again.")
                     .font(.system(size: 14))
                     .foregroundColor(ResonantColors.ink2)
                     .frame(maxWidth: 540, alignment: .leading)

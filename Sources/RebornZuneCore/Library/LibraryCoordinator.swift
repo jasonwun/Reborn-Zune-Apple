@@ -291,7 +291,8 @@ public final class LibraryCoordinator {
         let music = snapshots.map { s in
             Music(id: s.id.uuidString, url: URL(fileURLWithPath: s.path), title: s.title,
                   artist: s.artist, albumArtist: s.albumArtist, albumTitle: s.albumTitle,
-                  year: s.year, duration: s.duration, artworkData: byAlbum[albumKey(s)])
+                  year: s.year, trackNumber: s.trackNumber, discNumber: s.discNumber,
+                  genre: s.genre, duration: s.duration, artworkData: byAlbum[albumKey(s)])
         }
         return music.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
     }

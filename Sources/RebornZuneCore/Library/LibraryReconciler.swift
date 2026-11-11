@@ -17,6 +17,9 @@ public struct TrackSnapshot: Sendable, Equatable {
     public var duration: Double
     public var hasArtwork: Bool
     public var metadataVersion: Int
+    public var trackNumber: Int? = nil
+    public var discNumber: Int? = nil
+    public var genre: String? = nil
 }
 
 /// What a scan decided for one file.

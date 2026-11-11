@@ -33,7 +33,8 @@ let package = Package(
         .testTarget(
             name: "RebornZuneCoreTests",
             dependencies: ["RebornZuneCore"],
-            path: "Tests/RebornZuneCoreTests"
+            path: "Tests/RebornZuneCoreTests",
+            exclude: ["Fixtures"]
         ),
         .plugin(
             name: "MetalCompilerPlugin",

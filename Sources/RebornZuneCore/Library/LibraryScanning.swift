@@ -2,7 +2,7 @@ import Foundation
 
 /// Version of the metadata extraction schema. Bump to force a one-time full
 /// re-extraction; independent of identity migration and search versions.
-public let currentMetadataVersion = 1
+public let currentMetadataVersion = 2
 
 /// A supported audio file found on disk, with the data needed for
 /// fingerprinting and move matching.
@@ -39,17 +39,24 @@ public struct ExtractedMetadata: Sendable, Equatable {
     public var albumArtist: String?
     public var albumTitle: String?
     public var year: Int?
+    public var trackNumber: Int?
+    public var discNumber: Int?
+    public var genre: String?
     public var duration: TimeInterval
     public var artworkData: Data?
 
     public init(title: String, artist: String? = nil, albumArtist: String? = nil,
-                albumTitle: String? = nil, year: Int? = nil, duration: TimeInterval = 0,
+                albumTitle: String? = nil, year: Int? = nil, trackNumber: Int? = nil,
+                discNumber: Int? = nil, genre: String? = nil, duration: TimeInterval = 0,
                 artworkData: Data? = nil) {
         self.title = title
         self.artist = artist
         self.albumArtist = albumArtist
         self.albumTitle = albumTitle
         self.year = year
+        self.trackNumber = trackNumber
+        self.discNumber = discNumber
+        self.genre = genre
         self.duration = duration
         self.artworkData = artworkData
     }

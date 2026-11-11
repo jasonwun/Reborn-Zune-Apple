@@ -106,8 +106,12 @@ struct PlaylistTile: View {
             }
             .reduce(0, +)
         let hours = ResonantSynth.runtime(seconds: totalSeconds)
+        #if os(macOS)
+        return "\(count) tracks · \(hours)"
+        #else
         let mood = ResonantSynth.genre(for: playlist.id.uuidString)
         return "\(mood) · \(count) tracks · \(hours)"
+        #endif
     }
 
     var body: some View {

@@ -71,6 +71,50 @@ final class LibraryGroupingTests: XCTestCase {
                        "Tracks within an album must be sorted by title ascending.")
     }
 
+    func testTrackOrderingUsesDiscTrackThenTitleForUnnumbered() {
+        let tracks = [
+            makeTrack(path: "/m/d2.mp3", title: "Second Disc", albumTitle: "Mixed", albumArtist: "B", trackNumber: 1, discNumber: 2),
+            makeTrack(path: "/m/d1-10.mp3", title: "Ten", albumTitle: "Mixed", albumArtist: "B", trackNumber: 10),
+            makeTrack(path: "/m/untracked-b.mp3", title: "beta", albumTitle: "Mixed", albumArtist: "B"),
+            makeTrack(path: "/m/d1-2.mp3", title: "Two", albumTitle: "Mixed", albumArtist: "B", trackNumber: 2),
+            makeTrack(path: "/m/untracked-a.mp3", title: "Alpha", albumTitle: "Mixed", albumArtist: "B"),
+        ]
+
+        let album = LibraryGrouping.albums(from: tracks).first
+
+        XCTAssertEqual(album?.tracks.map { $0.title }, ["Two", "Ten", "Alpha", "beta", "Second Disc"])
+    }
+
+    func testAlbumGenreIsMostCommonRealTrackGenre() {
+        let tracks = [
+            makeTrack(path: "/m/1.mp3", title: "One", albumTitle: "Genres", albumArtist: "B", genre: "Rock"),
+            makeTrack(path: "/m/2.mp3", title: "Two", albumTitle: "Genres", albumArtist: "B", genre: "Jazz"),
+            makeTrack(path: "/m/3.mp3", title: "Three", albumTitle: "Genres", albumArtist: "B", genre: "Jazz"),
+            makeTrack(path: "/m/4.mp3", title: "Four", albumTitle: "Genres", albumArtist: "B"),
+        ]
+
+        XCTAssertEqual(LibraryGrouping.albums(from: tracks).first?.genre, "Jazz")
+        let untagged = makeTrack(path: "/m/none.mp3", title: "None", albumTitle: "None", albumArtist: "B")
+        XCTAssertNil(LibraryGrouping.albums(from: [untagged]).first?.genre)
+    }
+
+    func testAlbumPresentationAddsOnlyMultiDiscHeadingsAndUsesPositionalFallback() {
+        let tracks = [
+            makeTrack(path: "/m/d2.mp3", title: "Second Disc", albumTitle: "Presentation", albumArtist: "B", trackNumber: 3, discNumber: 2),
+            makeTrack(path: "/m/d1.mp3", title: "First Disc", albumTitle: "Presentation", albumArtist: "B", trackNumber: 7, discNumber: 1),
+            makeTrack(path: "/m/untracked.mp3", title: "Untracked", albumTitle: "Presentation", albumArtist: "B"),
+        ]
+        let album = LibraryGrouping.albums(from: tracks)[0]
+
+        let rows = album.trackPresentation
+        XCTAssertEqual(rows.map(\.discHeading), ["Disc 1", nil, "Disc 2"])
+        XCTAssertEqual(rows.map(\.displayNumber), [7, 2, 3])
+        XCTAssertEqual(rows.map(\.queueIndex), [0, 1, 2])
+
+        let single = Album(id: "single", title: "Single", albumArtist: "B", year: nil, tracks: [tracks[1]])
+        XCTAssertEqual(single.trackPresentation.map(\.discHeading), [String?].init(repeating: nil, count: 1))
+    }
+
     func testEmptyInput() {
         XCTAssertEqual(LibraryGrouping.albums(from: []), [])
         XCTAssertEqual(LibraryGrouping.artists(from: []), [])
@@ -110,7 +154,10 @@ final class LibraryGroupingTests: XCTestCase {
         albumTitle: String?,
         artist: String? = nil,
         albumArtist: String?,
-        year: Int? = nil
+        year: Int? = nil,
+        trackNumber: Int? = nil,
+        discNumber: Int? = nil,
+        genre: String? = nil
     ) -> Music {
         let url = URL(fileURLWithPath: path)
         return Music(
@@ -121,6 +168,9 @@ final class LibraryGroupingTests: XCTestCase {
             albumArtist: albumArtist,
             albumTitle: albumTitle,
             year: year,
+            trackNumber: trackNumber,
+            discNumber: discNumber,
+            genre: genre,
             duration: 0,
             artworkData: nil
         )

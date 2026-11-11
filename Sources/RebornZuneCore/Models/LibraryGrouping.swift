@@ -9,7 +9,8 @@ public enum LibraryGrouping {
     ///     2. Else use `artist` if non-nil and not `"Unknown Artist"`.
     ///     3. Else `"Unknown Artist"`.
     /// - Album.year is the earliest non-nil year among the album's tracks.
-    /// - Album.tracks is sorted by title ascending.
+    /// - Album.tracks is sorted by disc (default 1), track (unnumbered last),
+    ///   then localized case-insensitive title.
     public static func albums(from tracks: [Music]) -> [Album] {
         guard !tracks.isEmpty else { return [] }
 
@@ -34,7 +35,17 @@ public enum LibraryGrouping {
 
         return insertionOrder.map { key in
             let bucket = buckets[key] ?? []
-            let sorted = bucket.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            let sorted = bucket.sorted { lhs, rhs in
+                let lhsDisc = lhs.discNumber ?? 1
+                let rhsDisc = rhs.discNumber ?? 1
+                if lhsDisc != rhsDisc { return lhsDisc < rhsDisc }
+                let lhsTrack = lhs.trackNumber ?? Int.max
+                let rhsTrack = rhs.trackNumber ?? Int.max
+                if lhsTrack != rhsTrack { return lhsTrack < rhsTrack }
+                let titleOrder = lhs.title.localizedCaseInsensitiveCompare(rhs.title)
+                if titleOrder != .orderedSame { return titleOrder == .orderedAscending }
+                return lhs.id < rhs.id
+            }
             let earliestYear = bucket.compactMap { $0.year }.min()
             return Album(
                 id: Album.makeID(title: key.albumTitle, albumArtist: key.privilegedArtist),

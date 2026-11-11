@@ -11,11 +11,13 @@ final class FakeSource: LibraryFileSource, @unchecked Sendable {
     private var _extractions: [String] = []
     private var _failExtraction = Set<String>()
     private var _delay: UInt64 = 0
+    private var _metadata: ExtractedMetadata?
 
     var files: [DiscoveredFile] { get { lock.withLock { _files } } set { lock.withLock { _files = newValue } } }
     var error: Error? { get { lock.withLock { _error } } set { lock.withLock { _error = newValue } } }
     var extractions: [String] { lock.withLock { _extractions } }
     var delayNanos: UInt64 { get { lock.withLock { _delay } } set { lock.withLock { _delay = newValue } } }
+    var metadata: ExtractedMetadata? { get { lock.withLock { _metadata } } set { lock.withLock { _metadata = newValue } } }
     func failExtraction(of path: String) { lock.withLock { _ = _failExtraction.insert(path) } }
 
     func discover() async throws -> [DiscoveredFile] {
@@ -27,6 +29,7 @@ final class FakeSource: LibraryFileSource, @unchecked Sendable {
         if d > 0 { try await Task.sleep(nanoseconds: d) }
         let fail = lock.withLock { _extractions.append(file.path); return _failExtraction.contains(file.path) }
         if fail { throw CocoaError(.fileReadCorruptFile) }
+        if let metadata { return metadata }
         return ExtractedMetadata(title: (file.path as NSString).lastPathComponent,
                                  artist: "Artist", albumTitle: "Album", duration: 60,
                                  artworkData: Data([1, 2, 3]))
@@ -81,6 +84,30 @@ final class LibraryCoordinatorTests: XCTestCase {
         XCTAssertEqual(second.scanError, "Boom")
     }
 
+    func testInitialImportPersistsTrackDiscAndGenreAcrossRelaunch() async throws {
+        let container = try container()
+        let source = FakeSource()
+        source.files = [file("a.mp3")]
+        source.metadata = ExtractedMetadata(
+            title: "Real Title", artist: "Artist", albumTitle: "Album",
+            trackNumber: 4, discNumber: 2, genre: "Jazz", duration: 60
+        )
+        let first = coordinator(container, source)
+        await first.start()
+
+        XCTAssertEqual(first.tracks.first?.trackNumber, 4)
+        XCTAssertEqual(first.tracks.first?.discNumber, 2)
+        XCTAssertEqual(first.tracks.first?.genre, "Jazz")
+
+        let unavailable = FakeSource()
+        unavailable.error = Boom()
+        let second = coordinator(container, unavailable)
+        await second.start()
+        XCTAssertEqual(second.tracks.first?.trackNumber, 4)
+        XCTAssertEqual(second.tracks.first?.discNumber, 2)
+        XCTAssertEqual(second.tracks.first?.genre, "Jazz")
+    }
+
     func testEmptyScanIsEmptyNotFailedAndNeverDemo() async throws {
         let source = FakeSource()
         let c = coordinator(try container(), source)
@@ -130,6 +157,36 @@ final class LibraryCoordinatorTests: XCTestCase {
         await c.refresh()
         XCTAssertEqual(source.extractions.count, 3)
         XCTAssertEqual(c.tracks.count, 2)
+    }
+
+    func testMetadataVersionBackfillsOnceThenReturnsToIncrementalScanning() async throws {
+        let container = try container()
+        let source = FakeSource()
+        source.files = [file("a.mp3")]
+        let coordinator = coordinator(container, source)
+        await coordinator.start()
+        XCTAssertEqual(source.extractions.count, 1)
+
+        let context = ModelContext(container)
+        let stored = try XCTUnwrap(context.fetch(FetchDescriptor<StoredTrack>()).first)
+        stored.metadataVersion = 1
+        stored.trackNumber = nil
+        stored.discNumber = nil
+        stored.genre = nil
+        try context.save()
+        source.metadata = ExtractedMetadata(
+            title: "Real Title", trackNumber: 6, discNumber: 2, genre: "Ambient"
+        )
+
+        await coordinator.refresh()
+        XCTAssertEqual(currentMetadataVersion, 2)
+        XCTAssertEqual(source.extractions.count, 2, "version 1 rows are re-extracted despite an unchanged fingerprint")
+        XCTAssertEqual(coordinator.tracks.first?.trackNumber, 6)
+        XCTAssertEqual(coordinator.tracks.first?.discNumber, 2)
+        XCTAssertEqual(coordinator.tracks.first?.genre, "Ambient")
+
+        await coordinator.refresh()
+        XCTAssertEqual(source.extractions.count, 2, "the backfill does not repeat after rows reach version 2")
     }
 
     func testMoveKeepsIdentityAndCopyGetsNewOne() async throws {
@@ -355,6 +412,17 @@ final class FolderFileSourceIdentityTests: XCTestCase {
                 return XCTFail("Permission/read failures must preserve the Library, got \(error)")
             }
         }
+    }
+
+    func testDiscoversNewFormatsButNotOggOrStandaloneOpus() async throws {
+        let supported = ["mp3", "m4a", "mp4", "aac", "flac", "wav", "aiff"]
+        for ext in supported + ["ogg", "opus"] {
+            try Data("audio".utf8).write(to: root.appendingPathComponent("track.\(ext)"))
+        }
+
+        let found = try await FolderFileSource(root: root).discover()
+
+        XCTAssertEqual(Set(found.map { $0.url.pathExtension }), Set(supported))
     }
 
     func testEmptyRootIsEmptyNotAnError() async throws {

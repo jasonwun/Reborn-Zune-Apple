@@ -13,4 +13,7 @@ enum SupportedAudioExtension: String, CaseIterable {
     case m4a
     case mp4
     case aac
+    case flac
+    case wav
+    case aiff
 }

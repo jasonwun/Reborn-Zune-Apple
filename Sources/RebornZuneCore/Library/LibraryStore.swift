@@ -250,6 +250,9 @@ public actor LibraryStore {
         track.albumArtist = meta.albumArtist
         track.albumTitle = meta.albumTitle
         track.year = meta.year
+        track.trackNumber = meta.trackNumber
+        track.discNumber = meta.discNumber
+        track.genre = meta.genre
         track.duration = meta.duration
         track.metadataVersion = currentMetadataVersion
         if let data = meta.artworkData {
@@ -267,7 +270,8 @@ public actor LibraryStore {
             modificationDate: t.modificationDate, fileSize: t.fileSize,
             volumeID: t.volumeID, fileID: t.fileID, title: t.title, artist: t.artist,
             albumArtist: t.albumArtist, albumTitle: t.albumTitle, year: t.year,
-            duration: t.duration, hasArtwork: t.hasArtwork, metadataVersion: t.metadataVersion)
+            duration: t.duration, hasArtwork: t.hasArtwork, metadataVersion: t.metadataVersion,
+            trackNumber: t.trackNumber, discNumber: t.discNumber, genre: t.genre)
     }
 }
 
