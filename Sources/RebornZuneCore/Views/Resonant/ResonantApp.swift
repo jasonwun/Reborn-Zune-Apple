@@ -20,6 +20,7 @@ public struct ResonantApp: View {
     let libraryStatus: LibraryStatus?
     let scanBanner: String?
     let onRetry: () -> Void
+    let onGrantAccess: (() -> Void)?
 
     @State private var router = ResonantRouter(initial: ResonantRouter.envInitialRoute())
     @State private var showCreatePlaylist = false
@@ -35,7 +36,8 @@ public struct ResonantApp: View {
                 onPickFolder: @escaping () -> Void = {},
                 libraryStatus: LibraryStatus? = nil,
                 scanBanner: String? = nil,
-                onRetry: @escaping () -> Void = {}) {
+                onRetry: @escaping () -> Void = {},
+                onGrantAccess: (() -> Void)? = nil) {
         self.engine = engine
         self.library = library
         self.tiles = tiles
@@ -47,6 +49,7 @@ public struct ResonantApp: View {
         self.libraryStatus = libraryStatus
         self.scanBanner = scanBanner
         self.onRetry = onRetry
+        self.onGrantAccess = onGrantAccess
     }
 
     private var spacing: ResonantSpacing { ResonantSpacing.for(density) }
@@ -95,7 +98,7 @@ public struct ResonantApp: View {
                         PivotNav(router: router, spacing: spacing)
                     }
                     if let scanBanner {
-                        ScanBanner(message: scanBanner, onRetry: onRetry)
+                        ScanBanner(message: scanBanner, onRetry: onRetry, onGrantAccess: onGrantAccess)
                     }
                     content
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -145,7 +148,8 @@ public struct ResonantApp: View {
     @ViewBuilder
     private var content: some View {
         if let libraryStatus {
-            LibraryStatusView(status: libraryStatus, onRetry: onRetry, onPickFolder: onPickFolder)
+            LibraryStatusView(status: libraryStatus, onRetry: onRetry, onPickFolder: onPickFolder,
+                              onGrantAccess: onGrantAccess)
         } else if needsLibraryFolder {
             FolderEmptyState(onPickFolder: onPickFolder)
         } else {
@@ -258,6 +262,7 @@ public enum LibraryStatus: Equatable, Sendable {
 private struct ScanBanner: View {
     let message: String
     let onRetry: () -> Void
+    let onGrantAccess: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 12) {
@@ -266,6 +271,14 @@ private struct ScanBanner: View {
                 .foregroundColor(ResonantColors.ink2)
                 .lineLimit(2)
             Spacer(minLength: 12)
+            if let onGrantAccess {
+                Button("Grant Access…", action: onGrantAccess)
+                    .buttonStyle(.plain)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .tracking(2.2)
+                    .textCase(.uppercase)
+                    .foregroundColor(ResonantColors.magenta)
+            }
             Button("Retry", action: onRetry)
                 .buttonStyle(.plain)
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -282,6 +295,7 @@ private struct LibraryStatusView: View {
     let status: LibraryStatus
     let onRetry: () -> Void
     let onPickFolder: () -> Void
+    let onGrantAccess: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -324,7 +338,18 @@ private struct LibraryStatusView: View {
                     .font(.system(size: 14))
                     .foregroundColor(ResonantColors.ink2)
                     .frame(maxWidth: 540, alignment: .leading)
-                retryButton("Retry")
+                HStack(spacing: 18) {
+                    retryButton("Retry")
+                    if let onGrantAccess {
+                        Button("Grant Access…", action: onGrantAccess)
+                            .buttonStyle(.plain)
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .tracking(2.2)
+                            .textCase(.uppercase)
+                            .foregroundColor(ResonantColors.magenta)
+                            .padding(.top, 8)
+                    }
+                }
             }
         }
         .padding(80)

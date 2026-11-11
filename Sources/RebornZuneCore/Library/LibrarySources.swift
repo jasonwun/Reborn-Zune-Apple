@@ -19,11 +19,14 @@ public struct LibrarySourceState: Identifiable, Equatable, Sendable {
 
 public enum LibrarySourceError: LocalizedError, Equatable {
     case overlappingSource(candidate: String, conflict: String)
+    case grantMismatch(selected: String, expected: String)
 
     public var errorDescription: String? {
         switch self {
         case .overlappingSource(let candidate, let conflict):
             return "The folder \(candidate) overlaps the existing Library Source \(conflict). Choose a folder that is not the same as, inside, or above an existing source."
+        case .grantMismatch(let selected, let expected):
+            return "The selected folder \(selected) does not match the Library Source \(expected). Choose the requested folder to grant access."
         }
     }
 }
@@ -31,6 +34,10 @@ public enum LibrarySourceError: LocalizedError, Equatable {
 enum LibrarySourcePath {
     static func normalize(_ url: URL) -> String {
         url.standardizedFileURL.path
+    }
+
+    static func contains(_ path: String, in root: String) -> Bool {
+        isPrefix(components(root), of: components(path))
     }
 
     static func conflict(for candidate: String, among existing: [String]) -> String? {

@@ -8,7 +8,7 @@ struct RebornZuneMacApp: App {
     /// Failure to open falls back to an in-memory container so the app
     /// can still launch (the user just loses persistence).
     private let modelContainer = RebornZuneMacApp.sharedContainer
-    @State private var engine = PlaybackEngine()
+    @State private var engine: PlaybackEngine
     @State private var library: LibraryCoordinator
 
     init() {
@@ -19,9 +19,14 @@ struct RebornZuneMacApp: App {
             root = FileManager.default.urls(for: .musicDirectory, in: .userDomainMask).first
                 ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Music")
         }
-        _library = State(initialValue: LibraryCoordinator(
+        let library = LibraryCoordinator(
             container: RebornZuneMacApp.sharedContainer,
-            sources: [FolderFileSource(root: root)]))
+            sources: [FolderFileSource(root: root)])
+        _library = State(initialValue: library)
+        _engine = State(initialValue: PlaybackEngine(fileAccess: { [weak library] url in
+            guard let library else { throw LibraryBookmarkError.accessDenied(url.path) }
+            return try library.startPlaybackAccess(for: url)
+        }))
     }
 
     /// One container shared by SwiftUI (`.modelContainer`) and the Library

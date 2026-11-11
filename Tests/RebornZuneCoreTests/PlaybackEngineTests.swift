@@ -24,6 +24,35 @@ final class PlaybackEngineTests: XCTestCase {
 
     // MARK: - Tests
 
+    func testPlaybackBalancesSecurityScopesAcrossAdvanceAndTrackRemoval() throws {
+        let bookmarks = FakeBookmarkAccess()
+        let engine = PlaybackEngine(fileAccess: { url in
+            try bookmarks.startAccessing(bookmark: Data("playback".utf8), at: url)
+        })
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let audioURL = repositoryRoot.appendingPathComponent("Apps/tvOS/Resources/silence.m4a")
+        let tracks = (0..<5).map { index in
+            Music(id: UUID().uuidString, url: audioURL, title: "scope\(index)",
+                  artist: nil, albumArtist: nil, albumTitle: nil, year: nil,
+                  duration: 5, artworkData: nil)
+        }
+
+        engine.setQueue(tracks)
+        XCTAssertEqual(bookmarks.starts, 5, "each loaded AVPlayerItem owns access")
+        XCTAssertEqual(bookmarks.stops, 0, "AVPlayer may read lazily after the scan scope stops")
+
+        engine.next()
+        XCTAssertEqual(bookmarks.starts, 9)
+        XCTAssertEqual(bookmarks.stops, 5, "advancing releases the previous AVQueuePlayer items")
+
+        engine.removeTracks(withIDs: Set(tracks.map(\.id)))
+        XCTAssertEqual(bookmarks.starts, bookmarks.stops)
+        XCTAssertEqual(bookmarks.stops, 9)
+    }
+
     func testInitialStateIsStoppedNoItem() {
         let engine = PlaybackEngine()
         XCTAssertEqual(engine.state, .stopped)

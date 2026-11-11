@@ -44,6 +44,7 @@ targets:
         PRODUCT_NAME: "Reborn Zune"
         GENERATE_INFOPLIST_FILE: NO
         ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_ENTITLEMENTS: RebornZune-macOS.entitlements
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGNING_ALLOWED: YES

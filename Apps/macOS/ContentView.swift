@@ -64,6 +64,7 @@ private struct ResonantHost: View {
     /// 1440×900 placeholder until `.task` ran) so the tile wall's
     /// first-layout freeze never sees a stale screen size.
     @State private var screenSize = NSScreen.main?.frame.size ?? CGSize(width: 1440, height: 900)
+    @State private var grantError: String?
 
     var body: some View {
         let _ = PerfProbe.once("app.body")
@@ -101,7 +102,10 @@ private struct ResonantHost: View {
                 onPickFolder: { openSettings() },
                 libraryStatus: status,
                 scanBanner: banner,
-                onRetry: { Task { await library.retry() } }
+                onRetry: { Task { await library.retry() } },
+                onGrantAccess: library.sourcePathsRequiringAuthorization.isEmpty
+                    ? nil
+                    : { grantAccess() }
             )
             .environment(\.resonantLayout, .mac(screen: screenSize))
             .environment(\.resonantWindowSize, proxy.size)
@@ -109,6 +113,14 @@ private struct ResonantHost: View {
         }
         .background(WindowSizeAccessor(targetSize: Self.initialWindowTarget))
         .background(WindowChromeConfigurator())
+        .alert("Library Access", isPresented: Binding(
+            get: { grantError != nil },
+            set: { if !$0 { grantError = nil } }
+        )) {
+            Button("OK") {}
+        } message: {
+            Text(grantError ?? "")
+        }
         .onReceive(NotificationCenter.default.publisher(
             for: NSWindow.didChangeScreenNotification)) { _ in
             updateScreenSize()
@@ -127,6 +139,11 @@ private struct ResonantHost: View {
             updateScreenSize()
             await library.start()
         }
+    }
+
+    private func grantAccess() {
+        guard let path = library.sourcePathsRequiringAuthorization.sorted().first else { return }
+        MacLibraryAuthorization.requestAccess(to: path, library: library) { grantError = $0 }
     }
 
     private func updateScreenSize() {
