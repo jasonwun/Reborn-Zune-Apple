@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     let library: LibraryCoordinator
     let engine: PlaybackEngine
+    let history: PlayHistory
     let router: ResonantRouter
     let appDelegate: MacAppDelegate
 
@@ -14,10 +15,12 @@ struct ContentView: View {
         if let path = SnapshotHarness.requestedOutputPath {
             SnapshotView(outputPath: path)
         } else {
-            ResonantHost(library: library, engine: engine, router: router, appDelegate: appDelegate)
+            ResonantHost(library: library, engine: engine, history: history,
+                         router: router, appDelegate: appDelegate)
         }
         #else
-        ResonantHost(library: library, engine: engine, router: router, appDelegate: appDelegate)
+        ResonantHost(library: library, engine: engine, history: history,
+                     router: router, appDelegate: appDelegate)
         #endif
     }
 }
@@ -59,6 +62,7 @@ private struct SnapshotView: View {
 private struct ResonantHost: View {
     let library: LibraryCoordinator
     let engine: PlaybackEngine
+    let history: PlayHistory
     let router: ResonantRouter
     let appDelegate: MacAppDelegate
     @Environment(\.openSettings) private var openSettings
@@ -142,8 +146,9 @@ private struct ResonantHost: View {
         }
         .task {
             updateScreenSize()
-            // Issue #25 owns persistent history and supplies this provider.
-            appDelegate.configureDock(engine: engine, recentTracks: { [] })
+            appDelegate.configureDock(engine: engine, recentTracks: {
+                (try? history.recentTracks(from: library.tracks)) ?? []
+            })
             await library.start()
         }
     }

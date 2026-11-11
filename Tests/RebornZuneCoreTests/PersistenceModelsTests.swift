@@ -74,7 +74,7 @@ final class PersistenceModelsTests: XCTestCase {
     }
 
     func testSchemaContainsAllEntities() {
-        XCTAssertEqual(RebornZunePersistence.schema.entities.count, 7)
+        XCTAssertEqual(RebornZunePersistence.schema.entities.count, 9)
         let names = Set(RebornZunePersistence.schema.entities.map(\.name))
         XCTAssertTrue(names.contains("StoredPlaylist"))
         XCTAssertTrue(names.contains("StoredPlaylistEntry"))
@@ -83,5 +83,7 @@ final class PersistenceModelsTests: XCTestCase {
         XCTAssertTrue(names.contains("StoredTrackArtwork"))
         XCTAssertTrue(names.contains("StoredLibraryState"))
         XCTAssertTrue(names.contains("StoredLibrarySource"))
+        XCTAssertTrue(names.contains("StoredPlayHistoryEntry"))
+        XCTAssertTrue(names.contains("StoredTrackPlaybackStats"))
     }
 }

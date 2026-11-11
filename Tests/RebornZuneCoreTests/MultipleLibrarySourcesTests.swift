@@ -146,10 +146,16 @@ final class MultipleLibrarySourcesTests: XCTestCase {
         context.insert(StoredPlaylistEntry(orderIndex: 1, musicID: "two",
                                            trackID: UUID(uuidString: retainedID), playlist: playlist))
         try context.save()
+        let history = PlayHistory(container: container)
+        for id in [removedID, retainedID] {
+            try history.record(.start(id: UUID(), trackID: id, reason: .actual))
+        }
 
         try await coordinator.removeSource(first.sourcePath)
 
         XCTAssertEqual(coordinator.tracks.map(\.id), [retainedID])
+        XCTAssertEqual(try history.historyEntries().map(\.trackID), [UUID(uuidString: retainedID)])
+        XCTAssertEqual(try history.playbackStats().map(\.trackID), [UUID(uuidString: retainedID)])
         XCTAssertEqual(coordinator.sources.map(\.path), [second.sourcePath])
         let entries = try ModelContext(container).fetch(FetchDescriptor<StoredPlaylistEntry>())
         XCTAssertEqual(entries.map(\.trackID), [UUID(uuidString: retainedID)])
@@ -177,15 +183,22 @@ final class MultipleLibrarySourcesTests: XCTestCase {
         let second = MultiFakeSource("/fake/B")
         first.files = [file(first.sourcePath, "one.mp3")]
         second.files = [file(second.sourcePath, "two.mp3")]
-        let coordinator = coordinator(try container(), sources: [first, second])
+        let container = try container()
+        let coordinator = coordinator(container, sources: [first, second])
         await coordinator.start()
         let oldID = coordinator.tracks.first { $0.title == "one.mp3" }!.id
         let unrelatedID = coordinator.tracks.first { $0.title == "two.mp3" }!.id
+        let history = PlayHistory(container: container)
+        for id in [oldID, unrelatedID] {
+            try history.record(.start(id: UUID(), trackID: id, reason: .actual))
+        }
 
         first.error = LibraryScanError.sourceUnavailable(first.sourcePath)
         await coordinator.refresh()
 
         XCTAssertEqual(coordinator.tracks.map(\.id), [unrelatedID])
+        XCTAssertEqual(try history.historyEntries().map(\.trackID), [UUID(uuidString: unrelatedID)])
+        XCTAssertEqual(try history.playbackStats().map(\.trackID), [UUID(uuidString: unrelatedID)])
         XCTAssertEqual(coordinator.sources.count, 2)
         XCTAssertFalse(coordinator.sources[0].isAvailable)
         XCTAssertEqual(coordinator.sources[0].committedTrackCount, 0)

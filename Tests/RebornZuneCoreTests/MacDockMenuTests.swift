@@ -7,7 +7,7 @@ import AppKit
 final class MacDockMenuTests: XCTestCase {
     private func makeTrack(_ index: Int) -> Music {
         let url = URL(fileURLWithPath: "/tmp/reborn-zune-tests/dock-\(index).m4a")
-        return Music(id: "dock-\(index)", url: url, title: "Dock \(index)", artist: nil,
+        return Music(id: UUID().uuidString, url: url, title: "Dock \(index)", artist: nil,
                      albumArtist: nil, albumTitle: nil, year: nil, duration: 100, artworkData: nil)
     }
 
@@ -33,10 +33,19 @@ final class MacDockMenuTests: XCTestCase {
         XCTAssertEqual(engine.currentItem, tracks[0])
     }
 
-    func testRecentSelectionPlaysTrackAndEmptyHistoryIsDisabled() {
+    func testRecentSelectionPlaysTrackAndEmptyHistoryIsDisabled() throws {
         let engine = PlaybackEngine()
         let tracks = (0..<12).map(makeTrack)
-        let dock = MacDockMenuController(engine: engine) { tracks + [tracks[0]] }
+        var now = Date(timeIntervalSince1970: 70_000)
+        let history = PlayHistory(
+            container: try RebornZunePersistence.makeInMemoryContainer(), now: { now })
+        for track in tracks.reversed() + [tracks[0]] {
+            try history.record(.start(id: UUID(), trackID: track.id, reason: .actual))
+            now = now.addingTimeInterval(1)
+        }
+        let dock = MacDockMenuController(engine: engine) {
+            try! history.recentTracks(from: tracks)
+        }
         let menu = dock.makeMenu()
         let recentItem = try! XCTUnwrap(menu.items.first { $0.title == "Recently Played" })
         let recentMenu = try! XCTUnwrap(recentItem.submenu)
