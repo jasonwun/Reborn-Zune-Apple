@@ -94,6 +94,26 @@ final class PlayHistoryTests: XCTestCase {
                        [ids[1], ids[0], ids[3]].map(\.uuidString))
     }
 
+    func testRecentlyPlayedLoadsAvailableTracksOutsideBrowsingPage() throws {
+        let container = try RebornZunePersistence.makeInMemoryContainer()
+        let context = ModelContext(container)
+        context.insert(StoredTrack(
+            id: trackID, path: "/tmp/unloaded-recent.m4a", sourcePath: "/tmp",
+            modificationDate: Date(timeIntervalSince1970: 1), fileSize: 1,
+            volumeID: nil, fileID: nil, title: "Unloaded Recent", artist: "Artist",
+            albumArtist: "Album Artist", albumTitle: "Album", year: 2024,
+            duration: 42, hasArtwork: false, metadataVersion: 1))
+        try context.save()
+        let history = PlayHistory(container: container, now: { Date(timeIntervalSince1970: 25_000) })
+        try history.record(.start(id: eventID, trackID: trackID.uuidString, reason: .actual))
+
+        let recent = try history.recentTracks()
+
+        XCTAssertEqual(recent.map(\.id), [trackID.uuidString])
+        XCTAssertEqual(recent.first?.title, "Unloaded Recent")
+        XCTAssertEqual(recent.first?.artist, "Artist")
+    }
+
     func testKnownDurationUsesWhicheverQualificationThresholdComesFirst() throws {
         var now = Date(timeIntervalSince1970: 30_000)
         let history = try makeHistory(now: { now })

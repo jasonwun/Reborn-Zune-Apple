@@ -76,6 +76,29 @@ public final class PlayHistory {
                                                    startedAt: $0.startedAt, qualifiedAt: $0.qualifiedAt) }
     }
 
+    /// Resolves up to ten latest distinct Tracks directly from the committed Library,
+    /// independently of which browsing page the host has currently loaded.
+    public func recentTracks() throws -> [Music] {
+        var seen = Set<UUID>()
+        let ids = try historyEntries().compactMap { entry in
+            seen.insert(entry.trackID).inserted ? entry.trackID : nil
+        }
+        guard !ids.isEmpty else { return [] }
+
+        var available: [UUID: StoredTrack] = [:]
+        for chunk in ids.chunked(500) {
+            let tracks = try modelContext.fetch(FetchDescriptor<StoredTrack>(
+                predicate: #Predicate { chunk.contains($0.id) }))
+            for track in tracks { available[track.id] = track }
+        }
+        return ids.compactMap { available[$0] }.prefix(10).map { track in
+            Music(id: track.id.uuidString, url: URL(fileURLWithPath: track.path), title: track.title,
+                  artist: track.artist, albumArtist: track.albumArtist, albumTitle: track.albumTitle,
+                  year: track.year, trackNumber: track.trackNumber, discNumber: track.discNumber,
+                  genre: track.genre, duration: track.duration, artworkData: track.artwork?.data)
+        }
+    }
+
     /// Up to ten latest distinct available Tracks, with repeats moved to the front.
     public func recentTracks(from availableTracks: [Music]) throws -> [Music] {
         let available = Dictionary(uniqueKeysWithValues: availableTracks.map { ($0.id, $0) })
