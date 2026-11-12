@@ -31,8 +31,12 @@ public struct ResonantApp: View {
     let resolveArtist: (Artist) async -> Artist?
     let resolveTracks: (([String]) async -> [Music])?
     let resolvePlaylistPickerTracks: ((String) async -> [Music])?
+    let searchClient: LibrarySearchClient?
+    let committedRevision: Int
+    let isScanning: Bool
 
     @State private var router: ResonantRouter
+    @State private var searchController: LibrarySearchController
     @State private var showCreatePlaylist = false
     @State private var playlistInteraction = PlaylistInteractionState()
     @State private var resolvedAlbums: [String: Album] = [:]
@@ -62,7 +66,10 @@ public struct ResonantApp: View {
                 resolveAlbum: @escaping (Album) async -> Album? = { $0 },
                 resolveArtist: @escaping (Artist) async -> Artist? = { $0 },
                 resolveTracks: (([String]) async -> [Music])? = nil,
-                resolvePlaylistPickerTracks: ((String) async -> [Music])? = nil) {
+                resolvePlaylistPickerTracks: ((String) async -> [Music])? = nil,
+                searchClient: LibrarySearchClient? = nil,
+                committedRevision: Int = 0,
+                isScanning: Bool = false) {
         self.engine = engine
         self.library = library
         self.tiles = tiles
@@ -86,6 +93,18 @@ public struct ResonantApp: View {
         self.resolveArtist = resolveArtist
         self.resolveTracks = resolveTracks
         self.resolvePlaylistPickerTracks = resolvePlaylistPickerTracks
+        self.searchClient = searchClient
+        self.committedRevision = committedRevision
+        self.isScanning = isScanning
+        _searchController = State(initialValue: LibrarySearchController(
+            search: { query in
+                if let searchClient { return try await searchClient.search(query) }
+                return LibrarySearchResults()
+            },
+            genres: {
+                if let searchClient { return try await searchClient.genres() }
+                return []
+            }))
     }
 
     private func openAlbum(_ album: Album) {
@@ -152,6 +171,10 @@ public struct ResonantApp: View {
                 } else if router.route == .artists {
                     await onBrowse(LibraryTrackQuery(sort: .artist))
                 }
+            }
+            .onChange(of: committedRevision) { _, _ in
+                guard platform == .mac else { return }
+                Task { await searchController.refreshForLibraryUpdate() }
             }
             .onChange(of: router.route) { previous, current in
                 guard usesStoreBrowsing else { return }
@@ -326,7 +349,9 @@ public struct ResonantApp: View {
 
     @ViewBuilder
     private var content: some View {
-        if let libraryStatus {
+        if platform == .mac && router.route == .search {
+            searchRoute
+        } else if let libraryStatus {
             LibraryStatusView(status: libraryStatus, onRetry: onRetry, onPickFolder: onPickFolder,
                               onGrantAccess: onGrantAccess)
         } else if needsLibraryFolder {
@@ -436,16 +461,7 @@ public struct ResonantApp: View {
                     Text("Artist not found.").foregroundColor(ResonantColors.ink2)
                 }
             case .search:
-                SearchScreen(library: library, spacing: spacing, router: router,
-                             totalTrackCount: totalTrackCount,
-                             hasMoreTracks: hasMoreTracks,
-                             loadedTrackCount: loadedTrackCount,
-                             usesStoreBrowsing: usesStoreBrowsing,
-                             onLoadMore: onLoadMore,
-                             onSearch: { query in
-                                 await onBrowse(LibraryTrackQuery(searchText: query))
-                             },
-                             onOpen: openAlbum)
+                searchRoute
             case .nowPlaying:
                 NowPlayingScreen(tiles: tiles,
                                  lightingAnimator: lightingAnimator,
@@ -458,6 +474,37 @@ public struct ResonantApp: View {
                                  })
             }
         }
+    }
+
+    @ViewBuilder
+    private var searchRoute: some View {
+        #if os(macOS)
+        if let searchClient {
+            MacSearchScreen(
+                controller: searchController, client: searchClient, engine: engine,
+                spacing: spacing, router: router, playlistActions: playlistActions,
+                libraryStatus: libraryStatus, isScanning: isScanning,
+                totalTrackCount: totalTrackCount ?? 0, onRetryLibrary: onRetry,
+                onOpenAlbum: openAlbum, onOpenArtist: openArtist)
+        } else {
+            legacySearchRoute
+        }
+        #else
+        legacySearchRoute
+        #endif
+    }
+
+    private var legacySearchRoute: some View {
+        SearchScreen(library: library, spacing: spacing, router: router,
+                     totalTrackCount: totalTrackCount,
+                     hasMoreTracks: hasMoreTracks,
+                     loadedTrackCount: loadedTrackCount,
+                     usesStoreBrowsing: usesStoreBrowsing,
+                     onLoadMore: onLoadMore,
+                     onSearch: { query in
+                         await onBrowse(LibraryTrackQuery(searchText: query))
+                     },
+                     onOpen: openAlbum)
     }
 }
 

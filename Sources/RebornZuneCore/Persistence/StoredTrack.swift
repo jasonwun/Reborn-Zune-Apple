@@ -34,6 +34,15 @@ public final class StoredTrack {
     /// Version of the metadata extractor that produced the fields above.
     public var metadataVersion: Int
 
+    // Search keys are persisted independently of display metadata and artwork.
+    public var titleSearchKey: String = ""
+    public var artistSearchKey: String = ""
+    public var albumArtistSearchKey: String = ""
+    public var albumTitleSearchKey: String = ""
+    public var genreSearchKey: String = ""
+    public var searchDocumentKey: String = ""
+    public var searchNormalizationVersion: Int = 0
+
     @Relationship(deleteRule: .cascade, inverse: \StoredTrackArtwork.track)
     public var artwork: StoredTrackArtwork?
 
@@ -99,9 +108,13 @@ public final class StoredLibraryState {
     public var identityMigrationVersion: Int
     /// Extractor version the whole Library was last extracted with.
     public var metadataVersion: Int
+    /// Normalizer version shared by Track, Artist, and Album search records.
+    public var searchNormalizationVersion: Int
 
-    public init(identityMigrationVersion: Int = 0, metadataVersion: Int = 0) {
+    public init(identityMigrationVersion: Int = 0, metadataVersion: Int = 0,
+                searchNormalizationVersion: Int = 0) {
         self.identityMigrationVersion = identityMigrationVersion
         self.metadataVersion = metadataVersion
+        self.searchNormalizationVersion = searchNormalizationVersion
     }
 }
