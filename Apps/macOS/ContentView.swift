@@ -176,7 +176,7 @@ private struct ResonantHost: View {
         .task {
             updateScreenSize()
             appDelegate.configureDock(engine: engine, recentTracks: {
-                (try? history.recentTracks(from: library.tracks)) ?? []
+                (try? history.recentTracks()) ?? []
             })
             var didChangeQueueDuringScan = false
             var lastSnapshot = engine.persistenceSnapshot
