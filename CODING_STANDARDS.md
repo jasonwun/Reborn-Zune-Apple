@@ -42,6 +42,15 @@ not just by green builds and tests:
 
 - Boot the appropriate simulator (`xcrun simctl create` + `boot`) or run the
   macOS app natively.
+- Drive native interactions as a read-back loop. An accessibility or synthetic
+  input call succeeding is not behavior evidence: read the expected UI state
+  after every action, and inspect `unverified`, `suspected_noop`, and timeout
+  results before retrying. Refresh accessibility element indexes after each UI
+  change rather than reusing stale targets.
+- For hover-only controls and text fields, read the target's `AXPosition`,
+  `AXSize`, and window origin to derive window-local coordinates. Confirm the
+  hover control or text focus is visible before clicking or typing. Use scaled
+  screenshot coordinates only when accessibility geometry is unavailable.
 - Capture screenshots of the affected surface:
   - iOS/iPadOS/tvOS simulators: `xcrun simctl io <UDID> screenshot output.png`
     (reads the simulator framebuffer directly; no permissions required).
