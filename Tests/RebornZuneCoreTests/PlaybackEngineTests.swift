@@ -69,6 +69,20 @@ final class PlaybackEngineTests: XCTestCase {
         )
     }
 
+    private func makeUUIDMusic(_ name: String) -> Music {
+        Music(
+            id: UUID().uuidString,
+            url: URL(fileURLWithPath: "/tmp/reborn-zune-tests/\(name).m4a"),
+            title: name,
+            artist: "Test Artist",
+            albumArtist: nil,
+            albumTitle: "Test Album",
+            year: nil,
+            duration: 30,
+            artworkData: nil
+        )
+    }
+
     private func makeSilenceTrack(_ name: String) -> Music {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -106,16 +120,16 @@ final class PlaybackEngineTests: XCTestCase {
         }
 
         engine.setQueue(tracks)
-        XCTAssertEqual(bookmarks.starts, 5, "each loaded AVPlayerItem owns access")
+        XCTAssertEqual(bookmarks.starts, 3, "each item in the current-plus-two window owns access")
         XCTAssertEqual(bookmarks.stops, 0, "AVPlayer may read lazily after the scan scope stops")
 
         engine.next()
-        XCTAssertEqual(bookmarks.starts, 9)
-        XCTAssertEqual(bookmarks.stops, 5, "advancing releases the previous AVQueuePlayer items")
+        XCTAssertEqual(bookmarks.starts, 6, "advancing refills the three-item window")
+        XCTAssertEqual(bookmarks.stops, 3, "advancing releases the previous AVQueuePlayer items")
 
         engine.removeTracks(withIDs: Set(tracks.map(\.id)))
         XCTAssertEqual(bookmarks.starts, bookmarks.stops)
-        XCTAssertEqual(bookmarks.stops, 9)
+        XCTAssertEqual(bookmarks.stops, 6)
     }
 
     func testInitialStateIsStoppedNoItem() {
@@ -229,6 +243,213 @@ final class PlaybackEngineTests: XCTestCase {
         XCTAssertEqual(engine.queue.count, tracks.count)
         XCTAssertEqual(engine.currentItem, engine.queue.first)
         XCTAssertEqual(engine.state, .playing)
+    }
+
+    func testPlayNextAndPlayLaterEditUpcomingOrder() {
+        let engine = PlaybackEngine()
+        let a = makeMusic("a"), b = makeMusic("b"), c = makeMusic("c")
+        let next = makeMusic("next"), later = makeMusic("later")
+        engine.setQueue([a, b, c])
+
+        engine.playNext(next)
+        engine.playLater(later)
+
+        XCTAssertEqual(engine.queue, [a, next, b, c, later])
+        XCTAssertEqual(engine.currentItem, a)
+        XCTAssertEqual(engine.upNext, [next, b, c, later])
+    }
+
+    func testUpNextReorderDeleteAndClearRetainCurrentTrack() {
+        let engine = PlaybackEngine()
+        let a = makeMusic("a"), b = makeMusic("b"), c = makeMusic("c"), d = makeMusic("d")
+        engine.setQueue([a, b, c, d])
+
+        engine.moveUpNext(fromOffsets: [0], toOffset: 2)
+        XCTAssertEqual(engine.queue, [a, c, b, d])
+
+        engine.removeUpNext(at: 1)
+        XCTAssertEqual(engine.queue, [a, c, d])
+        XCTAssertEqual(engine.currentItem, a)
+
+        engine.clearUpNext()
+        XCTAssertEqual(engine.queue, [a])
+        XCTAssertEqual(engine.currentItem, a)
+        XCTAssertEqual(engine.state, .paused)
+    }
+
+    func testPlayerWindowContainsCurrentPlusTwoAndRefillsInActiveOrder() {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        let items = (0..<6).map { makeMusic("window\($0)") }
+
+        engine.setQueue(items)
+        XCTAssertEqual(engine.queue, items)
+        XCTAssertEqual(player.itemURLs, items.prefix(3).map(\.url))
+
+        engine.next()
+        XCTAssertEqual(engine.currentItem, items[1])
+        XCTAssertEqual(player.itemURLs, Array(items[1...3]).map(\.url))
+    }
+
+    func testLargeQueueMaterializesOnlyCurrentPlusTwoPlayerItems() {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        let tracks = (0..<50_000).map { makeMusic("release-track-\($0)") }
+
+        engine.setQueue(tracks)
+
+        XCTAssertEqual(engine.queue.count, 50_000)
+        XCTAssertEqual(player.itemURLs, tracks.prefix(3).map(\.url))
+    }
+
+    func testShuffleEditsReconcilePlayerAndToggleOffRestoresOriginalOrder() {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        let a = makeMusic("a"), b = makeMusic("b"), c = makeMusic("c"), d = makeMusic("d")
+        let inserted = makeMusic("inserted"), later = makeMusic("later")
+        engine.setQueue([a, b, c, d], startingAt: 1)
+        engine.seek(to: 0.4)
+
+        engine.isShuffling = true
+        XCTAssertEqual(engine.currentItem, b)
+        XCTAssertEqual(player.itemURLs, engine.queue.prefix(3).map(\.url))
+
+        engine.playNext(inserted)
+        engine.playLater(later)
+        XCTAssertEqual(engine.queue[1], inserted)
+        XCTAssertEqual(engine.queue.last, later)
+        XCTAssertEqual(player.itemURLs, engine.queue.prefix(3).map(\.url))
+
+        engine.moveUpNext(fromOffsets: [1], toOffset: 2)
+        engine.isShuffling = false
+
+        XCTAssertEqual(engine.queue, [a, b, inserted, c, d, later])
+        XCTAssertEqual(engine.currentItem, b)
+        XCTAssertEqual(player.itemURLs, [b, inserted, c].map(\.url))
+        XCTAssertEqual(engine.currentTime, 0.4)
+    }
+
+    func testShuffleRemovalTargetsDuplicateEntryAndKeepsCurrentAnchor() throws {
+        let engine = PlaybackEngine()
+        let a = makeMusic("a"), b = makeMusic("b"), c = makeMusic("c")
+        engine.setQueue([a, b, a, c])
+        engine.isShuffling = true
+        let duplicateOffset = try XCTUnwrap(engine.upNext.firstIndex(of: a))
+
+        engine.removeUpNext(at: duplicateOffset)
+        engine.isShuffling = false
+
+        XCTAssertEqual(engine.queue, [a, b, c])
+        XCTAssertEqual(engine.currentIndex, 0)
+        XCTAssertEqual(engine.upNext, [b, c])
+    }
+
+    func testRestoreDropsUnresolvedReferencesAndRestoresPausedWindowAndPosition() {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        let a = makeUUIDMusic("a"), b = makeUUIDMusic("b")
+        let c = makeUUIDMusic("c"), d = makeUUIDMusic("d")
+        let missing = UUID()
+        let activeIDs = [UUID(uuidString: a.id)!, missing, UUID(uuidString: b.id)!, UUID(uuidString: c.id)!, UUID(uuidString: d.id)!]
+        let snapshot = PlaybackQueueSnapshot(
+            originalTrackIDs: activeIDs,
+            activeTrackIDs: activeIDs,
+            currentIndex: 2,
+            position: 4.25,
+            isShuffling: false
+        )
+        let tracks = [a, b, c, d]
+
+        engine.restoreQueue(snapshot) { id in tracks.first { $0.id == id.uuidString } }
+
+        XCTAssertEqual(engine.queue, tracks)
+        XCTAssertEqual(engine.currentItem, b)
+        XCTAssertEqual(engine.currentIndex, 1)
+        XCTAssertEqual(engine.currentTime, 4.25)
+        XCTAssertEqual(engine.state, .paused)
+        XCTAssertEqual(player.itemURLs, [b, c, d].map(\.url))
+        XCTAssertEqual(engine.persistenceSnapshot.position, 4.25)
+    }
+
+    func testRestoreKeepsPersistedIndexWhenCurrentTrackIsDuplicated() {
+        let engine = PlaybackEngine()
+        let a = makeUUIDMusic("duplicate"), b = makeUUIDMusic("other")
+        let aID = UUID(uuidString: a.id)!, bID = UUID(uuidString: b.id)!
+        let snapshot = PlaybackQueueSnapshot(
+            originalTrackIDs: [aID, aID, bID],
+            activeTrackIDs: [aID, aID, bID],
+            currentIndex: 1,
+            position: 3,
+            isShuffling: false
+        )
+        let tracks = [a, b]
+
+        engine.restoreQueue(snapshot) { id in tracks.first { $0.id == id.uuidString } }
+
+        XCTAssertEqual(engine.currentIndex, 1)
+        XCTAssertEqual(engine.upNext, [b])
+    }
+
+    func testPreviousRepeatAndNaturalEndUseDisplayedOrderAndCurrentPlusTwo() {
+        let player = FakeQueuePlayer()
+        let engine = makeEngine(player: player)
+        let items = (0..<5).map { makeMusic("transport\($0)") }
+        engine.setQueue(items, startingAt: 1)
+        engine.play()
+
+        engine.previous()
+        XCTAssertEqual(engine.currentItem, items[0])
+        XCTAssertEqual(player.itemURLs, items.prefix(3).map(\.url))
+
+        engine.skip(to: items[4])
+        engine.repeatMode = .all
+        player.finishCurrentItem()
+        XCTAssertEqual(engine.currentItem, items[0])
+        XCTAssertEqual(player.itemURLs, items.prefix(3).map(\.url))
+
+        engine.repeatMode = .one
+        player.finishCurrentItem()
+        XCTAssertEqual(engine.currentItem, items[0])
+        XCTAssertEqual(player.seekPositions.last, 0)
+        XCTAssertTrue(player.isPlaying)
+    }
+
+    func testQueueChangesPublishPersistableSnapshots() {
+        let engine = PlaybackEngine()
+        let a = makeUUIDMusic("persist-a"), b = makeUUIDMusic("persist-b")
+        var snapshots: [PlaybackQueueSnapshot] = []
+        engine.queuePersistenceHandler = { snapshots.append($0) }
+
+        engine.setQueue([a, b])
+        engine.playNext(b)
+        engine.seek(to: 7)
+
+        XCTAssertEqual(snapshots.last?.activeTrackIDs, [UUID(uuidString: a.id)!, UUID(uuidString: b.id)!, UUID(uuidString: b.id)!])
+        XCTAssertEqual(snapshots.last?.position, 7)
+        XCTAssertEqual(snapshots.last?.activeEntryIDs.count, 3)
+    }
+
+    func testLegacySnapshotRebuildsSharedDuplicateEntryIdentities() throws {
+        let engine = PlaybackEngine()
+        let a = makeUUIDMusic("legacy-a"), b = makeUUIDMusic("legacy-b"), c = makeUUIDMusic("legacy-c")
+        let tracks = [a, b, c]
+        let ids = tracks.map { UUID(uuidString: $0.id)! }
+        let snapshot = PlaybackQueueSnapshot(
+            originalTrackIDs: [ids[0], ids[1], ids[0], ids[2]],
+            activeTrackIDs: [ids[0], ids[0], ids[1], ids[2]],
+            currentIndex: 0,
+            position: 0,
+            isShuffling: true
+        )
+        engine.restoreQueue(snapshot) { id in tracks.first { $0.id == id.uuidString } }
+        let duplicateOffset = try XCTUnwrap(engine.upNext.firstIndex(of: a))
+
+        engine.removeUpNext(at: duplicateOffset)
+        engine.isShuffling = false
+
+        XCTAssertEqual(engine.queue, [a, b, c])
+        XCTAssertEqual(engine.currentIndex, 0)
+        XCTAssertEqual(engine.upNext, [b, c])
     }
 
     func testEmptySetQueueResetsState() {

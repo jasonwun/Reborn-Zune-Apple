@@ -46,9 +46,15 @@ struct TrackPlaylistMenu: View {
     let actions: PlaylistActions
     let tracks: [Music]
     let hover: Bool
+    var onPlayNext: (() -> Void)? = nil
+    var onPlayLater: (() -> Void)? = nil
 
     var body: some View {
         Menu {
+            if let onPlayNext, let onPlayLater {
+                QueueActionButtons(onPlayNext: onPlayNext, onPlayLater: onPlayLater)
+                Divider()
+            }
             AddToPlaylistMenu(actions: actions, tracks: tracks)
         } label: {
             Text("⋯")

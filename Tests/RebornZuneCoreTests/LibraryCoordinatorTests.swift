@@ -312,6 +312,14 @@ final class LibraryCoordinatorTests: XCTestCase {
         ctx.insert(StoredPlaylistEntry(orderIndex: 0, musicID: "x", trackID: UUID(uuidString: a), playlist: pl))
         ctx.insert(StoredPlaylistEntry(orderIndex: 1, musicID: "y", trackID: UUID(uuidString: b), playlist: pl))
         try ctx.save()
+        let aID = UUID(uuidString: a)!, bID = UUID(uuidString: b)!
+        try QueueStore(container: container).save(PlaybackQueueSnapshot(
+            originalTrackIDs: [aID, bID],
+            activeTrackIDs: [bID, aID, bID],
+            currentIndex: 1,
+            position: 8,
+            isShuffling: true
+        ))
 
         source.files = [file("b.mp3")]
         await c.refresh()
@@ -319,6 +327,10 @@ final class LibraryCoordinatorTests: XCTestCase {
         let entries = try ModelContext(container).fetch(FetchDescriptor<StoredPlaylistEntry>())
         XCTAssertEqual(entries.map(\.trackID), [UUID(uuidString: b)])
         XCTAssertEqual(try ModelContext(container).fetch(FetchDescriptor<StoredPlaylist>()).count, 1)
+        let queue = try QueueStore(container: container).load()
+        XCTAssertEqual(queue?.originalTrackIDs, [bID])
+        XCTAssertEqual(queue?.activeTrackIDs, [bID, bID])
+        XCTAssertNil(queue?.currentIndex, "cleanup must not select a replacement for a missing current Track")
     }
 
     func testConfirmedMissingDeletesHistoryAndStatsButFailedScanPreservesThem() async throws {

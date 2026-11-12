@@ -71,7 +71,9 @@ public struct AlbumScreen: View {
                             onPlay: {
                                 engine.setQueue(album.tracks, startingAt: row.queueIndex)
                                 engine.play()
-                            }
+                            },
+                            onPlayNext: { engine.playNext(row.track) },
+                            onPlayLater: { engine.playLater(row.track) }
                         )
                     }
                     #else
@@ -148,8 +150,10 @@ public struct AlbumScreen: View {
                 if let playlistActions {
                     AddToPlaylistMenu(actions: playlistActions, tracks: album.tracks)
                         .menuStyle(.borderlessButton)
-                    TrackPlaylistMenu(actions: playlistActions, tracks: album.tracks,
-                                      hover: headerHover)
+                    TrackPlaylistMenu(
+                        actions: playlistActions, tracks: album.tracks, hover: headerHover,
+                        onPlayNext: { engine.playNext(album.tracks) },
+                        onPlayLater: { engine.playLater(album.tracks) })
                 }
                 #else
                 secondaryButton(label: "+ add to library") {}
@@ -164,6 +168,10 @@ public struct AlbumScreen: View {
         #if os(macOS)
         .onHover { headerHover = $0 }
         .contextMenu {
+            QueueActionButtons(
+                onPlayNext: { engine.playNext(album.tracks) },
+                onPlayLater: { engine.playLater(album.tracks) })
+            if playlistActions != nil { Divider() }
             if let playlistActions {
                 AddToPlaylistMenu(actions: playlistActions, tracks: album.tracks)
             }
@@ -181,11 +189,15 @@ struct TrackRow: View {
     let track: Music?
     let playlistActions: PlaylistActions?
     let onPlay: () -> Void
+    let onPlayNext: () -> Void
+    let onPlayLater: () -> Void
     @State private var hover = false
 
     init(number: Int, title: String, meta: String, time: String, playing: Bool,
          track: Music? = nil, playlistActions: PlaylistActions? = nil,
-         onPlay: @escaping () -> Void) {
+         onPlay: @escaping () -> Void,
+         onPlayNext: @escaping () -> Void = {},
+         onPlayLater: @escaping () -> Void = {}) {
         self.number = number
         self.title = title
         self.meta = meta
@@ -194,6 +206,8 @@ struct TrackRow: View {
         self.track = track
         self.playlistActions = playlistActions
         self.onPlay = onPlay
+        self.onPlayNext = onPlayNext
+        self.onPlayLater = onPlayLater
     }
 
     var body: some View {
@@ -222,8 +236,19 @@ struct TrackRow: View {
                 .resonantScaledFont(11, design: .monospaced)
                 .foregroundColor(ResonantColors.ink2)
             #if os(macOS)
-            if let track, let playlistActions {
-                TrackPlaylistMenu(actions: playlistActions, tracks: [track], hover: hover)
+            if let track {
+                if let playlistActions {
+                    TrackPlaylistMenu(
+                        actions: playlistActions, tracks: [track], hover: hover,
+                        onPlayNext: onPlayNext,
+                        onPlayLater: onPlayLater)
+                } else {
+                    QueueHoverMenu(
+                        onPlayNext: onPlayNext,
+                        onPlayLater: onPlayLater)
+                        .opacity(hover ? 1 : 0)
+                        .allowsHitTesting(hover)
+                }
             }
             #endif
         }
@@ -241,6 +266,12 @@ struct TrackRow: View {
         .onTapGesture(perform: onPlay)
         #if os(macOS)
         .contextMenu {
+            if let track {
+                QueueActionButtons(
+                    onPlayNext: onPlayNext,
+                    onPlayLater: onPlayLater)
+                if playlistActions != nil { Divider() }
+            }
             if let track, let playlistActions {
                 AddToPlaylistMenu(actions: playlistActions, tracks: [track])
             }
