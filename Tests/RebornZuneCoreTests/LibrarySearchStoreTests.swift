@@ -120,6 +120,21 @@ final class LibrarySearchStoreTests: XCTestCase {
         XCTAssertEqual(genres.prefix(3).map(\.count), [3, 2, 1])
     }
 
+    func testMoreThanOneBatchReturnsEverySongWithoutRepeating() async throws {
+        let context = ModelContext(container)
+        for index in 0..<1001 {
+            insertTrack(context, title: String(format: "Track %04d", index),
+                        artist: "Artist", albumArtist: "Artist", albumTitle: "Album", genre: nil)
+        }
+        try context.save()
+        let search = LibrarySearchStore(modelContainer: container)
+
+        let results = try await search.search("track")
+
+        XCTAssertEqual(results.songs.count, 1001)
+        XCTAssertEqual(Set(results.songs.map(\.id)).count, 1001)
+    }
+
     private func insertTrack(
         _ context: ModelContext,
         title: String,
