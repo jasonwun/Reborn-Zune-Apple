@@ -135,6 +135,8 @@ public enum RebornZunePersistence {
         StoredAppSettings.self,
         StoredTrack.self,
         StoredTrackArtwork.self,
+        StoredArtist.self,
+        StoredAlbum.self,
         StoredLibraryState.self,
         StoredLibrarySource.self,
         StoredQueueState.self,

@@ -257,6 +257,7 @@ public actor LibraryStore {
                 predicate: #Predicate { $0.path == path }))
             for configuration in configurations { modelContext.delete(configuration) }
             try normalizePlaylistOrder()
+            try libraryState().searchNormalizationVersion = 0
             try modelContext.save()
         } catch {
             modelContext.rollback()
@@ -475,6 +476,10 @@ public actor LibraryStore {
             state.identityMigrationVersion = max(state.identityMigrationVersion, 1)
         }
         state.metadataVersion = currentMetadataVersion
+        // Search normalization has its own independent version. Invalidating
+        // it makes the next actor query rebuild Track/Artist/Album records
+        // after any committed metadata or source-membership change.
+        state.searchNormalizationVersion = 0
     }
 
     private func libraryState() throws -> StoredLibraryState {

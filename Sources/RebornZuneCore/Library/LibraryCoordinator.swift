@@ -125,6 +125,7 @@ public final class LibraryCoordinator {
     public private(set) var sourcePathsRequiringAuthorization: Set<String> = []
 
     @ObservationIgnored private let store: LibraryStore
+    @ObservationIgnored private let searchStore: LibrarySearchStore
     @ObservationIgnored private let initialSources: [any LibraryFileSource]
     @ObservationIgnored private let sourceFactory: @Sendable (URL) -> any LibraryFileSource
     @ObservationIgnored private let bookmarkAccess: any LibraryBookmarkAccessing
@@ -134,6 +135,7 @@ public final class LibraryCoordinator {
 
     public init(container: ModelContainer, source: any LibraryFileSource) {
         self.store = LibraryStore(modelContainer: container)
+        self.searchStore = LibrarySearchStore(modelContainer: container)
         self.initialSources = [source]
         self.sourceFactory = { FolderFileSource(root: $0) }
         self.bookmarkAccess = NoLibraryBookmarkAccess()
@@ -144,6 +146,7 @@ public final class LibraryCoordinator {
                 sourceFactory: @escaping @Sendable (URL) -> any LibraryFileSource = { FolderFileSource(root: $0) },
                 bookmarkAccess: any LibraryBookmarkAccessing = SystemLibraryBookmarkAccess()) {
         self.store = LibraryStore(modelContainer: container)
+        self.searchStore = LibrarySearchStore(modelContainer: container)
         self.initialSources = sources
         self.sourceFactory = sourceFactory
         self.bookmarkAccess = bookmarkAccess
@@ -346,6 +349,26 @@ public final class LibraryCoordinator {
             scanError = "The Playlist Tracks could not be loaded: \(error.localizedDescription)"
             return []
         }
+    }
+
+    /// Executes Global Search against normalized persisted records off the main actor.
+    public func search(matching query: String) async throws -> LibrarySearchResults {
+        try await searchStore.search(query)
+    }
+
+    public func searchGenres() async throws -> [LibrarySearchGenre] {
+        try await searchStore.genres()
+    }
+
+    /// Converts a complete ranked Song snapshot without fetching artwork for
+    /// every result. Playback receives exactly this same ordered snapshot.
+    public func searchMusic(from snapshots: [TrackSnapshot]) async -> [Music] {
+        await Self.buildMusic(snapshots, artwork: [:])
+    }
+
+    /// Artwork is fetched only for the currently visible Search rows/cards.
+    public func searchArtwork(for ids: [UUID]) async -> [UUID: Data] {
+        (try? await store.artwork(for: ids)) ?? [:]
     }
 
     public func cancelScan() { scanTask?.cancel() }

@@ -58,7 +58,9 @@ public struct Album: Identifiable, Hashable, Sendable {
     static func makeID(title: String, albumArtist: String) -> String {
         let payload = "\(title)\u{1F}\(albumArtist)"
         let digest = SHA256.hash(data: Data(payload.utf8))
-        return digest.map { String(format: "%02x", $0) }.joined()
+        let hex = Array("0123456789abcdef".utf8)
+        return String(decoding: digest.flatMap { [hex[Int($0 >> 4)], hex[Int($0 & 0x0f)]] },
+                      as: UTF8.self)
     }
 }
 

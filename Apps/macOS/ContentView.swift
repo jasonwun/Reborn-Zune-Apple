@@ -130,7 +130,15 @@ private struct ResonantHost: View {
                 resolveTracks: { ids in await library.loadTracks(withIDs: ids) },
                 resolvePlaylistPickerTracks: { query in
                     await library.playlistPickerTracks(matching: query)
-                }
+                },
+                searchClient: LibrarySearchClient(
+                    search: { query in try await library.search(matching: query) },
+                    genres: { try await library.searchGenres() },
+                    music: { snapshots in await library.searchMusic(from: snapshots) },
+                    artwork: { ids in await library.searchArtwork(for: ids) }
+                ),
+                committedRevision: library.committedRevision,
+                isScanning: library.isScanning
             )
             .environment(\.resonantLayout, .mac(screen: screenSize))
             .environment(\.resonantWindowSize, proxy.size)

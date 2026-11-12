@@ -19,6 +19,8 @@ public struct Artist: Identifiable, Hashable, Sendable {
     /// Compute the deterministic artist ID from its name.
     static func makeID(name: String) -> String {
         let digest = SHA256.hash(data: Data(name.utf8))
-        return digest.map { String(format: "%02x", $0) }.joined()
+        let hex = Array("0123456789abcdef".utf8)
+        return String(decoding: digest.flatMap { [hex[Int($0 >> 4)], hex[Int($0 & 0x0f)]] },
+                      as: UTF8.self)
     }
 }
