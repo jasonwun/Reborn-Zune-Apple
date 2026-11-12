@@ -168,7 +168,9 @@ public struct PlaylistScreen: View {
                             },
                             onRemove: {
                                 onRemoveEntry(playlist, resolved.entry)
-                            })
+                            },
+                            onPlayNext: { engine.playNext(resolved.track) },
+                            onPlayLater: { engine.playLater(resolved.track) })
                     }
                     .onMove(perform: moveEntries)
                 }
@@ -201,6 +203,11 @@ public struct PlaylistScreen: View {
     #if os(macOS)
     @ViewBuilder
     private var managementMenuItems: some View {
+        QueueActionButtons(
+            onPlayNext: { engine.playNext(resolvedTracks) },
+            onPlayLater: { engine.playLater(resolvedTracks) })
+            .disabled(resolvedTracks.isEmpty)
+        if playlistActions != nil { Divider() }
         if let playlistActions {
             AddToPlaylistMenu(actions: playlistActions, tracks: resolvedTracks)
                 .disabled(resolvedTracks.isEmpty)
@@ -248,6 +255,8 @@ private struct MacPlaylistEntryRow: View {
     let actions: PlaylistActions?
     let onPlay: () -> Void
     let onRemove: () -> Void
+    let onPlayNext: () -> Void
+    let onPlayLater: () -> Void
     @State private var hover = false
 
     var body: some View {
@@ -257,6 +266,8 @@ private struct MacPlaylistEntryRow: View {
         ) {
             if let actions {
                 Menu {
+                    QueueActionButtons(onPlayNext: onPlayNext, onPlayLater: onPlayLater)
+                    Divider()
                     AddToPlaylistMenu(actions: actions, tracks: [resolved.track])
                     Divider()
                     Button("Remove from Playlist", action: onRemove)
@@ -276,6 +287,8 @@ private struct MacPlaylistEntryRow: View {
         }
         .onHover { hover = $0 }
         .contextMenu {
+            QueueActionButtons(onPlayNext: onPlayNext, onPlayLater: onPlayLater)
+            Divider()
             if let actions {
                 AddToPlaylistMenu(actions: actions, tracks: [resolved.track])
                 Divider()

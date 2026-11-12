@@ -9,6 +9,7 @@ struct ContentView: View {
     let history: PlayHistory
     let router: ResonantRouter
     let appDelegate: MacAppDelegate
+    let queueStore: QueueStore
 
     var body: some View {
         #if DEBUG
@@ -16,11 +17,11 @@ struct ContentView: View {
             SnapshotView(outputPath: path)
         } else {
             ResonantHost(library: library, engine: engine, history: history,
-                         router: router, appDelegate: appDelegate)
+                         router: router, appDelegate: appDelegate, queueStore: queueStore)
         }
         #else
         ResonantHost(library: library, engine: engine, history: history,
-                     router: router, appDelegate: appDelegate)
+                     router: router, appDelegate: appDelegate, queueStore: queueStore)
         #endif
     }
 }
@@ -65,6 +66,7 @@ private struct ResonantHost: View {
     let history: PlayHistory
     let router: ResonantRouter
     let appDelegate: MacAppDelegate
+    let queueStore: QueueStore
     @Environment(\.openSettings) private var openSettings
     /// Hardware screen size backing the M15.1 screen-fixed scale tokens.
     /// Re-derived only when the window moves to another screen — never
@@ -73,7 +75,6 @@ private struct ResonantHost: View {
     /// first-layout freeze never sees a stale screen size.
     @State private var screenSize = NSScreen.main?.frame.size ?? CGSize(width: 1440, height: 900)
     @State private var grantError: String?
-    @State private var didAdoptInitialQueue = false
     @State private var resonantLibrary = ResonantLibrary(albums: [], artists: [])
     @State private var libraryTiles: [TileWallEntry] = []
     @State private var derivationTask: Task<Void, Never>?
@@ -149,13 +150,7 @@ private struct ResonantHost: View {
             for: NSWindow.didChangeScreenNotification)) { _ in
             updateScreenSize()
         }
-        .onChange(of: library.tracks) { previous, tracks in
-            // Adopt the initial browsing page only. After cleanup, an empty
-            // Queue must stay stopped rather than selecting a replacement.
-            if !didAdoptInitialQueue, previous.isEmpty, engine.queue.isEmpty, !tracks.isEmpty {
-                didAdoptInitialQueue = true
-                engine.setQueue(tracks)
-            }
+        .onChange(of: library.tracks) { _, tracks in
             derivePresentation(from: tracks)
         }
         .onChange(of: library.committedRevision) { _, _ in
@@ -165,12 +160,34 @@ private struct ResonantHost: View {
                 engine.removeTracks(withIDs: queuedIDs.subtracting(existing))
             }
         }
+        .onReceive(NotificationCenter.default.publisher(
+            for: NSApplication.willTerminateNotification)) { _ in
+            engine.pause()
+            try? queueStore.save(engine.persistenceSnapshot)
+        }
         .task {
             updateScreenSize()
             appDelegate.configureDock(engine: engine, recentTracks: {
                 (try? history.recentTracks(from: library.tracks)) ?? []
             })
+            var didChangeQueueDuringScan = false
+            var lastSnapshot = engine.persistenceSnapshot
+            engine.queuePersistenceHandler = { snapshot in
+                guard snapshot != lastSnapshot else { return }
+                didChangeQueueDuringScan = true
+                lastSnapshot = snapshot
+                try? queueStore.save(snapshot)
+            }
+            let savedSnapshot = try? queueStore.load()
             await library.start()
+            if !didChangeQueueDuringScan, let snapshot = savedSnapshot {
+                let ids = Set(snapshot.originalTrackIDs + snapshot.activeTrackIDs).map(\.uuidString)
+                let tracks = await library.loadTracks(withIDs: ids)
+                let tracksByID = Dictionary(uniqueKeysWithValues: tracks.map { ($0.id, $0) })
+                engine.restoreQueue(snapshot) { tracksByID[$0.uuidString] }
+            }
+            // Drop unresolved references from the persisted Queue after restoration.
+            try? queueStore.save(engine.persistenceSnapshot)
         }
     }
 

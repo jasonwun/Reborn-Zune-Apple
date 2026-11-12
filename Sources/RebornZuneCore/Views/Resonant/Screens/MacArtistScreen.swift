@@ -79,7 +79,11 @@ struct MacArtistScreen: View {
                 .resonantTag(size: 10, tracking: 2.2)
                 .padding(.bottom, 12)
             ForEach(Array(tracks.prefix(5).enumerated()), id: \.offset) { index, track in
-                MacArtistTrackRow(index: index, track: track, playlistActions: playlistActions) {
+                MacArtistTrackRow(
+                    index: index, track: track, playlistActions: playlistActions,
+                    onPlayNext: { engine.playNext(track) },
+                    onPlayLater: { engine.playLater(track) }
+                ) {
                     engine.setQueue(tracks, startingAt: index)
                     engine.play()
                 }
@@ -152,6 +156,8 @@ private struct MacArtistTrackRow: View {
     let index: Int
     let track: Music
     let playlistActions: PlaylistActions?
+    let onPlayNext: () -> Void
+    let onPlayLater: () -> Void
     let onPlay: () -> Void
     @State private var hover = false
 
@@ -168,7 +174,13 @@ private struct MacArtistTrackRow: View {
             Text(ResonantSynth.runtime(seconds: track.duration))
                 .resonantTag(size: 10, tracking: 1.2)
             if let playlistActions {
-                TrackPlaylistMenu(actions: playlistActions, tracks: [track], hover: hover)
+                TrackPlaylistMenu(
+                    actions: playlistActions, tracks: [track], hover: hover,
+                    onPlayNext: onPlayNext, onPlayLater: onPlayLater)
+            } else {
+                QueueHoverMenu(onPlayNext: onPlayNext, onPlayLater: onPlayLater)
+                    .opacity(hover ? 1 : 0)
+                    .allowsHitTesting(hover)
             }
         }
         .padding(.vertical, 10)
@@ -177,6 +189,8 @@ private struct MacArtistTrackRow: View {
         .onTapGesture(perform: onPlay)
         .onHover { hover = $0 }
         .contextMenu {
+            QueueActionButtons(onPlayNext: onPlayNext, onPlayLater: onPlayLater)
+            if playlistActions != nil { Divider() }
             if let playlistActions {
                 AddToPlaylistMenu(actions: playlistActions, tracks: [track])
             }
