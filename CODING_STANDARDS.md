@@ -39,6 +39,17 @@ be backed by command output actually run: build output, test output, or a
 screenshot. "Tests pass" without pasted output is not evidence. No
 `--no-verify`, no skipping tests, no stub implementations claimed as complete.
 
+For an intermittent failure, capture the focused red case before editing and
+rerun that same case after the fix. Choose repetition counts that expose the
+observed failure rate, and report both the red and repeated green runs; one
+green run is not evidence of a nondeterministic fix.
+
+Keep diagnostics bounded: log counts, cursors, and relevant identifiers rather
+than whole collections. Give each iteration of a repeated test loop its own
+timeout and fail fast so one hanging run cannot consume the session timeout.
+Remove temporary instrumentation and stop spawned test processes before
+finishing.
+
 ## Visual verification for on-screen behavior
 
 Any change that produces or alters on-screen behavior must be verified visually,
