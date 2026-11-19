@@ -224,7 +224,10 @@ public actor LibrarySearchStore {
                 if let genre = track.genre { artistAggregate.genres[genre, default: 0] += 1 }
                 artists[artist] = artistAggregate
             }
-            lastPath = batch.last?.path
+            // SwiftData can return a limited batch in context-registration order
+            // even when SQLite applied the requested sort. Advance by the actual
+            // maximum so an unordered last element cannot repeat or skip Tracks.
+            lastPath = batch.map(\.path).max()
             if batch.count < Self.batchSize { break }
         }
         for (id, album) in albums {
@@ -293,7 +296,7 @@ public actor LibrarySearchStore {
                     artistSort: Self.sortKey(track.artist ?? ""),
                     albumSort: Self.sortKey(track.albumTitle ?? "")))
             }
-            lastPath = batch.last?.path
+            lastPath = batch.map(\.path).max()
             if batch.count < Self.batchSize { break }
         }
 
