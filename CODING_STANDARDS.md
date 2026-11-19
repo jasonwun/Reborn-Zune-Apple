@@ -28,6 +28,10 @@ Run `xcodebuild` commands sequentially when they share DerivedData. For parallel
 builds, give each invocation a distinct `-derivedDataPath`; sharing one build
 database can fail with `build.db is locked`.
 
+GitHub Actions is informational during the current development stage, not a
+required merge gate. The applicable local commands above remain mandatory.
+Revisit required status checks when the app reaches a complete release stage.
+
 ## Evidence over claims
 
 Every "this works" claim — in a ticket comment, PR body, or review reply — must

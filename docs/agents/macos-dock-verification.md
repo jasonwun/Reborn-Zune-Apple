@@ -77,5 +77,57 @@ screencapture -x reports/screenshots/dock-verification.png
 ```
 
 Read the screenshot and verify the ticket's ordering, enabled state, and
-click-to-play behavior. After verification, quit only the unique bundle ID and
-remove only its test Library, store, and app copy.
+click-to-play behavior.
+
+### Target the app when other instances are running
+
+The unique display name selects the Dock icon, but System Events can still call
+every development process `Reborn Zune`. Get the isolated app's PID with `orca
+computer list-apps --json`, then use an explicit loop for app windows and menus:
+
+```applescript
+set targetPID to 12345 -- Replace with the isolated app's PID.
+tell application "System Events"
+  set targetProcess to missing value
+  repeat with candidate in every process
+    try
+      if (unix id of candidate) is targetPID then set targetProcess to candidate
+    end try
+  end repeat
+  tell targetProcess to get name of every menu bar item of menu bar 1
+end tell
+```
+
+Use the loop rather than a `whose unix id` filter, which selected the wrong
+process in a multi-instance verification run. Resolve the menu bar item again
+for each action: changing between Play and Pause rebuilds the Controls menu and
+can invalidate a cached reference. Read back the expected app state after every
+action; a successful accessibility call alone is not behavior evidence.
+
+## Inspect related system Now Playing behavior
+
+Open the system status item and expand the row belonging to the isolated app.
+Through System Events, inspect `window "Control Center"` of process
+`ControlCenter`; its `entire contents` expose the current title, transport
+buttons, and an `AXSlider` for playback position. Other apps can appear in the
+same surface, so select the row by the current Track title.
+
+If assigning the slider's value does not change the app, use the slider's
+accessibility position and size to click the desired fraction with CGEvent:
+
+```text
+x = sliderX + sliderWidth * fraction
+y = sliderY + sliderHeight / 2
+post leftMouseDown, then leftMouseUp at (x, y)
+```
+
+Read the app's displayed position after every remote action. For paused
+exactness, read the system slider twice with a delay and compare the full values.
+Capture and inspect playing, paused, and seeking states together with the app.
+
+## Clean up only the isolated copy
+
+After verification, quit only the unique bundle ID and remove only its test
+Library, store, and app copy. Container-manager metadata at the container root
+can be protected; remove the isolated `Data` contents without changing system
+privacy settings or other app containers.
