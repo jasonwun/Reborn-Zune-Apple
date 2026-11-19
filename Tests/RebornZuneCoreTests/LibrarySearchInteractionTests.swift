@@ -1,3 +1,4 @@
+import Observation
 import XCTest
 @testable import RebornZuneCore
 
@@ -88,6 +89,34 @@ final class LibrarySearchInteractionTests: XCTestCase {
         XCTAssertEqual(LibrarySearchNavigation.move(from: "b1", direction: .up, in: items), "a1")
         XCTAssertNil(LibrarySearchNavigation.move(from: "s0", direction: .up, in: items))
         XCTAssertEqual(LibrarySearchNavigation.move(from: "a0", direction: .left, in: items), "a0")
+    }
+
+    func testSelectionPublishesChangesToSwiftUIObservation() {
+        let controller = LibrarySearchController(search: { _ in LibrarySearchResults() })
+        let song = Self.snapshot(title: "Selected")
+        let publication = XCTestExpectation(description: "Selection published to SwiftUI")
+        withObservationTracking {
+            _ = controller.selectedResultID
+        } onChange: {
+            publication.fulfill()
+        }
+
+        controller.select(songID: song.id)
+
+        wait(for: [publication], timeout: 0.1)
+        XCTAssertEqual(controller.selectedSongID, song.id)
+    }
+
+    func testRepeatedDownNavigationWalksEveryShowAllResult() {
+        let items = (0..<17).map {
+            LibrarySearchNavigationItem(id: "song:\($0)", group: .songs, index: $0, columns: 1)
+        }
+        var selectedID: String?
+
+        for expectedIndex in 0..<17 {
+            selectedID = LibrarySearchNavigation.move(from: selectedID, direction: .down, in: items)
+            XCTAssertEqual(selectedID, "song:\(expectedIndex)")
+        }
     }
 
     private static func snapshot(title: String) -> TrackSnapshot {
