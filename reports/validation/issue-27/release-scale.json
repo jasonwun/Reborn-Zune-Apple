@@ -1,0 +1,31 @@
+{
+  "albumCount" : 2500,
+  "artistCount" : 500,
+  "browsedTrackCountAfterPagination" : 200,
+  "commonSearchP95Milliseconds" : 235.577542,
+  "decodedArtworkHeight" : 256,
+  "decodedArtworkWidth" : 256,
+  "fullLibrarySearchMilliseconds" : 39.09975,
+  "hardware" : "Mac15,8",
+  "highMatchSearchMilliseconds" : 110.870792,
+  "highMatchSongCount" : 42206,
+  "largeQueuePlaybackStartMilliseconds" : 9.564708,
+  "launchIncludingIncrementalScanMilliseconds" : 8080.079458,
+  "logicalQueueCount" : 50000,
+  "manualIncrementalScanMilliseconds" : 8041.337916,
+  "materializedPlayerItemCount" : 3,
+  "maximumMainThreadSchedulingGapMilliseconds" : 22.674375,
+  "operatingSystem" : "Version 27.0.1 (Build 26A434)",
+  "physicalFootprintAfterValidationBytes" : 246137960,
+  "physicalFootprintBeforeLaunchBytes" : 45532000,
+  "publishedTrackCountAfterLaunch" : 100,
+  "remainingTrackCountAfterCleanup" : 45000,
+  "searchDTOConversionMilliseconds" : 54.308333,
+  "showAllMainThreadMilliseconds" : 0.033625,
+  "sourceCleanupMilliseconds" : 801.898833,
+  "trackCount" : 50000,
+  "unicodeSearchMilliseconds" : [
+    93.9725,
+    168.261667
+  ]
+}

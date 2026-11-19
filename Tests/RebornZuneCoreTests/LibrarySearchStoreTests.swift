@@ -135,6 +135,35 @@ final class LibrarySearchStoreTests: XCTestCase {
         XCTAssertEqual(Set(results.songs.map(\.id)).count, 1001)
     }
 
+    func testMultiSourceBatchesReturnEverySongWithoutRepeating() async throws {
+        let context = ModelContext(container)
+        for index in 0..<3_000 {
+            let source = index < 2_000 ? "/release/Retained" : "/release/Removed"
+            let album = index
+            let artist = album / 5
+            context.insert(StoredTrack(
+                id: UUID(),
+                path: "\(source)/Artist \(artist)/Album \(album)/Track \(index).m4a",
+                sourcePath: source,
+                modificationDate: Date(timeIntervalSince1970: 1), fileSize: 1,
+                volumeID: nil, fileID: nil,
+                title: "Release Song \(index)", artist: "Release Artist \(artist)",
+                albumArtist: "Release Artist \(artist)", albumTitle: "Release Album \(album)",
+                year: 2024, genre: "Jazz", duration: 60, hasArtwork: false,
+                metadataVersion: currentMetadataVersion
+            ))
+            if (index + 1) % 1_000 == 0 { try context.save() }
+        }
+        let search = LibrarySearchStore(modelContainer: container)
+
+        let results = try await search.search("release")
+
+        XCTAssertEqual(results.songs.count, 3_000)
+        XCTAssertEqual(Set(results.songs.map(\.id)).count, 3_000)
+        XCTAssertEqual(results.artists.count, 600)
+        XCTAssertEqual(results.albums.count, 3_000)
+    }
+
     private func insertTrack(
         _ context: ModelContext,
         title: String,

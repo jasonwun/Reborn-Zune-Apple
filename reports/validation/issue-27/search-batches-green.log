@@ -1,0 +1,14 @@
+Building for debugging...
+[1 / 2]
+Build complete! (0.23 sec)
+Test Suite 'Selected tests' started at 2026-11-19 04:28:41.142.
+Test Suite 'RebornZuneCoreTests.xctest' started at 2026-11-19 04:28:41.143.
+Test Suite 'LibrarySearchStoreTests' started at 2026-11-19 04:28:41.143.
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testMultiSourceBatchesReturnEverySongWithoutRepeating]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testMultiSourceBatchesReturnEverySongWithoutRepeating]' passed (1.770 seconds).
+Test Suite 'LibrarySearchStoreTests' passed at 2026-11-19 04:28:42.913.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.770 (1.770) seconds
+Test Suite 'RebornZuneCoreTests.xctest' passed at 2026-11-19 04:28:42.913.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.770 (1.770) seconds
+Test Suite 'Selected tests' passed at 2026-11-19 04:28:42.913.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.770 (1.771) seconds
