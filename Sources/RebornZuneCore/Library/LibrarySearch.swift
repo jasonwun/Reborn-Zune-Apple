@@ -100,9 +100,11 @@ public struct LibrarySearchGenre: Identifiable, Sendable, Equatable {
 /// applies its 10/5/5 presentation caps. No artwork is fetched here.
 public actor LibrarySearchStore {
     private static let batchSize = 1000
+    private let modelContainer: ModelContainer
     private let modelContext: ModelContext
 
     public init(modelContainer: ModelContainer) {
+        self.modelContainer = modelContainer
         self.modelContext = ModelContext(modelContainer)
     }
 
@@ -190,17 +192,17 @@ public actor LibrarySearchStore {
         var albums: [String: AlbumAggregate] = [:]
         var albumIDs: [String: String] = [:]
         var artists: [String: ArtistAggregate] = [:]
-        var lastPath: String?
+        var offset = 0
         while true {
             try Task.checkCancellation()
-            var descriptor = if let lastPath {
-                FetchDescriptor<StoredTrack>(predicate: #Predicate { $0.path > lastPath },
-                                             sortBy: [SortDescriptor(\.path)])
-            } else {
-                FetchDescriptor<StoredTrack>(sortBy: [SortDescriptor(\.path)])
-            }
+            // A fresh context keeps registered objects from replacing SQLite's
+            // requested order. Offset paging avoids Swift/SQLite cursor-collation
+            // mismatches while Search keys are saved in bounded batches.
+            let batchContext = ModelContext(modelContainer)
+            var descriptor = FetchDescriptor<StoredTrack>(sortBy: [SortDescriptor(\.path)])
             descriptor.fetchLimit = Self.batchSize
-            let batch = try modelContext.fetch(descriptor)
+            descriptor.fetchOffset = offset
+            let batch = try batchContext.fetch(descriptor)
             if batch.isEmpty { break }
             for track in batch {
                 Self.updateSearchKeys(for: track)
@@ -224,10 +226,8 @@ public actor LibrarySearchStore {
                 if let genre = track.genre { artistAggregate.genres[genre, default: 0] += 1 }
                 artists[artist] = artistAggregate
             }
-            // SwiftData can return a limited batch in context-registration order
-            // even when SQLite applied the requested sort. Advance by the actual
-            // maximum so an unordered last element cannot repeat or skip Tracks.
-            lastPath = batch.map(\.path).max()
+            try batchContext.save()
+            offset += batch.count
             if batch.count < Self.batchSize { break }
         }
         for (id, album) in albums {
@@ -273,17 +273,14 @@ public actor LibrarySearchStore {
     private func currentMemoryIndex() throws -> MemoryIndex {
         if let memoryIndex { return memoryIndex }
         var songs: [SongEntry] = []
-        var lastPath: String?
+        var trackOffset = 0
         while true {
             try Task.checkCancellation()
-            var descriptor = if let lastPath {
-                FetchDescriptor<StoredTrack>(predicate: #Predicate { $0.path > lastPath },
-                                             sortBy: [SortDescriptor(\.path)])
-            } else {
-                FetchDescriptor<StoredTrack>(sortBy: [SortDescriptor(\.path)])
-            }
+            let batchContext = ModelContext(modelContainer)
+            var descriptor = FetchDescriptor<StoredTrack>(sortBy: [SortDescriptor(\.path)])
             descriptor.fetchLimit = Self.batchSize
-            let batch = try modelContext.fetch(descriptor)
+            descriptor.fetchOffset = trackOffset
+            let batch = try batchContext.fetch(descriptor)
             if batch.isEmpty { break }
             for track in batch {
                 let snapshot = LibraryStore.snapshotForSearch(track)
@@ -296,25 +293,20 @@ public actor LibrarySearchStore {
                     artistSort: Self.sortKey(track.artist ?? ""),
                     albumSort: Self.sortKey(track.albumTitle ?? "")))
             }
-            lastPath = batch.map(\.path).max()
+            trackOffset += batch.count
             if batch.count < Self.batchSize { break }
         }
 
         var artists: [ArtistEntry] = []
-        var lastArtistName: String?
-        var lastArtistID = ""
+        var artistOffset = 0
         while true {
             try Task.checkCancellation()
-            var descriptor = if let lastArtistName {
-                FetchDescriptor<StoredArtist>(
-                    predicate: #Predicate {
-                        $0.name > lastArtistName || ($0.name == lastArtistName && $0.id > lastArtistID)
-                    }, sortBy: [SortDescriptor(\.name), SortDescriptor(\.id)])
-            } else {
-                FetchDescriptor<StoredArtist>(sortBy: [SortDescriptor(\.name), SortDescriptor(\.id)])
-            }
+            let batchContext = ModelContext(modelContainer)
+            var descriptor = FetchDescriptor<StoredArtist>(
+                sortBy: [SortDescriptor(\.name), SortDescriptor(\.id)])
             descriptor.fetchLimit = Self.batchSize
-            let batch = try modelContext.fetch(descriptor)
+            descriptor.fetchOffset = artistOffset
+            let batch = try batchContext.fetch(descriptor)
             if batch.isEmpty { break }
             for stored in batch {
                 artists.append(ArtistEntry(
@@ -322,26 +314,20 @@ public actor LibrarySearchStore {
                                                 albumCount: stored.albumCount, genre: stored.genre),
                     fields: [stored.nameSearchKey], nameSort: Self.sortKey(stored.name)))
             }
-            lastArtistName = batch.last?.name
-            lastArtistID = batch.last?.id ?? lastArtistID
+            artistOffset += batch.count
             if batch.count < Self.batchSize { break }
         }
 
         var albums: [AlbumEntry] = []
-        var lastAlbumTitle: String?
-        var lastAlbumID = ""
+        var albumOffset = 0
         while true {
             try Task.checkCancellation()
-            var descriptor = if let lastAlbumTitle {
-                FetchDescriptor<StoredAlbum>(
-                    predicate: #Predicate {
-                        $0.title > lastAlbumTitle || ($0.title == lastAlbumTitle && $0.id > lastAlbumID)
-                    }, sortBy: [SortDescriptor(\.title), SortDescriptor(\.id)])
-            } else {
-                FetchDescriptor<StoredAlbum>(sortBy: [SortDescriptor(\.title), SortDescriptor(\.id)])
-            }
+            let batchContext = ModelContext(modelContainer)
+            var descriptor = FetchDescriptor<StoredAlbum>(
+                sortBy: [SortDescriptor(\.title), SortDescriptor(\.id)])
             descriptor.fetchLimit = Self.batchSize
-            let batch = try modelContext.fetch(descriptor)
+            descriptor.fetchOffset = albumOffset
+            let batch = try batchContext.fetch(descriptor)
             if batch.isEmpty { break }
             for stored in batch {
                 albums.append(AlbumEntry(
@@ -354,8 +340,7 @@ public actor LibrarySearchStore {
                     titleSort: Self.sortKey(stored.title),
                     artistSort: Self.sortKey(stored.albumArtist)))
             }
-            lastAlbumTitle = batch.last?.title
-            lastAlbumID = batch.last?.id ?? lastAlbumID
+            albumOffset += batch.count
             if batch.count < Self.batchSize { break }
         }
         let index = MemoryIndex(songs: songs, artists: artists, albums: albums)

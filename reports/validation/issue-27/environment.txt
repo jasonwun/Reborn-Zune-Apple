@@ -1,0 +1,15 @@
+Validation date: 2026-11-19
+Starting revision: c8bb937dd0196ad53b63c67ba8c4be3eacfb147d
+Model Name: MacBook Pro
+Model Identifier: Mac15,8
+Chip: Apple M3 Max
+Memory: 128 GB
+ProductName: macOS
+ProductVersion: 27.0.1
+BuildVersion: 26A434
+Xcode 27.2
+Build version 27B52
+
+Scale store: temporary on-disk SwiftData store, release Swift test configuration.
+Native host availability: macOS 27.0.1 only; no macOS 14 runtime result is claimed.
+Native GUI status: Orca computer returned screen_locked before any UI action or capture.

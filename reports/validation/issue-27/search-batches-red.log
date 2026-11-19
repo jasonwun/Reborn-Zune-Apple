@@ -1,0 +1,26 @@
+Building for debugging...
+[2 / 7] RebornZuneCoreTests-product
+[4 / 9] RebornZuneCoreTests-product
+[9 / 13] RebornZuneCoreTests-product
+Build complete! (1.06 sec)
+Test Suite 'Selected tests' started at 2026-11-19 04:14:06.737.
+Test Suite 'RebornZuneCoreTests.xctest' started at 2026-11-19 04:14:06.738.
+Test Suite 'LibrarySearchStoreTests' started at 2026-11-19 04:14:06.738.
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testMultiSourceBatchesReturnEverySongWithoutRepeating]' started.
+/Users/yjd/orca/workspaces/Reborn-Zune-Apple/Validate-the-complete-50-000-track-macOS-player-2/Tests/RebornZuneCoreTests/LibrarySearchStoreTests.swift:161: error: -[RebornZuneCoreTests.LibrarySearchStoreTests testMultiSourceBatchesReturnEverySongWithoutRepeating] : XCTAssertEqual failed: ("2000") is not equal to ("3000")
+/Users/yjd/orca/workspaces/Reborn-Zune-Apple/Validate-the-complete-50-000-track-macOS-player-2/Tests/RebornZuneCoreTests/LibrarySearchStoreTests.swift:162: error: -[RebornZuneCoreTests.LibrarySearchStoreTests testMultiSourceBatchesReturnEverySongWithoutRepeating] : XCTAssertEqual failed: ("2000") is not equal to ("3000")
+/Users/yjd/orca/workspaces/Reborn-Zune-Apple/Validate-the-complete-50-000-track-macOS-player-2/Tests/RebornZuneCoreTests/LibrarySearchStoreTests.swift:163: error: -[RebornZuneCoreTests.LibrarySearchStoreTests testMultiSourceBatchesReturnEverySongWithoutRepeating] : XCTAssertEqual failed: ("400") is not equal to ("600")
+/Users/yjd/orca/workspaces/Reborn-Zune-Apple/Validate-the-complete-50-000-track-macOS-player-2/Tests/RebornZuneCoreTests/LibrarySearchStoreTests.swift:164: error: -[RebornZuneCoreTests.LibrarySearchStoreTests testMultiSourceBatchesReturnEverySongWithoutRepeating] : XCTAssertEqual failed: ("1000") is not equal to ("3000")
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testMultiSourceBatchesReturnEverySongWithoutRepeating]' failed (1.285 seconds).
+Test Suite 'LibrarySearchStoreTests' failed at 2026-11-19 04:14:08.023.
+	 Executed 1 test, with 4 failures (0 unexpected) in 1.285 (1.285) seconds
+Test Suite 'RebornZuneCoreTests.xctest' failed at 2026-11-19 04:14:08.023.
+	 Executed 1 test, with 4 failures (0 unexpected) in 1.285 (1.285) seconds
+Test Suite 'Selected tests' failed at 2026-11-19 04:14:08.023.
+	 Executed 1 test, with 4 failures (0 unexpected) in 1.285 (1.286) seconds
+[DEBUG-issue27] normalization batch=1000 min=/release/Removed/Artist 400/Album 2000/Track 2000.m4a max=/release/Removed/Artist 599/Album 2999/Track 2999.m4a
+[DEBUG-issue27] normalization batch=1000 min=/release/Retained/Artist 0/Album 0/Track 0.m4a max=/release/Retained/Artist 99/Album 499/Track 499.m4a
+[DEBUG-issue27] normalized total=2000
+[DEBUG-issue27] memory index songs=2000
+Note: Some test targets reported failures:
+  - RebornZuneCoreTests (XCTest)

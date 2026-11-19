@@ -1,0 +1,791 @@
+Building for debugging...
+[2 / 13]
+Build complete! (0.58 sec)
+Test Suite 'All tests' started at 2026-11-19 04:27:37.212.
+Test Suite 'RebornZuneCoreTests.xctest' started at 2026-11-19 04:27:37.213.
+Test Suite 'AudioSessionConfiguratorTests' started at 2026-11-19 04:27:37.213.
+Test Case '-[RebornZuneCoreTests.AudioSessionConfiguratorTests testConfigureDoesNotThrow]' started.
+Test Case '-[RebornZuneCoreTests.AudioSessionConfiguratorTests testConfigureDoesNotThrow]' passed (0.000 seconds).
+Test Suite 'AudioSessionConfiguratorTests' passed at 2026-11-19 04:27:37.213.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'BitMatrixTests' started at 2026-11-19 04:27:37.213.
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testEmptyMatrixFindsTopLeft]' started.
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testEmptyMatrixFindsTopLeft]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testEmptyMatrixHasZeroFilledRowCount]' started.
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testEmptyMatrixHasZeroFilledRowCount]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testFilledRowCountAfterMixedPlacement]' started.
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testFilledRowCountAfterMixedPlacement]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testFindRegionRejectsInvalidArguments]' started.
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testFindRegionRejectsInvalidArguments]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testLargeOverflowsWidth]' started.
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testLargeOverflowsWidth]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testMediumPushesFollowingUnits]' started.
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testMediumPushesFollowingUnits]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testSequentialUnitsFillRow]' started.
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testSequentialUnitsFillRow]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testWrapToNextRow]' started.
+Test Case '-[RebornZuneCoreTests.BitMatrixTests testWrapToNextRow]' passed (0.000 seconds).
+Test Suite 'BitMatrixTests' passed at 2026-11-19 04:27:37.215.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'BundleLibrarySourceTests' started at 2026-11-19 04:27:37.215.
+Test Case '-[RebornZuneCoreTests.BundleLibrarySourceTests testConformsToLibrarySource]' started.
+Test Case '-[RebornZuneCoreTests.BundleLibrarySourceTests testConformsToLibrarySource]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.BundleLibrarySourceTests testEmptyBundleReturnsEmpty]' started.
+Test Case '-[RebornZuneCoreTests.BundleLibrarySourceTests testEmptyBundleReturnsEmpty]' passed (0.000 seconds).
+Test Suite 'BundleLibrarySourceTests' passed at 2026-11-19 04:27:37.216.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'CanvasTileWallTests' started at 2026-11-19 04:27:37.216.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testEntryBeforeDelayIsHidden]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testEntryBeforeDelayIsHidden]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testEntryCompletesToFull]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testEntryCompletesToFull]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testEntryEaseOutFrontLoadsProgress]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testEntryEaseOutFrontLoadsProgress]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testEntryIsMonotonic]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testEntryIsMonotonic]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipBeforeFadeDelayIsFullyOpaque]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipBeforeFadeDelayIsFullyOpaque]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipCompletesAtTotalDuration]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipCompletesAtTotalDuration]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipMidwayOpacityAndScale]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipMidwayOpacityAndScale]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipScaleXDecreasesMonotonicallyToZero]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipScaleXDecreasesMonotonicallyToZero]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipSingleImageIsIdentity]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipSingleImageIsIdentity]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipSwapsImageAtHalfSecond]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipSwapsImageAtHalfSecond]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipWrapsImageIndex]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testFlipWrapsImageIndex]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testMembershipAfterEntryIsSettled]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testMembershipAfterEntryIsSettled]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testMembershipBeforeWaveIsHidden]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testMembershipBeforeWaveIsHidden]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testMembershipDuringEntryIsAnimated]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testMembershipDuringEntryIsAnimated]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testMembershipFlippingBeforeEntryIsNotSettled]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testMembershipFlippingBeforeEntryIsNotSettled]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testMembershipFlippingOverridesSettled]' started.
+Test Case '-[RebornZuneCoreTests.CanvasTileWallTests testMembershipFlippingOverridesSettled]' passed (0.000 seconds).
+Test Suite 'CanvasTileWallTests' passed at 2026-11-19 04:27:37.218.
+	 Executed 16 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'FolderFileSourceIdentityTests' started at 2026-11-19 04:27:37.218.
+Test Case '-[RebornZuneCoreTests.FolderFileSourceIdentityTests testDiscoversNewFormatsButNotOggOrStandaloneOpus]' started.
+Test Case '-[RebornZuneCoreTests.FolderFileSourceIdentityTests testDiscoversNewFormatsButNotOggOrStandaloneOpus]' passed (0.003 seconds).
+Test Case '-[RebornZuneCoreTests.FolderFileSourceIdentityTests testDiscoversRecursivelyWithFingerprintAndIdentity]' started.
+Test Case '-[RebornZuneCoreTests.FolderFileSourceIdentityTests testDiscoversRecursivelyWithFingerprintAndIdentity]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.FolderFileSourceIdentityTests testEmptyRootIsEmptyNotAnError]' started.
+Test Case '-[RebornZuneCoreTests.FolderFileSourceIdentityTests testEmptyRootIsEmptyNotAnError]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.FolderFileSourceIdentityTests testMissingRootThrowsInsteadOfReportingEmpty]' started.
+Test Case '-[RebornZuneCoreTests.FolderFileSourceIdentityTests testMissingRootThrowsInsteadOfReportingEmpty]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.FolderFileSourceIdentityTests testPermissionFailureIsNotSourceUnavailable]' started.
+Test Case '-[RebornZuneCoreTests.FolderFileSourceIdentityTests testPermissionFailureIsNotSourceUnavailable]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.FolderFileSourceIdentityTests testRenameKeepsIdentityHardLinkAndCopyDiffer]' started.
+Test Case '-[RebornZuneCoreTests.FolderFileSourceIdentityTests testRenameKeepsIdentityHardLinkAndCopyDiffer]' passed (0.002 seconds).
+Test Suite 'FolderFileSourceIdentityTests' passed at 2026-11-19 04:27:37.226.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.008 (0.008) seconds
+Test Suite 'FolderLibrarySourceTests' started at 2026-11-19 04:27:37.226.
+Test Case '-[RebornZuneCoreTests.FolderLibrarySourceTests testEmptyFolderReturnsEmpty]' started.
+Test Case '-[RebornZuneCoreTests.FolderLibrarySourceTests testEmptyFolderReturnsEmpty]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.FolderLibrarySourceTests testNonAudioFilesAreIgnored]' started.
+Test Case '-[RebornZuneCoreTests.FolderLibrarySourceTests testNonAudioFilesAreIgnored]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.FolderLibrarySourceTests testNonExistentFolderThrows]' started.
+Test Case '-[RebornZuneCoreTests.FolderLibrarySourceTests testNonExistentFolderThrows]' passed (0.000 seconds).
+Test Suite 'FolderLibrarySourceTests' passed at 2026-11-19 04:27:37.228.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'LibraryCoordinatorTests' started at 2026-11-19 04:27:37.228.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testAlbumDetailLoadsTracksBeyondTheBrowsingPage]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testAlbumDetailLoadsTracksBeyondTheBrowsingPage]' passed (0.053 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testArtistDetailLoadsTracksBeyondTheBrowsingPage]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testArtistDetailLoadsTracksBeyondTheBrowsingPage]' passed (0.038 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testArtworkIsNotInTrackFetchAndLoadsOnDemand]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testArtworkIsNotInTrackFetchAndLoadsOnDemand]' passed (0.010 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testBrowsingUsesStorePredicateInsteadOfFilteringLoadedPage]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testBrowsingUsesStorePredicateInsteadOfFilteringLoadedPage]' passed (0.033 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testCancelledScanCommitsNothing]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testCancelledScanCommitsNothing]' passed (0.097 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testCommittedIdentityLookupOnlyReturnsRequestedExistingTracks]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testCommittedIdentityLookupOnlyReturnsRequestedExistingTracks]' passed (0.015 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testConfirmedMissingDeletesHistoryAndStatsButFailedScanPreservesThem]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testConfirmedMissingDeletesHistoryAndStatsButFailedScanPreservesThem]' passed (0.019 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testConfirmedMissingDeletesTrackAndItsPlaylistReferencesOnly]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testConfirmedMissingDeletesTrackAndItsPlaylistReferencesOnly]' passed (0.019 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testEmptyScanIsEmptyNotFailedAndNeverDemo]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testEmptyScanIsEmptyNotFailedAndNeverDemo]' passed (0.010 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testFailedExtractionOfExistingFileKeepsTrackAndRetries]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testFailedExtractionOfExistingFileKeepsTrackAndRetries]' passed (0.012 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testFailedFirstScanIsFailedWithRetry]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testFailedFirstScanIsFailedWithRetry]' passed (0.010 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testFailedScanLeavesLegacyEntriesUntouched]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testFailedScanLeavesLegacyEntriesUntouched]' passed (0.008 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testFailureAfterImportPreservesLibraryAndSkipsCleanup]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testFailureAfterImportPreservesLibraryAndSkipsCleanup]' passed (0.009 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testImportPersistsAcrossRelaunchWithSameIdentitiesBeforeRefresh]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testImportPersistsAcrossRelaunchWithSameIdentitiesBeforeRefresh]' passed (0.011 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testIncrementalScanSkipsUnchangedExtraction]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testIncrementalScanSkipsUnchangedExtraction]' passed (0.013 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testInitialImportPersistsTrackDiscAndGenreAcrossRelaunch]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testInitialImportPersistsTrackDiscAndGenreAcrossRelaunch]' passed (0.009 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testLaunchPublishesOnePageAndLoadsMoreOnDemand]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testLaunchPublishesOnePageAndLoadsMoreOnDemand]' passed (0.032 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testLegacyEntryForUnextractableCurrentFileIsNotRekeyedToGhostOrDeleted]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testLegacyEntryForUnextractableCurrentFileIsNotRekeyedToGhostOrDeleted]' passed (0.014 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testLegacyHashEntriesRekeyOnExactPathMatchOnly]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testLegacyHashEntriesRekeyOnExactPathMatchOnly]' passed (0.011 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testMetadataVersionBackfillsOnceThenReturnsToIncrementalScanning]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testMetadataVersionBackfillsOnceThenReturnsToIncrementalScanning]' passed (0.013 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testMoveKeepsIdentityAndCopyGetsNewOne]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testMoveKeepsIdentityAndCopyGetsNewOne]' passed (0.013 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testNewerBrowseQueryDoesNotAcceptOlderPageResults]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testNewerBrowseQueryDoesNotAcceptOlderPageResults]' passed (0.033 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testPlaylistTracksLoadByIdentityOutsideTheBrowsingPage]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testPlaylistTracksLoadByIdentityOutsideTheBrowsingPage]' passed (0.036 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testUnknownAlbumDetailUsesTheSameFallbackGroupingRules]' started.
+Test Case '-[RebornZuneCoreTests.LibraryCoordinatorTests testUnknownAlbumDetailUsesTheSameFallbackGroupingRules]' passed (0.010 seconds).
+Test Suite 'LibraryCoordinatorTests' passed at 2026-11-19 04:27:37.759.
+	 Executed 24 tests, with 0 failures (0 unexpected) in 0.529 (0.530) seconds
+Test Suite 'LibraryGroupingTests' started at 2026-11-19 04:27:37.759.
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testAlbumGenreIsMostCommonRealTrackGenre]' started.
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testAlbumGenreIsMostCommonRealTrackGenre]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testAlbumGroupingByAlbumAndArtist]' started.
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testAlbumGroupingByAlbumAndArtist]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testAlbumPresentationAddsOnlyMultiDiscHeadingsAndUsesPositionalFallback]' started.
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testAlbumPresentationAddsOnlyMultiDiscHeadingsAndUsesPositionalFallback]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testArtistsGroupAlbumsByAlbumArtist]' started.
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testArtistsGroupAlbumsByAlbumArtist]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testEarliestYearWins]' started.
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testEarliestYearWins]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testEmptyInput]' started.
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testEmptyInput]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testMissingAlbumTitleBecomesUnknownAlbum]' started.
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testMissingAlbumTitleBecomesUnknownAlbum]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testPrivilegedArtistRule]' started.
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testPrivilegedArtistRule]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testTrackOrdering]' started.
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testTrackOrdering]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testTrackOrderingUsesDiscTrackThenTitleForUnnumbered]' started.
+Test Case '-[RebornZuneCoreTests.LibraryGroupingTests testTrackOrderingUsesDiscTrackThenTitleForUnnumbered]' passed (0.000 seconds).
+Test Suite 'LibraryGroupingTests' passed at 2026-11-19 04:27:37.762.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'LibraryReconcilerTests' started at 2026-11-19 04:27:37.762.
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testAmbiguousMoveIsNotGuessed]' started.
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testAmbiguousMoveIsNotGuessed]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testChangedFingerprintReextractsButKeepsIdentity]' started.
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testChangedFingerprintReextractsButKeepsIdentity]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testCopyAtDifferentPathIsDistinct]' started.
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testCopyAtDifferentPathIsDistinct]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testCrossVolumeMoveDoesNotTransferIdentity]' started.
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testCrossVolumeMoveDoesNotTransferIdentity]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testDuplicateNormalizedPathsAreDeduplicated]' started.
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testDuplicateNormalizedPathsAreDeduplicated]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testHardLinkPathWhileOriginalRemainsGetsNewUUID]' started.
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testHardLinkPathWhileOriginalRemainsGetsNewUUID]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testSamePathReplacementWithNewFileIdentityRetainsUUID]' started.
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testSamePathReplacementWithNewFileIdentityRetainsUUID]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testSamePathRetainsIdentityAndSkipsExtractionWhenUnchanged]' started.
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testSamePathRetainsIdentityAndSkipsExtractionWhenUnchanged]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testSameVolumeMoveRetainsIdentity]' started.
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testSameVolumeMoveRetainsIdentity]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testStaleMetadataVersionForcesReextraction]' started.
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testStaleMetadataVersionForcesReextraction]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testTwoDisappearedOneNewIsNotGuessed]' started.
+Test Case '-[RebornZuneCoreTests.LibraryReconcilerTests testTwoDisappearedOneNewIsNotGuessed]' passed (0.000 seconds).
+Test Suite 'LibraryReconcilerTests' passed at 2026-11-19 04:27:37.763.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'LibraryScaleBenchmarkTests' started at 2026-11-19 04:27:37.763.
+Test Case '-[RebornZuneCoreTests.LibraryScaleBenchmarkTests testLaunchToBrowsableAt50000Tracks]' started.
+/Users/yjd/orca/workspaces/Reborn-Zune-Apple/Validate-the-complete-50-000-track-macOS-player-2/Tests/RebornZuneCoreTests/LibraryScaleBenchmarkTests.swift:54: -[RebornZuneCoreTests.LibraryScaleBenchmarkTests testLaunchToBrowsableAt50000Tracks] : Test skipped
+Test Case '-[RebornZuneCoreTests.LibraryScaleBenchmarkTests testLaunchToBrowsableAt50000Tracks]' skipped (0.000 seconds).
+Test Suite 'LibraryScaleBenchmarkTests' passed at 2026-11-19 04:27:37.764.
+	 Executed 1 test, with 1 test skipped and 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'LibrarySearchCoordinatorTests' started at 2026-11-19 04:27:37.764.
+Test Case '-[RebornZuneCoreTests.LibrarySearchCoordinatorTests testCommittedLibraryUpdateRerunsAgainstFreshNormalizedRecords]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchCoordinatorTests testCommittedLibraryUpdateRerunsAgainstFreshNormalizedRecords]' passed (0.011 seconds).
+Test Suite 'LibrarySearchCoordinatorTests' passed at 2026-11-19 04:27:37.775.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.011 (0.011) seconds
+Test Suite 'LibrarySearchInteractionTests' started at 2026-11-19 04:27:37.775.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testKeyboardNavigationFollowsGroupedRowsAndCardGrids]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testKeyboardNavigationFollowsGroupedRowsAndCardGrids]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testLoadingIndicatorAppearsOnlyAfter150MillisecondsOfIncompleteQuery]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testLoadingIndicatorAppearsOnlyAfter150MillisecondsOfIncompleteQuery]' passed (0.689 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testRepeatedDownNavigationWalksEveryShowAllResult]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testRepeatedDownNavigationWalksEveryShowAllResult]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testSelectionPublishesChangesToSwiftUIObservation]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testSelectionPublishesChangesToSwiftUIObservation]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testShowAllRetainsQueryAndLibraryRefreshPreservesOnlyStableSelection]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testShowAllRetainsQueryAndLibraryRefreshPreservesOnlyStableSelection]' passed (0.253 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testTextChangeClearsVisibleResultsAndDiscardsSupersededGeneration]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testTextChangeClearsVisibleResultsAndDiscardsSupersededGeneration]' passed (0.534 seconds).
+Test Suite 'LibrarySearchInteractionTests' passed at 2026-11-19 04:27:39.254.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 1.477 (1.479) seconds
+Test Suite 'LibrarySearchScaleBenchmarkTests' started at 2026-11-19 04:27:39.254.
+Test Case '-[RebornZuneCoreTests.LibrarySearchScaleBenchmarkTests testReleaseSearchAndPlaybackAt50000Tracks]' started.
+/Users/yjd/orca/workspaces/Reborn-Zune-Apple/Validate-the-complete-50-000-track-macOS-player-2/Tests/RebornZuneCoreTests/LibrarySearchScaleBenchmarkTests.swift:66: -[RebornZuneCoreTests.LibrarySearchScaleBenchmarkTests testReleaseSearchAndPlaybackAt50000Tracks] : Test skipped
+Test Case '-[RebornZuneCoreTests.LibrarySearchScaleBenchmarkTests testReleaseSearchAndPlaybackAt50000Tracks]' skipped (0.002 seconds).
+Test Suite 'LibrarySearchScaleBenchmarkTests' passed at 2026-11-19 04:27:39.256.
+	 Executed 1 test, with 1 test skipped and 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'LibrarySearchStoreTests' started at 2026-11-19 04:27:39.256.
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testArtistAndAlbumSearchUsesOwnedAlbumsAndAggregateRealFields]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testArtistAndAlbumSearchUsesOwnedAlbumsAndAggregateRealFields]' passed (0.030 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testGenreDiscoveryUsesRealTrackCountsAndLimit]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testGenreDiscoveryUsesRealTrackCountsAndLimit]' passed (0.026 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testMoreThanOneBatchReturnsEverySongWithoutRepeating]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testMoreThanOneBatchReturnsEverySongWithoutRepeating]' passed (0.300 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testMultiSourceBatchesReturnEverySongWithoutRepeating]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testMultiSourceBatchesReturnEverySongWithoutRepeating]' passed (1.649 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testSearchReturnsCompleteRankedSnapshotBeyondOverviewCaps]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testSearchReturnsCompleteRankedSnapshotBeyondOverviewCaps]' passed (0.011 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testSongRankingUsesMinimumScoreSumAndLocalizedTieBreakers]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testSongRankingUsesMinimumScoreSumAndLocalizedTieBreakers]' passed (0.007 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testSongSearchMatchesRealFieldsAcrossTokenOrderAndDiacritics]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchStoreTests testSongSearchMatchesRealFieldsAcrossTokenOrderAndDiacritics]' passed (0.006 seconds).
+Test Suite 'LibrarySearchStoreTests' passed at 2026-11-19 04:27:41.286.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 2.029 (2.030) seconds
+Test Suite 'LibraryStorePagingTests' started at 2026-11-19 04:27:41.286.
+Test Case '-[RebornZuneCoreTests.LibraryStorePagingTests testAlbumOrderingUsesAlbumTitleInsteadOfTrackTitle]' started.
+Test Case '-[RebornZuneCoreTests.LibraryStorePagingTests testAlbumOrderingUsesAlbumTitleInsteadOfTrackTitle]' passed (0.009 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryStorePagingTests testPagedFetchAppliesRequestedArtistAndYearOrdering]' started.
+Test Case '-[RebornZuneCoreTests.LibraryStorePagingTests testPagedFetchAppliesRequestedArtistAndYearOrdering]' passed (0.008 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryStorePagingTests testPagedFetchUsesStableTitleOrderAndReportsFilteredCount]' started.
+Test Case '-[RebornZuneCoreTests.LibraryStorePagingTests testPagedFetchUsesStableTitleOrderAndReportsFilteredCount]' passed (0.008 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryStorePagingTests testScanSnapshotsAreLimitedToTheirLibrarySource]' started.
+Test Case '-[RebornZuneCoreTests.LibraryStorePagingTests testScanSnapshotsAreLimitedToTheirLibrarySource]' passed (0.007 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryStorePagingTests testSearchMatchesEverySupportedMetadataFieldCaseInsensitively]' started.
+Test Case '-[RebornZuneCoreTests.LibraryStorePagingTests testSearchMatchesEverySupportedMetadataFieldCaseInsensitively]' passed (0.009 seconds).
+Test Case '-[RebornZuneCoreTests.LibraryStorePagingTests testZeroLimitDoesNotTurnIntoAnUnboundedFetch]' started.
+Test Case '-[RebornZuneCoreTests.LibraryStorePagingTests testZeroLimitDoesNotTurnIntoAnUnboundedFetch]' passed (0.006 seconds).
+Test Suite 'LibraryStorePagingTests' passed at 2026-11-19 04:27:41.334.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.047 (0.048) seconds
+Test Suite 'LightKeyframesTests' started at 2026-11-19 04:27:41.334.
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testColorInterpolation]' started.
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testColorInterpolation]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testCoolPaletteCount]' started.
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testCoolPaletteCount]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testCoolPalettePositionsNormalized]' started.
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testCoolPalettePositionsNormalized]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testCoolPaletteValues]' started.
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testCoolPaletteValues]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testInterpolationClampsOutOfRange]' started.
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testInterpolationClampsOutOfRange]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testInterpolationMidpoint]' started.
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testInterpolationMidpoint]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testKeyframeProgressBoundaries]' started.
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testKeyframeProgressBoundaries]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testWarmPaletteCount]' started.
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testWarmPaletteCount]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testWarmPalettePositionAtSecondKeyframe]' started.
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testWarmPalettePositionAtSecondKeyframe]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testWarmPalettePositionsNormalized]' started.
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testWarmPalettePositionsNormalized]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testWarmPaletteValues]' started.
+Test Case '-[RebornZuneCoreTests.LightKeyframesTests testWarmPaletteValues]' passed (0.000 seconds).
+Test Suite 'LightKeyframesTests' passed at 2026-11-19 04:27:41.335.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'LightingAnimatorTests' started at 2026-11-19 04:27:41.335.
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testCyclesAtCycleDuration]' started.
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testCyclesAtCycleDuration]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testCyclicProgressHelper]' started.
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testCyclicProgressHelper]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testDefaultIntensityAndAmbient]' started.
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testDefaultIntensityAndAmbient]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testKeyframesScaleWithPanelSize]' started.
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testKeyframesScaleWithPanelSize]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testKeyframesStayOnScreen]' started.
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testKeyframesStayOnScreen]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testPanelSizePropagates]' started.
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testPanelSizePropagates]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testParametersAtStartDelayBoundary]' started.
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testParametersAtStartDelayBoundary]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testParametersAtTimeZero]' started.
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testParametersAtTimeZero]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testProgressClampHelper]' started.
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testProgressClampHelper]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testStartCorners]' started.
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testStartCorners]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testStartDelayHoldsBothLights]' started.
+Test Case '-[RebornZuneCoreTests.LightingAnimatorTests testStartDelayHoldsBothLights]' passed (0.000 seconds).
+Test Suite 'LightingAnimatorTests' passed at 2026-11-19 04:27:41.337.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'LightingShaderCompilationTest' started at 2026-11-19 04:27:41.337.
+Test Case '-[RebornZuneCoreTests.LightingShaderCompilationTest testZuneLightingFunctionExistsInModuleMetalLibrary]' started.
+Test Case '-[RebornZuneCoreTests.LightingShaderCompilationTest testZuneLightingFunctionExistsInModuleMetalLibrary]' passed (0.015 seconds).
+Test Suite 'LightingShaderCompilationTest' passed at 2026-11-19 04:27:41.352.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.015 (0.015) seconds
+Test Suite 'LightingShaderTests' started at 2026-11-19 04:27:41.352.
+Test Case '-[RebornZuneCoreTests.LightingShaderTests testCustomIntensityAndAmbientArePreserved]' started.
+Test Case '-[RebornZuneCoreTests.LightingShaderTests testCustomIntensityAndAmbientArePreserved]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightingShaderTests testParametersDefaultsMatchM58Spec]' started.
+Test Case '-[RebornZuneCoreTests.LightingShaderTests testParametersDefaultsMatchM58Spec]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LightingShaderTests testParametersStoredFieldCount]' started.
+Test Case '-[RebornZuneCoreTests.LightingShaderTests testParametersStoredFieldCount]' passed (0.000 seconds).
+Test Suite 'LightingShaderTests' passed at 2026-11-19 04:27:41.352.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'MacCommandTests' started at 2026-11-19 04:27:41.352.
+Test Case '-[RebornZuneCoreTests.MacCommandTests testFocusingSearchNavigatesAndRequestsFieldFocusEachTime]' started.
+Test Case '-[RebornZuneCoreTests.MacCommandTests testFocusingSearchNavigatesAndRequestsFieldFocusEachTime]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.MacCommandTests testNavigationCommandsSelectPivotsNowPlayingAndBack]' started.
+Test Case '-[RebornZuneCoreTests.MacCommandTests testNavigationCommandsSelectPivotsNowPlayingAndBack]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.MacCommandTests testPlaybackShortcutDoesNotFireWhileEditingText]' started.
+Test Case '-[RebornZuneCoreTests.MacCommandTests testPlaybackShortcutDoesNotFireWhileEditingText]' passed (0.002 seconds).
+Test Case '-[RebornZuneCoreTests.MacCommandTests testTransportCommandsRouteThroughPublicPlaybackBehavior]' started.
+Test Case '-[RebornZuneCoreTests.MacCommandTests testTransportCommandsRouteThroughPublicPlaybackBehavior]' passed (0.001 seconds).
+Test Suite 'MacCommandTests' passed at 2026-11-19 04:27:41.357.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.005 (0.005) seconds
+Test Suite 'MacDockMenuTests' started at 2026-11-19 04:27:41.357.
+Test Case '-[RebornZuneCoreTests.MacDockMenuTests testDockTransportUsesCurrentPublicPlaybackState]' started.
+Test Case '-[RebornZuneCoreTests.MacDockMenuTests testDockTransportUsesCurrentPublicPlaybackState]' passed (0.018 seconds).
+Test Case '-[RebornZuneCoreTests.MacDockMenuTests testRecentSelectionPlaysTrackAndEmptyHistoryIsDisabled]' started.
+Test Case '-[RebornZuneCoreTests.MacDockMenuTests testRecentSelectionPlaysTrackAndEmptyHistoryIsDisabled]' passed (0.012 seconds).
+Test Suite 'MacDockMenuTests' passed at 2026-11-19 04:27:41.388.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.030 (0.030) seconds
+Test Suite 'MetadataExtractorTests' started at 2026-11-19 04:27:41.388.
+Test Case '-[RebornZuneCoreTests.MetadataExtractorTests testAIFFReadsID3Metadata]' started.
+Test Case '-[RebornZuneCoreTests.MetadataExtractorTests testAIFFReadsID3Metadata]' passed (0.009 seconds).
+Test Case '-[RebornZuneCoreTests.MetadataExtractorTests testFLACReadsVorbisNumbersAndFirstGenre]' started.
+Test Case '-[RebornZuneCoreTests.MetadataExtractorTests testFLACReadsVorbisNumbersAndFirstGenre]' passed (0.004 seconds).
+Test Case '-[RebornZuneCoreTests.MetadataExtractorTests testM4AReadsBinaryITunesTrackDiscAndGenre]' started.
+Test Case '-[RebornZuneCoreTests.MetadataExtractorTests testM4AReadsBinaryITunesTrackDiscAndGenre]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.MetadataExtractorTests testMissingFieldsStayNilAndTitleFallsBackToFilename]' started.
+Test Case '-[RebornZuneCoreTests.MetadataExtractorTests testMissingFieldsStayNilAndTitleFallsBackToFilename]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.MetadataExtractorTests testMP3ReadsID3TrackDiscAndGenre]' started.
+Test Case '-[RebornZuneCoreTests.MetadataExtractorTests testMP3ReadsID3TrackDiscAndGenre]' passed (0.002 seconds).
+Test Case '-[RebornZuneCoreTests.MetadataExtractorTests testWAVReadsCoreAudioMetadata]' started.
+Test Case '-[RebornZuneCoreTests.MetadataExtractorTests testWAVReadsCoreAudioMetadata]' passed (0.001 seconds).
+Test Suite 'MetadataExtractorTests' passed at 2026-11-19 04:27:41.407.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.018 (0.019) seconds
+Test Suite 'MultipleLibrarySourcesTests' started at 2026-11-19 04:27:41.407.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testAddingRejectsDuplicateAncestorAndDescendantUsingPathComponents]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testAddingRejectsDuplicateAncestorAndDescendantUsingPathComponents]' passed (0.013 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testAddingSourcePersistsBookmarkAndImmediatelyScansIntoUnion]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testAddingSourcePersistsBookmarkAndImmediatelyScansIntoUnion]' passed (0.013 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testBookmarksAreIndependentRefreshedAndBalancedOnSuccessFailureAndCancellation]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testBookmarksAreIndependentRefreshedAndBalancedOnSuccessFailureAndCancellation]' passed (0.066 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testCancellationKeepsOldUnionAndCommittedCountsVisible]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testCancellationKeepsOldUnionAndCommittedCountsVisible]' passed (0.066 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testDefaultSourceWithoutUserSelectionRequiresGrantInsteadOfAutomaticBookmark]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testDefaultSourceWithoutUserSelectionRequiresGrantInsteadOfAutomaticBookmark]' passed (0.012 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testDeniedBookmarkMarksSourceForGrantAndSuccessfulGrantClearsIt]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testDeniedBookmarkMarksSourceForGrantAndSuccessfulGrantClearsIt]' passed (0.018 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testFailedScanPreservesPlaylistEntriesAndOrder]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testFailedScanPreservesPlaylistEntriesAndOrder]' passed (0.017 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testFailedSourcePreservesWholePreviousUnionAndCountsForRetry]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testFailedSourcePreservesWholePreviousUnionAndCountsForRetry]' passed (0.016 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testMissingVolumeDuringBookmarkResolutionUsesUnavailableCleanup]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testMissingVolumeDuringBookmarkResolutionUsesUnavailableCleanup]' passed (0.014 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testOpenPanelGrantPersistsPerSourceBookmarkAcrossRelaunch]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testOpenPanelGrantPersistsPerSourceBookmarkAcrossRelaunch]' passed (0.015 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testPlaybackAccessResolvesTheOwningSourceBookmark]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testPlaybackAccessResolvesTheOwningSourceBookmark]' passed (0.011 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testPlaylistPickerLoadsBeyondBrowsePageAndSearchesStore]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testPlaylistPickerLoadsBeyondBrowsePageAndSearchesStore]' passed (0.030 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testPlaylistTrackResolutionRestoresEveryRequestedIDInManualOrder]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testPlaylistTrackResolutionRestoresEveryRequestedIDInManualOrder]' passed (0.029 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testProgressCountsUniqueNormalizedURLsAcrossSources]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testProgressCountsUniqueNormalizedURLsAcrossSources]' passed (0.010 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testRemovingSourceDeletesOnlyItsTracksAndLinkedData]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testRemovingSourceDeletesOnlyItsTracksAndLinkedData]' passed (0.014 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testScanBuildsUnionWithCommittedCountsForEverySource]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testScanBuildsUnionWithCommittedCountsForEverySource]' passed (0.009 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testSuccessfulScanDeletesMissingPlaylistEntriesAndNormalizesRemainingOrder]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testSuccessfulScanDeletesMissingPlaylistEntriesAndNormalizesRemainingOrder]' passed (0.013 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testUnavailableRootRetainsConfigurationClearsOnlyThatSourceAndRecoversWithNewIdentity]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testUnavailableRootRetainsConfigurationClearsOnlyThatSourceAndRecoversWithNewIdentity]' passed (0.014 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testUnreadableDefaultSourceAlsoOffersOpenPanelGrant]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testUnreadableDefaultSourceAlsoOffersOpenPanelGrant]' passed (0.010 seconds).
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testZeroSourcesSurvivesRelaunchWithoutResurrectingDefault]' started.
+Test Case '-[RebornZuneCoreTests.MultipleLibrarySourcesTests testZeroSourcesSurvivesRelaunchWithoutResurrectingDefault]' passed (0.011 seconds).
+Test Suite 'MultipleLibrarySourcesTests' passed at 2026-11-19 04:27:41.809.
+	 Executed 20 tests, with 0 failures (0 unexpected) in 0.401 (0.403) seconds
+Test Suite 'MusicTests' started at 2026-11-19 04:27:41.809.
+Test Case '-[RebornZuneCoreTests.MusicTests testHashableEquality]' started.
+Test Case '-[RebornZuneCoreTests.MusicTests testHashableEquality]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.MusicTests testIDIsDerivedFromURL]' started.
+Test Case '-[RebornZuneCoreTests.MusicTests testIDIsDerivedFromURL]' passed (0.000 seconds).
+Test Suite 'MusicTests' passed at 2026-11-19 04:27:41.810.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'NowPlayingCenterTests' started at 2026-11-19 04:27:41.810.
+Test Case '-[RebornZuneCoreTests.NowPlayingCenterTests testRegisterEnablesAllSupportedRemoteCommands]' started.
+Test Case '-[RebornZuneCoreTests.NowPlayingCenterTests testRegisterEnablesAllSupportedRemoteCommands]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.NowPlayingCenterTests testUpdateProducesExpectedKeys]' started.
+Test Case '-[RebornZuneCoreTests.NowPlayingCenterTests testUpdateProducesExpectedKeys]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.NowPlayingCenterTests testUpdateWithNilClearsInfo]' started.
+Test Case '-[RebornZuneCoreTests.NowPlayingCenterTests testUpdateWithNilClearsInfo]' passed (0.000 seconds).
+Test Suite 'NowPlayingCenterTests' passed at 2026-11-19 04:27:41.811.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'PersistenceModelsTests' started at 2026-11-19 04:27:41.811.
+Test Case '-[RebornZuneCoreTests.PersistenceModelsTests testCascadeDeletesEntriesWithPlaylist]' started.
+Test Case '-[RebornZuneCoreTests.PersistenceModelsTests testCascadeDeletesEntriesWithPlaylist]' passed (0.004 seconds).
+Test Case '-[RebornZuneCoreTests.PersistenceModelsTests testEntriesPreserveOrderIndex]' started.
+Test Case '-[RebornZuneCoreTests.PersistenceModelsTests testEntriesPreserveOrderIndex]' passed (0.003 seconds).
+Test Case '-[RebornZuneCoreTests.PersistenceModelsTests testInsertAndFetchPlaylist]' started.
+Test Case '-[RebornZuneCoreTests.PersistenceModelsTests testInsertAndFetchPlaylist]' passed (0.003 seconds).
+Test Case '-[RebornZuneCoreTests.PersistenceModelsTests testSchemaContainsAllEntities]' started.
+Test Case '-[RebornZuneCoreTests.PersistenceModelsTests testSchemaContainsAllEntities]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.PersistenceModelsTests testStoredAppSettingsRoundTrip]' started.
+Test Case '-[RebornZuneCoreTests.PersistenceModelsTests testStoredAppSettingsRoundTrip]' passed (0.003 seconds).
+Test Suite 'PersistenceModelsTests' passed at 2026-11-19 04:27:41.824.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.013 (0.013) seconds
+Test Suite 'PlayHistoryTests' started at 2026-11-19 04:27:41.824.
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testActualStartImmediatelyPersistsEventAndLastPlayedStats]' started.
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testActualStartImmediatelyPersistsEventAndLastPlayedStats]' passed (0.003 seconds).
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testHistoryPruningKeepsLatest500WithoutReducingQualifiedStats]' started.
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testHistoryPruningKeepsLatest500WithoutReducingQualifiedStats]' passed (4.949 seconds).
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testKnownDurationUsesWhicheverQualificationThresholdComesFirst]' started.
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testKnownDurationUsesWhicheverQualificationThresholdComesFirst]' passed (0.005 seconds).
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testRecentlyPlayedLoadsAvailableTracksOutsideBrowsingPage]' started.
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testRecentlyPlayedLoadsAvailableTracksOutsideBrowsingPage]' passed (0.004 seconds).
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testRecentlyPlayedUsesLatestDistinctStartsAndOnlyAvailableTracks]' started.
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testRecentlyPlayedUsesLatestDistinctStartsAndOnlyAvailableTracks]' passed (0.005 seconds).
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testRelaunchKeepsUnqualifiedEventWithoutPersistingProgress]' started.
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testRelaunchKeepsUnqualifiedEventWithoutPersistingProgress]' passed (0.014 seconds).
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testUnknownDurationQualifiesOnceAtThirtySecondsOfActivePlayback]' started.
+Test Case '-[RebornZuneCoreTests.PlayHistoryTests testUnknownDurationQualifiesOnceAtThirtySecondsOfActivePlayback]' passed (0.004 seconds).
+Test Suite 'PlayHistoryTests' passed at 2026-11-19 04:27:46.807.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 4.983 (4.983) seconds
+Test Suite 'PlaybackEngineTests' started at 2026-11-19 04:27:46.807.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testActivePlaybackAccumulatesOnlyWhilePlaying]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testActivePlaybackAccumulatesOnlyWhilePlaying]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testActivePlaybackSignalExcludesSeekJumpsAndHandlesUnknownDuration]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testActivePlaybackSignalExcludesSeekJumpsAndHandlesUnknownDuration]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testEmptySetQueueResetsState]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testEmptySetQueueResetsState]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testInitialStateIsStoppedNoItem]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testInitialStateIsStoppedNoItem]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testLargeQueueMaterializesOnlyCurrentPlusTwoPlayerItems]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testLargeQueueMaterializesOnlyCurrentPlusTwoPlayerItems]' passed (1.452 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testLegacySnapshotRebuildsSharedDuplicateEntryIdentities]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testLegacySnapshotRebuildsSharedDuplicateEntryIdentities]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testLoadStartResumeAndSeekHaveDistinctSignals]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testLoadStartResumeAndSeekHaveDistinctSignals]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testNextAdvancesQueue]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testNextAdvancesQueue]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testNextAtEndStopsWithRepeatOff]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testNextAtEndStopsWithRepeatOff]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testNextAtEndWrapsWithRepeatAll]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testNextAtEndWrapsWithRepeatAll]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPausedRealItemDoesNotEnterBuffering]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPausedRealItemDoesNotEnterBuffering]' passed (0.513 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPausePublishesExactPlayerPositionAtZeroRate]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPausePublishesExactPlayerPositionAtZeroRate]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPeriodicTimeUpdatesDoNotRepublishNowPlayingProgress]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPeriodicTimeUpdatesDoNotRepublishNowPlayingProgress]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPlaybackBalancesSecurityScopesAcrossAdvanceAndTrackRemoval]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPlaybackBalancesSecurityScopesAcrossAdvanceAndTrackRemoval]' passed (0.003 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPlayerRateAndBufferingChangesPublishImmediately]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPlayerRateAndBufferingChangesPublishImmediately]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPlayerWindowContainsCurrentPlusTwoAndRefillsInActiveOrder]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPlayerWindowContainsCurrentPlusTwoAndRefillsInActiveOrder]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPlayHistoryQualificationIgnoresPausedTimeAndSeekJumps]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPlayHistoryQualificationIgnoresPausedTimeAndSeekJumps]' passed (0.008 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPlayHistoryRecordsOnlyActualStartsAcrossTransportActions]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPlayHistoryRecordsOnlyActualStartsAcrossTransportActions]' passed (0.012 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPlayNextAndPlayLaterEditUpcomingOrder]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPlayNextAndPlayLaterEditUpcomingOrder]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPreviousRepeatAndNaturalEndUseDisplayedOrderAndCurrentPlusTwo]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPreviousRepeatAndNaturalEndUseDisplayedOrderAndCurrentPlusTwo]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPreviousReverses]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testPreviousReverses]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testQueueChangesPublishPersistableSnapshots]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testQueueChangesPublishPersistableSnapshots]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRealAudioNaturallyAdvancesToDisplayedNextTrack]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRealAudioNaturallyAdvancesToDisplayedNextTrack]' passed (5.307 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRealAudioPlaybackAdvancesTime]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRealAudioPlaybackAdvancesTime]' passed (0.768 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRelativeSkipsMoveFifteenSecondsWithinTrackBounds]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRelativeSkipsMoveFifteenSecondsWithinTrackBounds]' passed (0.002 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRemoteSeekShuffleAndRepeatDrivePublicPlaybackState]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRemoteSeekShuffleAndRepeatDrivePublicPlaybackState]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRemovingCurrentTrackStopsAndPreservesUnrelatedQueueEntries]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRemovingCurrentTrackStopsAndPreservesUnrelatedQueueEntries]' passed (0.003 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRemovingOtherTrackKeepsCurrentPlaybackAndQueueOrder]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRemovingOtherTrackKeepsCurrentPlaybackAndQueueOrder]' passed (0.004 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRepeatedPlayDoesNotDiscardUnobservedActivePlayback]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRepeatedPlayDoesNotDiscardUnobservedActivePlayback]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRepeatOneStaysOnTrack]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRepeatOneStaysOnTrack]' passed (0.002 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRestoreDropsUnresolvedReferencesAndRestoresPausedWindowAndPosition]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRestoreDropsUnresolvedReferencesAndRestoresPausedWindowAndPosition]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRestoreKeepsPersistedIndexWhenCurrentTrackIsDuplicated]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testRestoreKeepsPersistedIndexWhenCurrentTrackIsDuplicated]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testSeekClampsToZero]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testSeekClampsToZero]' passed (0.002 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testSetQueueAdvancesToFirstTrack]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testSetQueueAdvancesToFirstTrack]' passed (0.002 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testSetQueueWithStartingAt]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testSetQueueWithStartingAt]' passed (0.002 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testShuffleArtistPlaysWholeArtistQueueInShuffledOrder]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testShuffleArtistPlaysWholeArtistQueueInShuffledOrder]' passed (0.003 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testShuffleEditsReconcilePlayerAndToggleOffRestoresOriginalOrder]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testShuffleEditsReconcilePlayerAndToggleOffRestoresOriginalOrder]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testShuffleProducesQueuePermutation]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testShuffleProducesQueuePermutation]' passed (0.002 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testShuffleRemovalTargetsDuplicateEntryAndKeepsCurrentAnchor]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testShuffleRemovalTargetsDuplicateEntryAndKeepsCurrentAnchor]' passed (0.002 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testSkipToInQueue]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testSkipToInQueue]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testSkipToOutOfQueueIsNoOp]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testSkipToOutOfQueueIsNoOp]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testTogglePlayPauseFromPaused]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testTogglePlayPauseFromPaused]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testTrackChangesAndRestartsEmitExplicitStartReasons]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testTrackChangesAndRestartsEmitExplicitStartReasons]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testUpNextReorderDeleteAndClearRetainCurrentTrack]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testUpNextReorderDeleteAndClearRetainCurrentTrack]' passed (0.002 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testVolumeCommandsChangeFivePercentAndClampAtEndpoints]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testVolumeCommandsChangeFivePercentAndClampAtEndpoints]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testVolumeIsClampedAndAppliedToPlayer]' started.
+Test Case '-[RebornZuneCoreTests.PlaybackEngineTests testVolumeIsClampedAndAppliedToPlayer]' passed (0.000 seconds).
+Test Suite 'PlaybackEngineTests' passed at 2026-11-19 04:27:54.922.
+	 Executed 46 tests, with 0 failures (0 unexpected) in 8.108 (8.115) seconds
+Test Suite 'PlaylistInteractionTests' started at 2026-11-19 04:27:54.922.
+Test Case '-[RebornZuneCoreTests.PlaylistInteractionTests testAddingShowsNamedNonmodalFeedback]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistInteractionTests testAddingShowsNamedNonmodalFeedback]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistInteractionTests testDeleteReturnsOnlyMatchingDetailToGridAndEscapeCancelsSheets]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistInteractionTests testDeleteReturnsOnlyMatchingDetailToGridAndEscapeCancelsSheets]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistInteractionTests testStandaloneCreateNavigatesButTrackMenuCreateStaysInPlace]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistInteractionTests testStandaloneCreateNavigatesButTrackMenuCreateStaysInPlace]' passed (0.000 seconds).
+Test Suite 'PlaylistInteractionTests' passed at 2026-11-19 04:27:54.924.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'PlaylistPickerTests' started at 2026-11-19 04:27:54.924.
+Test Case '-[RebornZuneCoreTests.PlaylistPickerTests testSearchMatchesTitleArtistAndAlbumWithoutHidingOtherChoices]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistPickerTests testSearchMatchesTitleArtistAndAlbumWithoutHidingOtherChoices]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistPickerTests testSelectionConfirmsInDisplayOrderRatherThanClickOrder]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistPickerTests testSelectionConfirmsInDisplayOrderRatherThanClickOrder]' passed (0.000 seconds).
+Test Suite 'PlaylistPickerTests' passed at 2026-11-19 04:27:54.925.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'PlaylistStoreTests' started at 2026-11-19 04:27:54.925.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testAddNormalizesMalformedLegacyOrderWithDeterministicTieBreakers]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testAddNormalizesMalformedLegacyOrderWithDeterministicTieBreakers]' passed (0.009 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testAddTracksAppendsIndependentDuplicateEntriesWithStableIdentity]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testAddTracksAppendsIndependentDuplicateEntriesWithStableIdentity]' passed (0.005 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testAlbumAndSourcePlaylistGroupsAppendInTheirDisplayOrder]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testAlbumAndSourcePlaylistGroupsAppendInTheirDisplayOrder]' passed (0.009 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testCreateRejectsWhitespaceOnlyNameWithoutSaving]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testCreateRejectsWhitespaceOnlyNameWithoutSaving]' passed (0.004 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testCreateTrimsNameAndAllowsDuplicateNames]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testCreateTrimsNameAndAllowsDuplicateNames]' passed (0.004 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testLegacyEntryWithoutIDMigratesAndReceivesStableBackfilledID]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testLegacyEntryWithoutIDMigratesAndReceivesStableBackfilledID]' passed (0.126 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testPlaylistPlaybackSnapshotsManualOrderAndSurvivesLaterEdits]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testPlaylistPlaybackSnapshotsManualOrderAndSurvivesLaterEdits]' passed (0.006 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testRemovingOneDuplicateEntryNormalizesOrder]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testRemovingOneDuplicateEntryNormalizesOrder]' passed (0.005 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testRenameTrimsAndDeleteCascadesOnlyItsEntries]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testRenameTrimsAndDeleteCascadesOnlyItsEntries]' passed (0.005 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testReorderUsesEntryIdentityAndNormalizesOrder]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testReorderUsesEntryIdentityAndNormalizesOrder]' passed (0.004 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testResolvedEntriesPreserveDuplicateRowsAndOmitMissingTracks]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testResolvedEntriesPreserveDuplicateRowsAndOmitMissingTracks]' passed (0.004 seconds).
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testStableEntryAndTrackReferencesSurviveRelaunch]' started.
+Test Case '-[RebornZuneCoreTests.PlaylistStoreTests testStableEntryAndTrackReferencesSurviveRelaunch]' passed (0.010 seconds).
+Test Suite 'PlaylistStoreTests' passed at 2026-11-19 04:27:55.115.
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.190 (0.191) seconds
+Test Suite 'QueuePersistenceTests' started at 2026-11-19 04:27:55.115.
+Test Case '-[RebornZuneCoreTests.QueuePersistenceTests testQueueSnapshotSurvivesStoreRecreation]' started.
+Test Case '-[RebornZuneCoreTests.QueuePersistenceTests testQueueSnapshotSurvivesStoreRecreation]' passed (0.008 seconds).
+Test Suite 'QueuePersistenceTests' passed at 2026-11-19 04:27:55.124.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.008 (0.008) seconds
+Test Suite 'RealLibraryPresentationTests' started at 2026-11-19 04:27:55.124.
+Test Case '-[RebornZuneCoreTests.RealLibraryPresentationTests testHomePanelContentComesOnlyFromRealAlbums]' started.
+Test Case '-[RebornZuneCoreTests.RealLibraryPresentationTests testHomePanelContentComesOnlyFromRealAlbums]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.RealLibraryPresentationTests testSearchUsesOnlyRealGenresAndOmitsMissingSubtitleGenre]' started.
+Test Case '-[RebornZuneCoreTests.RealLibraryPresentationTests testSearchUsesOnlyRealGenresAndOmitsMissingSubtitleGenre]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.RealLibraryPresentationTests testSimilarArtistsRequireMatchingRealGenre]' started.
+Test Case '-[RebornZuneCoreTests.RealLibraryPresentationTests testSimilarArtistsRequireMatchingRealGenre]' passed (0.000 seconds).
+Test Suite 'RealLibraryPresentationTests' passed at 2026-11-19 04:27:55.125.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'RebornZuneCoreTests' started at 2026-11-19 04:27:55.125.
+Test Case '-[RebornZuneCoreTests.RebornZuneCoreTests testVersionStringIsNonEmpty]' started.
+Test Case '-[RebornZuneCoreTests.RebornZuneCoreTests testVersionStringIsNonEmpty]' passed (0.000 seconds).
+Test Suite 'RebornZuneCoreTests' passed at 2026-11-19 04:27:55.125.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'ReleaseScaleValidationTests' started at 2026-11-19 04:27:55.125.
+Test Case '-[RebornZuneCoreTests.ReleaseScaleValidationTests testIntegratedLibraryAt50000Tracks]' started.
+/Users/yjd/orca/workspaces/Reborn-Zune-Apple/Validate-the-complete-50-000-track-macOS-player-2/Tests/RebornZuneCoreTests/ReleaseScaleValidationTests.swift:44: -[RebornZuneCoreTests.ReleaseScaleValidationTests testIntegratedLibraryAt50000Tracks] : Test skipped - Set REBORN_ZUNE_RELEASE_SCALE=1 to run integrated release validation
+Test Case '-[RebornZuneCoreTests.ReleaseScaleValidationTests testIntegratedLibraryAt50000Tracks]' skipped (0.003 seconds).
+Test Suite 'ReleaseScaleValidationTests' passed at 2026-11-19 04:27:55.128.
+	 Executed 1 test, with 1 test skipped and 0 failures (0 unexpected) in 0.003 (0.003) seconds
+Test Suite 'ResonantDemoLibraryTests' started at 2026-11-19 04:27:55.128.
+Test Case '-[RebornZuneCoreTests.ResonantDemoLibraryTests testDemoLibraryProducesNoBlackTiles]' started.
+Test Case '-[RebornZuneCoreTests.ResonantDemoLibraryTests testDemoLibraryProducesNoBlackTiles]' passed (0.079 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantDemoLibraryTests testEveryDemoTrackHasDecodableArtwork]' started.
+Test Case '-[RebornZuneCoreTests.ResonantDemoLibraryTests testEveryDemoTrackHasDecodableArtwork]' passed (0.054 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantDemoLibraryTests testSynthesizedArtworkVariesPerAlbum]' started.
+Test Case '-[RebornZuneCoreTests.ResonantDemoLibraryTests testSynthesizedArtworkVariesPerAlbum]' passed (0.003 seconds).
+Test Suite 'ResonantDemoLibraryTests' passed at 2026-11-19 04:27:55.264.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.136 (0.136) seconds
+Test Suite 'ResonantLayoutTests' started at 2026-11-19 04:27:55.264.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testBucketedInitKeepsDocumentedTableValues]' started.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testBucketedInitKeepsDocumentedTableValues]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testEnvironmentDefaultUnchanged]' started.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testEnvironmentDefaultUnchanged]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testFromSizeBucketingUnchanged]' started.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testFromSizeBucketingUnchanged]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleAnchorsAtDesignWidth]' started.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleAnchorsAtDesignWidth]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleClampBoundariesAreExact]' started.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleClampBoundariesAreExact]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleDoesNotDependOnScreenHeight]' started.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleDoesNotDependOnScreenHeight]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleIsMonotonicAcrossRange]' started.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleIsMonotonicAcrossRange]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleLowerClamp]' started.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleLowerClamp]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleOn1512Screen]' started.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleOn1512Screen]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleUpperClamp]' started.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacScaleUpperClamp]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacWindowScaleTracksDisplayScale]' started.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testMacWindowScaleTracksDisplayScale]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testWindowSizeEnvironmentDefault]' started.
+Test Case '-[RebornZuneCoreTests.ResonantLayoutTests testWindowSizeEnvironmentDefault]' passed (0.000 seconds).
+Test Suite 'ResonantLayoutTests' passed at 2026-11-19 04:27:55.266.
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'SyntheticTilesTests' started at 2026-11-19 04:27:55.266.
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testDifferentSeedsProduceDifferentOutput]' started.
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testDifferentSeedsProduceDifferentOutput]' passed (0.008 seconds).
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testEachTileHasAtLeastOneImage]' started.
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testEachTileHasAtLeastOneImage]' passed (0.004 seconds).
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testFrameCountIsTwoOrThree]' started.
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testFrameCountIsTwoOrThree]' passed (0.004 seconds).
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testNoAdjacentNonUnits]' started.
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testNoAdjacentNonUnits]' passed (0.127 seconds).
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testNoLongUnitRuns]' started.
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testNoLongUnitRuns]' passed (0.126 seconds).
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testSeededOutputIsDeterministic]' started.
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testSeededOutputIsDeterministic]' passed (0.004 seconds).
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testSpanDistributionIsApproximatelyUWP]' started.
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testSpanDistributionIsApproximatelyUWP]' passed (0.635 seconds).
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testTileBrightnessRangeIsAlbumArtLike]' started.
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testTileBrightnessRangeIsAlbumArtLike]' passed (0.028 seconds).
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testTileWallEntriesHaveUniqueIDs]' started.
+Test Case '-[RebornZuneCoreTests.SyntheticTilesTests testTileWallEntriesHaveUniqueIDs]' passed (0.001 seconds).
+Test Suite 'SyntheticTilesTests' passed at 2026-11-19 04:27:56.205.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.938 (0.938) seconds
+Test Suite 'TileEntryAnimationTests' started at 2026-11-19 04:27:56.205.
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testCustomDurationsArePropagated]' started.
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testCustomDurationsArePropagated]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testCustomStepProducesProportionalDelays]' started.
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testCustomStepProducesProportionalDelays]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testNegativeWaveIndexWraps]' started.
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testNegativeWaveIndexWraps]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testWaveDelaysAreEvenlyStepped]' started.
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testWaveDelaysAreEvenlyStepped]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testWaveModuloWraps]' started.
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testWaveModuloWraps]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testZuneSeededRNGIsDeterministic]' started.
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testZuneSeededRNGIsDeterministic]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testZuneSeededRNGZeroSeedIsStable]' started.
+Test Case '-[RebornZuneCoreTests.TileEntryAnimationTests testZuneSeededRNGZeroSeedIsStable]' passed (0.000 seconds).
+Test Suite 'TileEntryAnimationTests' passed at 2026-11-19 04:27:56.206.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'TileFlipCoordinatorTests' started at 2026-11-19 04:27:56.206.
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testEligibleSubsetIsFirst80Percent]' started.
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testEligibleSubsetIsFirst80Percent]' passed (0.628 seconds).
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testEmptyPoolSkipsTicks]' started.
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testEmptyPoolSkipsTicks]' passed (0.202 seconds).
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testIdempotentStart]' started.
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testIdempotentStart]' passed (0.509 seconds).
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testNilPoolFallsBackToDefaultPool]' started.
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testNilPoolFallsBackToDefaultPool]' passed (0.314 seconds).
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testPoolProviderNarrowsEligibleIndices]' started.
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testPoolProviderNarrowsEligibleIndices]' passed (0.602 seconds).
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testStartInitializesPulses]' started.
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testStartInitializesPulses]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testStartWithZeroTileCountIsNoOp]' started.
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testStartWithZeroTileCountIsNoOp]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testStopCancelsTask]' started.
+Test Case '-[RebornZuneCoreTests.TileFlipCoordinatorTests testStopCancelsTask]' passed (0.518 seconds).
+Test Suite 'TileFlipCoordinatorTests' passed at 2026-11-19 04:27:58.985.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 2.775 (2.779) seconds
+Test Suite 'TileSpanTests' started at 2026-11-19 04:27:58.985.
+Test Case '-[RebornZuneCoreTests.TileSpanTests testDistributionWithSeededRNG]' started.
+Test Case '-[RebornZuneCoreTests.TileSpanTests testDistributionWithSeededRNG]' passed (0.015 seconds).
+Test Case '-[RebornZuneCoreTests.TileSpanTests testRawValuesMatchSpanSides]' started.
+Test Case '-[RebornZuneCoreTests.TileSpanTests testRawValuesMatchSpanSides]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileSpanTests testSeededRNGIsDeterministic]' started.
+Test Case '-[RebornZuneCoreTests.TileSpanTests testSeededRNGIsDeterministic]' passed (0.001 seconds).
+Test Suite 'TileSpanTests' passed at 2026-11-19 04:27:59.002.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.016 (0.017) seconds
+Test Suite 'TileWallExpansionTests' started at 2026-11-19 04:27:59.002.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testCacheHitOnIdenticalKey]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testCacheHitOnIdenticalKey]' passed (0.141 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testCacheInvalidatesOnSourceChange]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testCacheInvalidatesOnSourceChange]' passed (0.340 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testCacheMissOnCellBoundaryCrossing]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testCacheMissOnCellBoundaryCrossing]' passed (0.234 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testCacheToleratesSubCellResize]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testCacheToleratesSubCellResize]' passed (0.113 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testExpandedIDsAreStableAcrossCalls]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testExpandedIDsAreStableAcrossCalls]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testExpandedPrefixSurvivesPanelGrowth]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testExpandedPrefixSurvivesPanelGrowth]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testExpandedWithDifferentSeedProducesDifferentIDs]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testExpandedWithDifferentSeedProducesDifferentIDs]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testExpansionIDDoesNotCollideWithinAWall]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testExpansionIDDoesNotCollideWithinAWall]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testExpansionIDIsDeterministic]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testExpansionIDIsDeterministic]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testExpansionIDVariesWithSeedAndIndex]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testExpansionIDVariesWithSeedAndIndex]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testFrozenPanelCoversScreenPlusOneLargeTile]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testFrozenPanelCoversScreenPlusOneLargeTile]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testFrozenPanelFallsBackToEntryWhenScreenUnknown]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testFrozenPanelFallsBackToEntryWhenScreenUnknown]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testFrozenPanelKeepsEntryWhenEntryExceedsScreen]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testFrozenPanelKeepsEntryWhenEntryExceedsScreen]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testLightingFrameIntervalIsCappedAt15fps]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testLightingFrameIntervalIsCappedAt15fps]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testSourcePassthroughWhenSourceCoversPanel]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testSourcePassthroughWhenSourceCoversPanel]' passed (0.004 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testVisibleTileIndicesEmptyWhenViewportMissesWall]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testVisibleTileIndicesEmptyWhenViewportMissesWall]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testVisibleTileIndicesHitsLargeTileOnly]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testVisibleTileIndicesHitsLargeTileOnly]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testVisibleTileIndicesReturnsIntersectingTilesInOrder]' started.
+Test Case '-[RebornZuneCoreTests.TileWallExpansionTests testVisibleTileIndicesReturnsIntersectingTilesInOrder]' passed (0.000 seconds).
+Test Suite 'TileWallExpansionTests' passed at 2026-11-19 04:27:59.841.
+	 Executed 18 tests, with 0 failures (0 unexpected) in 0.838 (0.839) seconds
+Test Suite 'UpNextInteractionStateTests' started at 2026-11-19 04:27:59.841.
+Test Case '-[RebornZuneCoreTests.UpNextInteractionStateTests testOpenStateSurvivesWidthThresholdAndDismissalIsNarrowOnly]' started.
+Test Case '-[RebornZuneCoreTests.UpNextInteractionStateTests testOpenStateSurvivesWidthThresholdAndDismissalIsNarrowOnly]' passed (0.000 seconds).
+Test Suite 'UpNextInteractionStateTests' passed at 2026-11-19 04:27:59.841.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'VariableSpanLayoutTests' started at 2026-11-19 04:27:59.841.
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testCellsPerRowCeilBehavior]' started.
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testCellsPerRowCeilBehavior]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testLayoutTypeIsPublicAndConformsToLayoutProtocol]' started.
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testLayoutTypeIsPublicAndConformsToLayoutProtocol]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testPackEmptySpansReturnsEmpty]' started.
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testPackEmptySpansReturnsEmpty]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testPackMediumPushesUnitsAround]' started.
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testPackMediumPushesUnitsAround]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testPackOversizeSpanFallsBackToUnit]' started.
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testPackOversizeSpanFallsBackToUnit]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testPackPreservesOriginalSpanSizes]' started.
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testPackPreservesOriginalSpanSizes]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testPackUnitsRunLeftToRightThenWrap]' started.
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testPackUnitsRunLeftToRightThenWrap]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testPackZeroCellsPerRowReturnsEmpty]' started.
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testPackZeroCellsPerRowReturnsEmpty]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testResolvedWidthFallsBackForUnspecifiedProposal]' started.
+Test Case '-[RebornZuneCoreTests.VariableSpanLayoutTests testResolvedWidthFallsBackForUnspecifiedProposal]' passed (0.000 seconds).
+Test Suite 'VariableSpanLayoutTests' passed at 2026-11-19 04:27:59.843.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'WallTimeTests' started at 2026-11-19 04:27:59.843.
+Test Case '-[RebornZuneCoreTests.WallTimeTests testWallNowAdvancesWhenIdle]' started.
+Test Case '-[RebornZuneCoreTests.WallTimeTests testWallNowAdvancesWhenIdle]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.WallTimeTests testWallNowFreezesWhileActive]' started.
+Test Case '-[RebornZuneCoreTests.WallTimeTests testWallNowFreezesWhileActive]' passed (0.257 seconds).
+Test Case '-[RebornZuneCoreTests.WallTimeTests testWallNowResumesContinuouslyAfterSuspension]' started.
+Test Case '-[RebornZuneCoreTests.WallTimeTests testWallNowResumesContinuouslyAfterSuspension]' passed (0.712 seconds).
+Test Suite 'WallTimeTests' passed at 2026-11-19 04:28:00.813.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.970 (0.971) seconds
+Test Suite 'RebornZuneCoreTests.xctest' passed at 2026-11-19 04:28:00.814.
+	 Executed 320 tests, with 3 tests skipped and 0 failures (0 unexpected) in 23.567 (23.601) seconds
+Test Suite 'All tests' passed at 2026-11-19 04:28:00.814.
+	 Executed 320 tests, with 3 tests skipped and 0 failures (0 unexpected) in 23.567 (23.602) seconds
+◇ Test run started.
+↳ Testing Library Version: 2403
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.

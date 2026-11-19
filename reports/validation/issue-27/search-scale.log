@@ -1,0 +1,36 @@
+Building for production...
+[1 / 4]
+Build complete! (0.41 sec)
+Test Suite 'Selected tests' started at 2026-11-19 04:04:00.126.
+Test Suite 'RebornZuneCoreTests.xctest' started at 2026-11-19 04:04:00.126.
+Test Suite 'LibrarySearchScaleBenchmarkTests' started at 2026-11-19 04:04:00.126.
+Test Case '-[RebornZuneCoreTests.LibrarySearchScaleBenchmarkTests testReleaseSearchAndPlaybackAt50000Tracks]' started.
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1088 checkpointed: 1088
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1034 checkpointed: 1034
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1040 checkpointed: 1040
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1212 checkpointed: 1212
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1079 checkpointed: 1079
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1199 checkpointed: 1199
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1325 checkpointed: 1325
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1045 checkpointed: 1045
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1088 checkpointed: 1088
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1148 checkpointed: 1148
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1205 checkpointed: 1205
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 4731 checkpointed: 4731
+CoreData: debug: PostSaveMaintenance: fileSize 19491752 greater than prune threshold
+CoreData: annotation: PostSaveMaintenance: wal_checkpoint(TRUNCATE) 
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 0 checkpointed: 0
+Test Case '-[RebornZuneCoreTests.LibrarySearchScaleBenchmarkTests testReleaseSearchAndPlaybackAt50000Tracks]' passed (22.337 seconds).
+Test Suite 'LibrarySearchScaleBenchmarkTests' passed at 2026-11-19 04:04:22.463.
+	 Executed 1 test, with 0 failures (0 unexpected) in 22.337 (22.337) seconds
+Test Suite 'RebornZuneCoreTests.xctest' passed at 2026-11-19 04:04:22.463.
+	 Executed 1 test, with 0 failures (0 unexpected) in 22.337 (22.337) seconds
+Test Suite 'Selected tests' passed at 2026-11-19 04:04:22.463.
+	 Executed 1 test, with 0 failures (0 unexpected) in 22.337 (22.338) seconds
+SEARCH_BENCHMARK seeded=50000
+SEARCH_BENCHMARK normalized=50000
+SEARCH_BENCHMARK tracks=50000 hardware=arm64 os=Version 27.0.1 (Build 26A434)
+SEARCH_BENCHMARK common_p95_ms=110.867708 high_match_ms=68.976167 full_library_ms=70.054333
+SEARCH_BENCHMARK high_match_songs=37687 dto_conversion_ms=41.48325 unicode_ms=[61.447333, 114.072875]
+SEARCH_BENCHMARK show_all_main_ms=0.01125 playback_main_ms=9.30625 player_items=1 max_main_gap_ms=1.4895
+SEARCH_BENCHMARK store=/var/folders/dh/lx1cgsl14wnd8z1178xmzd680000gn/T/search-scale-54F179BB-6E52-4815-937B-C9419126E93F/library.store

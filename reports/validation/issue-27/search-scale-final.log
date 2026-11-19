@@ -1,0 +1,36 @@
+Building for production...
+Build complete! (0.21 sec)
+Test Suite 'Selected tests' started at 2026-11-19 04:26:17.902.
+Test Suite 'RebornZuneCoreTests.xctest' started at 2026-11-19 04:26:17.903.
+Test Suite 'LibrarySearchScaleBenchmarkTests' started at 2026-11-19 04:26:17.903.
+Test Case '-[RebornZuneCoreTests.LibrarySearchScaleBenchmarkTests testReleaseSearchAndPlaybackAt50000Tracks]' started.
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1096 checkpointed: 1096
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1030 checkpointed: 1030
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1045 checkpointed: 1045
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1219 checkpointed: 1219
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1078 checkpointed: 1078
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1199 checkpointed: 1199
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1323 checkpointed: 1323
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1033 checkpointed: 1033
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1112 checkpointed: 1112
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1166 checkpointed: 1166
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1201 checkpointed: 1201
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1008 checkpointed: 1008
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1102 checkpointed: 1102
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1013 checkpointed: 1013
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1098 checkpointed: 1098
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1085 checkpointed: 1085
+Test Case '-[RebornZuneCoreTests.LibrarySearchScaleBenchmarkTests testReleaseSearchAndPlaybackAt50000Tracks]' passed (28.252 seconds).
+Test Suite 'LibrarySearchScaleBenchmarkTests' passed at 2026-11-19 04:26:46.155.
+	 Executed 1 test, with 0 failures (0 unexpected) in 28.252 (28.252) seconds
+Test Suite 'RebornZuneCoreTests.xctest' passed at 2026-11-19 04:26:46.155.
+	 Executed 1 test, with 0 failures (0 unexpected) in 28.252 (28.252) seconds
+Test Suite 'Selected tests' passed at 2026-11-19 04:26:46.155.
+	 Executed 1 test, with 0 failures (0 unexpected) in 28.252 (28.253) seconds
+SEARCH_BENCHMARK seeded=50000
+SEARCH_BENCHMARK normalized=50000
+SEARCH_BENCHMARK tracks=50000 hardware=arm64 os=Version 27.0.1 (Build 26A434)
+SEARCH_BENCHMARK common_p95_ms=112.349334 high_match_ms=71.988416 full_library_ms=72.509167
+SEARCH_BENCHMARK high_match_songs=37687 dto_conversion_ms=41.99075 unicode_ms=[61.587166, 111.39775]
+SEARCH_BENCHMARK show_all_main_ms=0.011166 playback_main_ms=9.376167 player_items=1 max_main_gap_ms=1.50925
+SEARCH_BENCHMARK store=/var/folders/dh/lx1cgsl14wnd8z1178xmzd680000gn/T/search-scale-E1891315-6638-42AC-AC42-355A99C783CC/library.store
