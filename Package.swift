@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "RebornZuneCore",
     platforms: [
-        .macOS(.v14),
+        .macOS("27.0"),
         .iOS(.v17),
         .tvOS(.v17),
     ],

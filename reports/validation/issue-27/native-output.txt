@@ -1,0 +1,50 @@
+Native verification revision: 56d235b (plus macOS 27 deployment-target-only follow-up smoke run)
+Host: macOS 27.0.1 (26A434), Apple M3 Max
+Native app: ad-hoc signed isolated copies with isolated container-local Stores
+
+MANUAL SCAN READ-BACK
+Before: Additional = Available · 3 tracks
+After adding Manual Scan Track.wav and Scan All Sources Now: Additional = Available · 4 tracks
+
+QUEUE READ-BACK
+Initial Up Next: 01 Next Listening; 02 Fixture Title
+After drag: 01 Fixture Title; 02 Next Listening
+After Remove Next Listening from Up Next: 01 Fixture Title
+After Clear: no upcoming rows; Up Next control disabled
+Before relaunch: Next Listening, 0:16, Play (paused); Up Next = Fixture Title
+After relaunch: Next Listening, 0:16, Play (paused); Up Next = Fixture Title
+
+DOCK OUTPUT
+Reborn Zune Issue 27 Native, missing value, Play, Next Track, Previous Track, missing value, Recently Played, missing value, Options, missing value, Show All Windows, Hide, Hide Others, Quit, Force Quit
+Recently Played submenu: Next Listening, Fixture Title, true, true
+Selecting Fixture Title produced a real Pause control and current Fixture Title at 0:00.
+
+KEYBOARD READ-BACK
+Cmd-Right: Fixture Title -> Next Listening
+Cmd-Left: Next Listening -> Fixture Title
+Space: Pause -> Play; Play -> Pause
+Paused position 0:08 -> Shift-Cmd-Right = 0:23 -> Shift-Cmd-Left = 0:08
+Volume: 100 -> Cmd-Down = 95 -> Cmd-Up = 100
+Cmd-1 = Home; Cmd-2 = Albums; Cmd-3 = Playlists; Cmd-4 = Artists; Cmd-5 = Search
+Cmd-F focused the Search text field; Cmd-L opened Now Playing; Cmd-[ returned to Search
+Playlist name entered with real keyboard input: "Issue 27 Listening" (both spaces preserved)
+
+CONTROLS / VIEW MENU OUTPUT
+Controls: Play/Pause, Next Track, Previous Track, Skip Forward 15 Seconds, Skip Backward 15 Seconds, Volume Up, Volume Down, Shuffle, Repeat, Now Playing
+Repeat submenu: Repeat Off, Repeat All, Repeat One
+View: Home, Albums, Playlists, Artists, Search, Focus Search, Back (plus default tab/full-screen items)
+Shuffle menu AXMenuItemMarkChar: ✓
+Controls Play/Pause, skip, and volume actions changed the corresponding app state.
+Repeat submenu selection could not be read back as changed; it is not marked as verified.
+
+SCALE / EMPTY STATE READ-BACK
+During scan: busy indicator, Discovered 5,003 tracks, Cancel
+After scan: Available · 5,003 tracks
+After removing all sources: No Library Sources; Add a folder to build your Library. Reborn Zune never recreates a removed source automatically.
+Empty Home: RESONANT · YOUR LIBRARY IS EMPTY / Pick a folder / CHOOSE FOLDER…
+Additional audio files remained on disk after source removal.
+
+REMOTE / SIMULATOR LIMITS
+Control Center accessibility read exposed only the Wi-Fi detail surface (Wi-Fi, Known Network, Other Networks, Wi-Fi Settings). No Now Playing remote-command or seek behavior was established.
+Repeat Picker selection attempts did not change the checked Repeat Off item; this is an unverified interaction, not a claim that the control is dead.
+`xcrun simctl list devices available` timed out at 30 s and 90 s. `xcrun simctl version` timed out at 30 s. A CoreSimulatorService restart followed by the same list command also timed out at 90 s. No iPadOS/tvOS native sweep is claimed.

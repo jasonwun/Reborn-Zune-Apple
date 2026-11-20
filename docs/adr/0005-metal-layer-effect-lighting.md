@@ -5,7 +5,7 @@ The defining feature of the original app is a tile wall lit by two animated
 with that effect is the point of this port, and a Metal shader driven through
 SwiftUI's `.layerEffect` is the only path to true parity with XAML's
 `PointLight` — parameter-driven from SwiftUI so the UI can modulate it. This is
-why the OS floors are pinned at macOS 14 / iPadOS 17 / tvOS 17 (ADR-0001).
+why the OS floors are pinned at macOS 27 / iPadOS 17 / tvOS 17 (ADR-0001).
 
 ## Considered options
 
