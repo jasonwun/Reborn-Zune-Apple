@@ -1,7 +1,15 @@
 Building for production...
-[3 / 11] RebornZuneCore_RebornZuneCore
-[6 / 14]
-[7 / 15] RebornZuneCore
+[Planning deferred tasks]
+[13 / 23] RebornZuneCore_RebornZuneCore
+[15 / 23] RebornZuneCore
+/Users/yjd/orca/workspaces/Reborn-Zune-Apple/Validate-the-complete-50-000-track-macOS-player-2/Sources/RebornZuneCore/Audio/QueuePlayer.swift:67:23: [1;33mwarning: [1;39m'AVPlayerItemDidPlayToEndTime' was deprecated in macOS 27.0: Use AVPlayerItem.didPlayToEndTimeNotification instead.[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+ [0;36m65 |[0;0m         }
+ [0;36m66 |[0;0m         endObserver = NotificationCenter.default.addObserver(
+ [0;36m67 |[0;0m             forName: .AVPlayerItemDidPlayToEndTime,
+    [0;36m|[0;0m                       `- [1;33mwarning: [1;39m'AVPlayerItemDidPlayToEndTime' was deprecated in macOS 27.0: Use AVPlayerItem.didPlayToEndTimeNotification instead.[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+ [0;36m68 |[0;0m             object: nil,
+ [0;36m69 |[0;0m             queue: .main
+
 /Users/yjd/orca/workspaces/Reborn-Zune-Apple/Validate-the-complete-50-000-track-macOS-player-2/Sources/RebornZuneCore/Views/Resonant/Screens/AlbumScreen.swift:269:20: [1;33mwarning: [1;39mvalue 'track' was defined but never used; consider replacing with boolean test[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/no-usage\NoUsage]8;;\]
 [0;36m267 |[0;0m         #if os(macOS)
 [0;36m268 |[0;0m         .contextMenu {
@@ -58,10 +66,12 @@ Building for production...
 [0;36m547 |[0;0m             forPanelSize: panelSize,
 
 [#ActorIsolatedCall]: <https://docs.swift.org/compiler/documentation/diagnostics/actor-isolated-call>
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
 [#NoUsage]: <https://docs.swift.org/compiler/documentation/diagnostics/no-usage>
 [#SendableMetatypes]: <https://docs.swift.org/compiler/documentation/diagnostics/sendable-metatypes>
-[9 / 16] RebornZuneCore
-[17 / 27] RebornZuneCoreTests-product
+[17 / 24] RebornZuneCore
+[26 / 36] RebornZuneCoreTests-product
+[30 / 40]
 /Users/yjd/orca/workspaces/Reborn-Zune-Apple/Validate-the-complete-50-000-track-macOS-player-2/Tests/RebornZuneCoreTests/TileWallExpansionTests.swift:18:26: [1;33mwarning: [1;39mcall to main actor-isolated static method 'expansionID(seed:index:)' in a synchronous nonisolated context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/actor-isolated-call\ActorIsolatedCall]8;;\]
  [0;36m16 |[0;0m     func testExpansionIDIsDeterministic() {
  [0;36m17 |[0;0m         XCTAssertEqual(
@@ -412,41 +422,41 @@ RebornZuneCore.TileWallView.visibleTileIndices:2:33: [1;39mnote: [1;39mcalls t
 [0;36m3 |[0;0m 
 
 [#ActorIsolatedCall]: <https://docs.swift.org/compiler/documentation/diagnostics/actor-isolated-call>
-[19 / 28] RebornZuneCoreTests-product
-[22 / 26] RebornZuneCoreTests-product
-[24 / 26] RebornZuneCoreTests-product
-Build complete! (26.13 sec)
-Test Suite 'Selected tests' started at 2026-11-19 04:24:49.103.
-Test Suite 'RebornZuneCoreTests.xctest' started at 2026-11-19 04:24:49.103.
-Test Suite 'ReleaseScaleValidationTests' started at 2026-11-19 04:24:49.103.
+[31 / 40] RebornZuneCoreTests-product
+[36 / 40] RebornZuneCoreTests-product
+[38 / 40] RebornZuneCoreTests-product
+Build complete! (30.70 sec)
+Test Suite 'Selected tests' started at 2026-11-19 18:33:40.661.
+Test Suite 'RebornZuneCoreTests.xctest' started at 2026-11-19 18:33:40.661.
+Test Suite 'ReleaseScaleValidationTests' started at 2026-11-19 18:33:40.661.
 Test Case '-[RebornZuneCoreTests.ReleaseScaleValidationTests testIntegratedLibraryAt50000Tracks]' started.
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1056 checkpointed: 1056
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1106 checkpointed: 1106
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1145 checkpointed: 1145
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1176 checkpointed: 1176
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1174 checkpointed: 1174
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1176 checkpointed: 1176
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1016 checkpointed: 1016
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1197 checkpointed: 1197
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1066 checkpointed: 1066
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1016 checkpointed: 1016
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1032 checkpointed: 1032
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1041 checkpointed: 1041
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1022 checkpointed: 1022
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1059 checkpointed: 1059
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1101 checkpointed: 1101
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1149 checkpointed: 1149
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1175 checkpointed: 1175
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1179 checkpointed: 1179
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1185 checkpointed: 1185
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1011 checkpointed: 1011
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1185 checkpointed: 1185
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1071 checkpointed: 1071
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1009 checkpointed: 1009
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1036 checkpointed: 1036
 CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1040 checkpointed: 1040
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1018 checkpointed: 1018
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1825 checkpointed: 1825
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1004 checkpointed: 1004
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1020 checkpointed: 1020
 CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1031 checkpointed: 1031
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1048 checkpointed: 1048
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1032 checkpointed: 1032
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1031 checkpointed: 1031
-CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1957 checkpointed: 1957
-Test Case '-[RebornZuneCoreTests.ReleaseScaleValidationTests testIntegratedLibraryAt50000Tracks]' passed (79.005 seconds).
-Test Suite 'ReleaseScaleValidationTests' passed at 2026-11-19 04:26:08.109.
-	 Executed 1 test, with 0 failures (0 unexpected) in 79.005 (79.006) seconds
-Test Suite 'RebornZuneCoreTests.xctest' passed at 2026-11-19 04:26:08.109.
-	 Executed 1 test, with 0 failures (0 unexpected) in 79.005 (79.006) seconds
-Test Suite 'Selected tests' passed at 2026-11-19 04:26:08.109.
-	 Executed 1 test, with 0 failures (0 unexpected) in 79.005 (79.006) seconds
-RELEASE_SCALE_REPORT {"logicalQueueCount":50000,"physicalFootprintAfterValidationBytes":246137960,"sourceCleanupMilliseconds":801.898833,"materializedPlayerItemCount":3,"albumCount":2500,"hardware":"Mac15,8","searchDTOConversionMilliseconds":54.308333,"launchIncludingIncrementalScanMilliseconds":8080.079458,"highMatchSearchMilliseconds":110.870792,"maximumMainThreadSchedulingGapMilliseconds":22.674375,"fullLibrarySearchMilliseconds":39.09975,"decodedArtworkWidth":256,"highMatchSongCount":42206,"remainingTrackCountAfterCleanup":45000,"manualIncrementalScanMilliseconds":8041.337916,"browsedTrackCountAfterPagination":200,"decodedArtworkHeight":256,"largeQueuePlaybackStartMilliseconds":9.564708,"commonSearchP95Milliseconds":235.577542,"showAllMainThreadMilliseconds":0.033625,"trackCount":50000,"publishedTrackCountAfterLaunch":100,"physicalFootprintBeforeLaunchBytes":45532000,"artistCount":500,"operatingSystem":"Version 27.0.1 (Build 26A434)","unicodeSearchMilliseconds":[93.9725,168.261667]}
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1036 checkpointed: 1036
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1829 checkpointed: 1829
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1106 checkpointed: 1106
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1035 checkpointed: 1035
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1035 checkpointed: 1035
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1034 checkpointed: 1034
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1038 checkpointed: 1038
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1842 checkpointed: 1842
+Test Case '-[RebornZuneCoreTests.ReleaseScaleValidationTests testIntegratedLibraryAt50000Tracks]' passed (81.279 seconds).
+Test Suite 'ReleaseScaleValidationTests' passed at 2026-11-19 18:35:01.941.
+	 Executed 1 test, with 0 failures (0 unexpected) in 81.279 (81.280) seconds
+Test Suite 'RebornZuneCoreTests.xctest' passed at 2026-11-19 18:35:01.941.
+	 Executed 1 test, with 0 failures (0 unexpected) in 81.279 (81.280) seconds
+Test Suite 'Selected tests' passed at 2026-11-19 18:35:01.941.
+	 Executed 1 test, with 0 failures (0 unexpected) in 81.279 (81.280) seconds
+RELEASE_SCALE_REPORT {"operatingSystem":"Version 27.0.1 (Build 26A434)","launchIncludingIncrementalScanMilliseconds":8291.026958,"hardware":"Mac15,8","highMatchSongCount":42206,"searchDTOConversionMilliseconds":56.919625,"decodedArtworkHeight":256,"physicalFootprintBeforeLaunchBytes":45532024,"materializedPlayerItemCount":3,"largeQueuePlaybackStartMilliseconds":10.031583,"artistCount":500,"browsedTrackCountAfterPagination":200,"physicalFootprintAfterValidationBytes":256230480,"publishedTrackCountAfterLaunch":100,"sourceCleanupMilliseconds":828.433709,"albumCount":2500,"showAllMainThreadMilliseconds":0.023458,"remainingTrackCountAfterCleanup":45000,"highMatchSearchMilliseconds":115.47775,"fullLibrarySearchMilliseconds":41.134792,"unicodeSearchMilliseconds":[96.224167,171.962],"logicalQueueCount":50000,"trackCount":50000,"maximumMainThreadSchedulingGapMilliseconds":23.936875,"manualIncrementalScanMilliseconds":8256.843833,"decodedArtworkWidth":256,"commonSearchP95Milliseconds":241.258708}
