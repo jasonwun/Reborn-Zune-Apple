@@ -16,4 +16,4 @@ Scale store: temporary on-disk SwiftData store, release Swift test configuration
 Native host: macOS 27.0.1; the product and parent specification now target macOS 27+.
 Native apps: ad-hoc signed isolated copies with container-local Stores.
 Native GUI: completed after the user unlocked the host and explicitly allowed required foreground interactions.
-iPadOS/tvOS native simulators: unavailable because simctl repeatedly timed out, including after a CoreSimulatorService restart.
+iPadOS/tvOS: shared tests and simulator builds; no native sweep is required for this macOS-only acceptance scope.

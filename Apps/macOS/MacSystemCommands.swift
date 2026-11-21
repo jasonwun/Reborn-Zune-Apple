@@ -46,13 +46,10 @@ struct MacSystemCommands: Commands {
                 }
             ))
 
-            Picker("Repeat", selection: Binding(
-                get: { engine.repeatMode },
-                set: { perform(.setRepeat($0)) }
-            )) {
-                Text("Repeat Off").tag(RepeatMode.off)
-                Text("Repeat All").tag(RepeatMode.all)
-                Text("Repeat One").tag(RepeatMode.one)
+            Menu("Repeat") {
+                repeatToggle("Repeat Off", .off)
+                repeatToggle("Repeat All", .all)
+                repeatToggle("Repeat One", .one)
             }
 
             Divider()
@@ -81,6 +78,13 @@ struct MacSystemCommands: Commands {
                 .keyboardShortcut("[", modifiers: .command)
                 .disabled(!router.canGoBack)
         }
+    }
+
+    private func repeatToggle(_ title: String, _ mode: RepeatMode) -> some View {
+        Toggle(title, isOn: Binding(
+            get: { engine.repeatMode == mode },
+            set: { if $0 { perform(.setRepeat(mode)) } }
+        ))
     }
 
     private func perform(_ command: MacCommand) {

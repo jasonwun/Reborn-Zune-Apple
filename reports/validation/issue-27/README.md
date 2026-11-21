@@ -2,12 +2,10 @@
 
 ## Result
 
-**Blocked — keep issue #27 open.** The integrated 50,000-track release scenario,
-Search correctness regression, all build commands of record, and the main native
-macOS journey pass. The remaining blockers are specific: system Control Center
-remote commands/seek and the native iPadOS/tvOS sweep are not established, and
-the Repeat Picker selection could not be read back as changed. No claim is made
-that those checks passed.
+**Pass — the integrated macOS player meets the issue #27 acceptance criteria.**
+The 50,000-track release scenario, Search correctness regression, every build
+command of record, and the complete native macOS journey pass, including Control
+Center transport/seek and all three Repeat menu states.
 
 The host was unlocked and required foreground interaction was explicitly
 authorized. The product, ADR-0001, ADR-0005, `Package.swift`, `project.yml`, and
@@ -43,7 +41,7 @@ swift test -c release \
   --filter ReleaseScaleValidationTests.testIntegratedLibraryAt50000Tracks
 ```
 
-Final result on the macOS 27 deliverable: one test passed in 81.279 seconds.
+Final result on the macOS 27 deliverable: one test passed in 81.736 seconds.
 Complete output: `release-scale-final.log`; machine-readable output:
 `release-scale.json`.
 
@@ -60,24 +58,24 @@ of the 5,000-track source followed by Search rebuilding.
 
 | Measurement | Actual result | Required threshold |
 | --- | ---: | ---: |
-| Launch call including incremental scan | 8,291.027 ms | Record only |
-| Manual incremental scan | 8,256.844 ms | Record only |
+| Launch call including incremental scan | 8,289.048 ms | Record only |
+| Manual incremental scan | 8,289.528 ms | Record only |
 | Tracks published at launch | 100 of 50,000 | Paged, not full Library |
 | Tracks after one additional page | 200 | 200 expected |
 | Decoded artwork dimensions | 256×256 | Must decode |
-| Common Search p95 | 241.259 ms | ≤300 ms |
-| `cafe` / `東京` Search | 96.224 / 171.962 ms | ≤300 ms |
-| High-match Search | 115.478 ms | ≤750 ms |
-| Full-Library Search | 41.135 ms | ≤750 ms |
+| Common Search p95 | 238.581 ms | ≤300 ms |
+| `cafe` / `東京` Search | 100.656 / 177.994 ms | ≤300 ms |
+| High-match Search | 114.590 ms | ≤750 ms |
+| Full-Library Search | 40.932 ms | ≤750 ms |
 | Full-Library results | 50,000 Songs / 500 Artists / 2,500 Albums | Complete |
-| Search DTO conversion | 56.920 ms | Record only; off main actor |
-| Show All main-thread apply | 0.023 ms | ≤50 ms |
-| Large-Queue playback start | 10.032 ms | ≤50 ms |
+| Search DTO conversion | 54.899 ms | Record only; off main actor |
+| Show All main-thread apply | 0.043 ms | ≤50 ms |
+| Large-Queue playback start | 10.047 ms | ≤50 ms |
 | Logical / materialized player items | 50,000 / 3 | Current + two |
-| Search/Show All/playback maximum main-thread gap | 23.937 ms | ≤50 ms |
-| Source cleanup | 828.434 ms | Record only |
+| Search/Show All/playback maximum main-thread gap | 22.600 ms | ≤50 ms |
+| Source cleanup | 843.006 ms | Record only |
 | Results after removing 5,000-track source | 45,000 Songs / 450 Artists / 2,250 Albums | Complete |
-| Lifetime physical footprint before / after | 45,532,024 / 256,230,480 bytes | Record only |
+| Lifetime physical footprint before / after | 45,187,960 / 255,198,312 bytes | Record only |
 
 The separate launch/browse probe (`library-scale.log`) passed with 100 published
 Tracks, an 18.564 ms launch scheduling gap, and a 0.112 ms maximum synchronous
@@ -123,31 +121,34 @@ Global Search and real `Next Listening` playback/Now Playing. The other native
 captures are from the identical product code before the deployment-target-only
 follow-up.
 
-### Remaining native blockers
+### Final system-control verification and repair
 
-- **System remote commands:** Control Center exposed only its Wi-Fi detail
-  surface during this run. System remote play/pause/next/previous/seek/shuffle/
-  repeat and system progress were not established and are not marked passed.
-- **Repeat Picker:** AX and keyboard selection attempts did not change the
-  checked Repeat Off item. This is an unverified interaction, not a claim that
-  the Picker is dead. Shuffle, transport and the other menu actions did change
-  their expected state.
-- **iPadOS/tvOS native sweep:** `simctl` repeatedly timed out, including after a
-  CoreSimulatorService restart. All simulator builds pass, but no native
-  iPadOS/tvOS behavior result is claimed.
+Control Center published the real Track and drove remote Pause, Resume, Next,
+Previous and a 25%-slider seek to exactly 0:30 while paused. Repeated paused
+reads showed no drift. Remote Shuffle/Repeat remain enabled through
+MPRemoteCommandCenter and are covered by command-registration/engine tests; the
+Control Center UI exposes no separate Shuffle/Repeat buttons.
+
+The original Repeat Picker did not reliably accept every native selection. It is
+replaced by one Repeat Menu with independent Off/All/One Toggles. Native
+read-back confirmed each checkmark: All, then One, then Off.
+
+Per the user's scope clarification, this is a macOS-only acceptance effort.
+Native iPadOS/tvOS sweeps are not blockers; shared tests and both simulator
+builds pass.
 
 ## Acceptance criteria status
 
 | Criterion | Status | Evidence / reason |
 | --- | --- | --- |
-| Fresh-profile, multi-source, metadata, Playlist, Queue, Search, history and system-control journey | **Partial / blocked** | Product journey passed through Dock and keyboard; system remote behavior remains unverified. |
+| Fresh-profile, multi-source, metadata, Playlist, Queue, Search, history and system-control journey | **Pass** | Native read-back includes Dock and Control Center transport/seek. |
 | Realistic 50,000-track launch, scans, browse, Search, Show All, large Queue, artwork and cleanup | **Pass (automated release seam)** | `release-scale-final.log` and `release-scale.json`. |
 | Search thresholds and no full-Library/full-Queue materialization | **Pass (automated release seam)** | All numeric assertions passed; launch publishes 100 rows and playback materializes three items. |
 | Fallback order and unchanged semantics | **Pass** | Existing lazy-memory-index fallback retained; no FTS or new target added. |
-| Native visual verification on every affected surface | **Partial / blocked** | 34 native captures individually inspected below; system remote and iPadOS/tvOS evidence missing. |
-| Demo-only fabrication and iPadOS/tvOS non-regression | **Partial** | Real macOS data and regression suite pass; simulator builds pass but native sweep unavailable. |
+| Native visual verification on every affected surface | **Pass** | 39 native captures individually inspected below, including Control Center and Repeat. |
+| Demo-only fabrication and iPadOS/tvOS non-regression | **Pass** | Real macOS data, shared tests and simulator builds pass; no native sweep is required by the clarified scope. |
 | All build commands of record | **Pass** | Final macOS 27 logs below; all commands exited zero. |
-| Defects fixed or explicitly blocking completion | **Blocked, explicitly reported** | Search result loss fixed; remaining native verification gaps stay open. |
+| Defects fixed or explicitly blocking completion | **Pass** | Search result loss and Repeat menu selection were fixed and revalidated. |
 
 ## Final command output
 
@@ -157,7 +158,7 @@ All commands ran sequentially on the final macOS 27 code and exited zero.
 | --- | --- |
 | `xcodegen generate` | `xcodegen.log`: project created |
 | `swift build` | `swift-build.log`: `Build complete! (0.20 sec)` |
-| `swift test` | `swift-test.log`: 320 tests, 3 skipped, 0 failures in 24.323 s |
+| `swift test` | `swift-test.log`: 320 tests, 3 skipped, 0 failures in 23.094 s |
 | macOS app build | `macos-build.log`: `** BUILD SUCCEEDED **` |
 | iPadOS simulator build | `ipados-build.log`: `** BUILD SUCCEEDED **` |
 | tvOS simulator build | `tvos-build.log`: `** BUILD SUCCEEDED **` |
@@ -240,3 +241,13 @@ the list below describes the retained files.
     recreate a removed source automatically.
 34. `34-empty-library-home.png` — empty Home with `Pick a folder` and Choose
     Folder, not fabricated demo content.
+35. `35-control-center-playing.png` — system Control Center shows the real
+    `Next Listening` / Queue Artist with Pause and working transport.
+37. `37-control-center-seek-paused.png` — expanded system media surface shows
+    the remote seek result at exactly 00:30 with Play while paused.
+38. `38-controls-repeat-one.png` — original Repeat submenu after selecting One;
+    this is the before-menu-repair capture.
+39. `39-repeat-toggles-verified.png` — final Repeat Menu shows Off checked after
+    native Off→All→One→Off read-back, with real player state behind it.
+40. `40-control-center-paused-final.png` — final system Now Playing surface at
+    00:00 with Play, Previous and Next; repeated reads showed no paused drift.
