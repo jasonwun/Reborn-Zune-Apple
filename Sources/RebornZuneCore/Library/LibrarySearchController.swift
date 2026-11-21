@@ -56,6 +56,7 @@ public final class LibrarySearchController {
     @ObservationIgnored private let genresOperation: () async throws -> [LibrarySearchGenre]
     @ObservationIgnored private var searchTask: Task<Void, Never>?
     @ObservationIgnored private var indicatorTask: Task<Void, Never>?
+    @ObservationIgnored private let sleepOperation: @Sendable (UInt64) async throws -> Void
     private var selection: Selection?
 
     private enum Selection: Equatable {
@@ -66,10 +67,14 @@ public final class LibrarySearchController {
 
     public init(
         search: @escaping (String) async throws -> LibrarySearchResults,
-        genres: @escaping () async throws -> [LibrarySearchGenre] = { [] }
+        genres: @escaping () async throws -> [LibrarySearchGenre] = { [] },
+        sleep: @escaping @Sendable (UInt64) async throws -> Void = { nanoseconds in
+            try await Task.sleep(nanoseconds: nanoseconds)
+        }
     ) {
         self.searchOperation = search
         self.genresOperation = genres
+        self.sleepOperation = sleep
     }
 
     public var selectedSongID: UUID? {
@@ -185,17 +190,18 @@ public final class LibrarySearchController {
         searchTask = Task { [weak self] in
             guard let self else { return }
             if debounceNanoseconds > 0 {
-                do { try await Task.sleep(nanoseconds: debounceNanoseconds) }
+                do { try await self.sleepOperation(debounceNanoseconds) }
                 catch { return }
             }
             guard !Task.isCancelled, self.generation == currentGeneration else { return }
             self.isSearching = true
             self.indicatorTask = Task { [weak self] in
-                do { try await Task.sleep(nanoseconds: 150_000_000) }
+                guard let self else { return }
+                do { try await self.sleepOperation(150_000_000) }
                 catch { return }
                 guard !Task.isCancelled else { return }
-                if self?.generation == currentGeneration, self?.isSearching == true {
-                    self?.showsLoadingIndicator = true
+                if self.generation == currentGeneration, self.isSearching == true {
+                    self.showsLoadingIndicator = true
                 }
             }
             do {
