@@ -158,7 +158,7 @@ All commands ran sequentially on the final macOS 27 code and exited zero.
 | --- | --- |
 | `xcodegen generate` | `xcodegen.log`: project created |
 | `swift build` | `swift-build.log`: `Build complete! (0.20 sec)` |
-| `swift test` | `swift-test.log`: 320 tests, 3 skipped, 0 failures in 23.094 s |
+| `swift test` | `swift-test.log`: 320 tests, 3 skipped, 0 failures in 22.623 s |
 | macOS app build | `macos-build.log`: `** BUILD SUCCEEDED **` |
 | iPadOS simulator build | `ipados-build.log`: `** BUILD SUCCEEDED **` |
 | tvOS simulator build | `tvos-build.log`: `** BUILD SUCCEEDED **` |
