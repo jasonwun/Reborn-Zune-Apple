@@ -44,7 +44,23 @@ After removing all sources: No Library Sources; Add a folder to build your Libra
 Empty Home: RESONANT · YOUR LIBRARY IS EMPTY / Pick a folder / CHOOSE FOLDER…
 Additional audio files remained on disk after source removal.
 
-REMOTE / SIMULATOR LIMITS
-Control Center accessibility read exposed only the Wi-Fi detail surface (Wi-Fi, Known Network, Other Networks, Wi-Fi Settings). No Now Playing remote-command or seek behavior was established.
-Repeat Picker selection attempts did not change the checked Repeat Off item; this is an unverified interaction, not a claim that the control is dead.
-`xcrun simctl list devices available` timed out at 30 s and 90 s. `xcrun simctl version` timed out at 30 s. A CoreSimulatorService restart followed by the same list command also timed out at 90 s. No iPadOS/tvOS native sweep is claimed.
+REMOTE / FINAL MENU VERIFICATION
+Control Center playing: Next Listening, Queue Artist; Pause available.
+Remote Pause: Control Center Pause -> Play; app = Play at 0:55.
+Remote Resume: Control Center Play -> Pause; app = Pause.
+Remote Next: Next Listening -> Fixture Title, paused.
+Remote Previous: Fixture Title -> Next Listening, paused at 0:00.
+Remote Seek: clicked the system slider at 25% of its AX frame; app and Control Center both = 0:30 while paused.
+Paused exactness: repeated system slider reads one second apart both = 0 with no drift.
+Remote Shuffle/Repeat remain enabled through MPRemoteCommandCenter and are covered by the public command-registration/PlaybackEngine tests; Control Center exposes no separate Shuffle/Repeat buttons in this UI.
+
+REPEAT MENU FIX
+Original Picker: Repeat One could be selected, but Repeat All/Off selection could not be read back reliably.
+Final implementation: one Repeat Menu containing independent Repeat Off/All/One Toggles.
+Native read-back after fix:
+  Repeat All: missing value, ✓, missing value
+  Repeat One: missing value, missing value, ✓
+  Repeat Off: ✓, missing value, missing value
+
+PLATFORM SCOPE
+The user clarified that this effort is macOS-only. iPadOS/tvOS native sweeps are not acceptance blockers; shared tests and both simulator builds remain required and pass.

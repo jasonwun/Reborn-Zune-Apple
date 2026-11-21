@@ -1,0 +1,24 @@
+Building for debugging...
+[3 / 13] RebornZuneCore
+[5 / 15] RebornZuneCore
+[10 / 15] RebornZuneCoreTests-product
+[12 / 17] RebornZuneCoreTests-product
+[16 / 18] RebornZuneCoreTests-product
+Build complete! (2.57 sec)
+Test Suite 'Selected tests' started at 2026-11-21 01:03:52.091.
+Test Suite 'RebornZuneCoreTests.xctest' started at 2026-11-21 01:03:52.092.
+Test Suite 'MacCommandTests' started at 2026-11-21 01:03:52.092.
+Test Case '-[RebornZuneCoreTests.MacCommandTests testFocusingSearchNavigatesAndRequestsFieldFocusEachTime]' started.
+Test Case '-[RebornZuneCoreTests.MacCommandTests testFocusingSearchNavigatesAndRequestsFieldFocusEachTime]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.MacCommandTests testNavigationCommandsSelectPivotsNowPlayingAndBack]' started.
+Test Case '-[RebornZuneCoreTests.MacCommandTests testNavigationCommandsSelectPivotsNowPlayingAndBack]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.MacCommandTests testPlaybackShortcutDoesNotFireWhileEditingText]' started.
+Test Case '-[RebornZuneCoreTests.MacCommandTests testPlaybackShortcutDoesNotFireWhileEditingText]' passed (0.003 seconds).
+Test Case '-[RebornZuneCoreTests.MacCommandTests testTransportCommandsRouteThroughPublicPlaybackBehavior]' started.
+Test Case '-[RebornZuneCoreTests.MacCommandTests testTransportCommandsRouteThroughPublicPlaybackBehavior]' passed (0.001 seconds).
+Test Suite 'MacCommandTests' passed at 2026-11-21 01:03:52.098.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'RebornZuneCoreTests.xctest' passed at 2026-11-21 01:03:52.098.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'Selected tests' passed at 2026-11-21 01:03:52.098.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.006 (0.007) seconds
