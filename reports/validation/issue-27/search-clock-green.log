@@ -1,0 +1,16 @@
+Building for debugging...
+[2 / 7] RebornZuneCoreTests-product
+[4 / 9] RebornZuneCoreTests-product
+[9 / 13] RebornZuneCoreTests-product
+Build complete! (1.08 sec)
+Test Suite 'Selected tests' started at 2026-11-21 00:12:02.548.
+Test Suite 'RebornZuneCoreTests.xctest' started at 2026-11-21 00:12:02.549.
+Test Suite 'LibrarySearchInteractionTests' started at 2026-11-21 00:12:02.549.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testLoadingIndicatorAppearsOnlyAfter150MillisecondsOfIncompleteQuery]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testLoadingIndicatorAppearsOnlyAfter150MillisecondsOfIncompleteQuery]' passed (0.001 seconds).
+Test Suite 'LibrarySearchInteractionTests' passed at 2026-11-21 00:12:02.550.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'RebornZuneCoreTests.xctest' passed at 2026-11-21 00:12:02.550.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'Selected tests' passed at 2026-11-21 00:12:02.550.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.002) seconds

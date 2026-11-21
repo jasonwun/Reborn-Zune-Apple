@@ -25,17 +25,35 @@ final class LibrarySearchInteractionTests: XCTestCase {
     }
 
     func testLoadingIndicatorAppearsOnlyAfter150MillisecondsOfIncompleteQuery() async throws {
+        let sleep = ControlledSleep()
         let controller = LibrarySearchController(search: { _ in
-            try await Task.sleep(nanoseconds: 400_000_000)
+            try await sleep.sleep(400_000_000)
             return LibrarySearchResults()
+        }, sleep: { nanoseconds in
+            try await sleep.sleep(nanoseconds)
         })
 
         controller.updateQuery("slow")
-        try await Task.sleep(nanoseconds: 260_000_000)
+        await sleep.waitForPending(200_000_000)
         XCTAssertFalse(controller.showsLoadingIndicator)
-        try await Task.sleep(nanoseconds: 160_000_000)
+
+        sleep.resume(200_000_000)
+        await sleep.waitForPending(150_000_000)
+        XCTAssertFalse(controller.showsLoadingIndicator)
+
+        sleep.resume(150_000_000)
+        for _ in 0..<100 {
+            if controller.showsLoadingIndicator { break }
+            await Task.yield()
+        }
         XCTAssertTrue(controller.showsLoadingIndicator)
-        try await Task.sleep(nanoseconds: 240_000_000)
+        await sleep.waitForPending(400_000_000)
+
+        sleep.resume(400_000_000)
+        for _ in 0..<100 {
+            if !controller.showsLoadingIndicator { break }
+            await Task.yield()
+        }
         XCTAssertFalse(controller.showsLoadingIndicator)
     }
 
@@ -116,6 +134,28 @@ final class LibrarySearchInteractionTests: XCTestCase {
         for expectedIndex in 0..<17 {
             selectedID = LibrarySearchNavigation.move(from: selectedID, direction: .down, in: items)
             XCTAssertEqual(selectedID, "song:\(expectedIndex)")
+        }
+    }
+
+    @MainActor private final class ControlledSleep: @unchecked Sendable {
+        private var pending: [UInt64: CheckedContinuation<Void, Error>] = [:]
+
+        func sleep(_ nanoseconds: UInt64) async throws {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                pending[nanoseconds] = continuation
+            }
+        }
+
+        func waitForPending(_ nanoseconds: UInt64) async {
+            for _ in 0..<100 {
+                if pending[nanoseconds] != nil { return }
+                await Task.yield()
+            }
+            XCTFail("Expected a pending sleep of \(nanoseconds) ns")
+        }
+
+        func resume(_ nanoseconds: UInt64) {
+            pending.removeValue(forKey: nanoseconds)?.resume()
         }
     }
 
