@@ -1,0 +1,23 @@
+Building for debugging...
+Build complete! (0.22 sec)
+Test Suite 'Selected tests' started at 2026-11-21 01:25:06.679.
+Test Suite 'RebornZuneCoreTests.xctest' started at 2026-11-21 01:25:06.679.
+Test Suite 'LibrarySearchInteractionTests' started at 2026-11-21 01:25:06.679.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testKeyboardNavigationFollowsGroupedRowsAndCardGrids]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testKeyboardNavigationFollowsGroupedRowsAndCardGrids]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testLoadingIndicatorAppearsOnlyAfter150MillisecondsOfIncompleteQuery]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testLoadingIndicatorAppearsOnlyAfter150MillisecondsOfIncompleteQuery]' passed (0.001 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testRepeatedDownNavigationWalksEveryShowAllResult]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testRepeatedDownNavigationWalksEveryShowAllResult]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testSelectionPublishesChangesToSwiftUIObservation]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testSelectionPublishesChangesToSwiftUIObservation]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testShowAllRetainsQueryAndLibraryRefreshPreservesOnlyStableSelection]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testShowAllRetainsQueryAndLibraryRefreshPreservesOnlyStableSelection]' passed (0.000 seconds).
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testTextChangeClearsVisibleResultsAndDiscardsSupersededGeneration]' started.
+Test Case '-[RebornZuneCoreTests.LibrarySearchInteractionTests testTextChangeClearsVisibleResultsAndDiscardsSupersededGeneration]' passed (0.000 seconds).
+Test Suite 'LibrarySearchInteractionTests' passed at 2026-11-21 01:25:06.682.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'RebornZuneCoreTests.xctest' passed at 2026-11-21 01:25:06.682.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'Selected tests' passed at 2026-11-21 01:25:06.682.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds

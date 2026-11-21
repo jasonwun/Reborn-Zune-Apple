@@ -5,19 +5,30 @@ import XCTest
 @MainActor
 final class LibrarySearchInteractionTests: XCTestCase {
     func testTextChangeClearsVisibleResultsAndDiscardsSupersededGeneration() async throws {
+        let sleep = ControlledSleep()
         let controller = LibrarySearchController(search: { query in
             if query == "old" {
-                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                try await sleep.sleep(5_000_000_000)
                 return LibrarySearchResults(songs: [Self.snapshot(title: "Old")])
             }
             return LibrarySearchResults(songs: [Self.snapshot(title: "New")])
+        }, sleep: { nanoseconds in
+            try await sleep.sleep(nanoseconds)
         })
 
         controller.updateQuery("old")
-        try await Task.sleep(nanoseconds: 260_000_000)
+        await sleep.waitForPending(200_000_000)
+        sleep.resume(200_000_000)
+        await sleep.waitForPending(5_000_000_000)
+
         controller.updateQuery("new")
+        await sleep.waitForPending(200_000_000)
         XCTAssertTrue(controller.results.isEmpty)
-        try await Task.sleep(nanoseconds: 250_000_000)
+        sleep.resume(200_000_000)
+        for _ in 0..<100 {
+            if controller.results.songs.map(\.title) == ["New"] { break }
+            await Task.yield()
+        }
 
         XCTAssertEqual(controller.results.songs.map(\.title), ["New"])
         XCTAssertEqual(controller.generation, 2)
@@ -58,12 +69,20 @@ final class LibrarySearchInteractionTests: XCTestCase {
     }
 
     func testShowAllRetainsQueryAndLibraryRefreshPreservesOnlyStableSelection() async throws {
+        let sleep = ControlledSleep()
         var songs = [Self.snapshot(title: "Keep"), Self.snapshot(title: "Remove")]
         let controller = LibrarySearchController(search: { _ in
             LibrarySearchResults(songs: songs)
+        }, sleep: { nanoseconds in
+            try await sleep.sleep(nanoseconds)
         })
         controller.updateQuery("needle")
-        try await Task.sleep(nanoseconds: 240_000_000)
+        await sleep.waitForPending(200_000_000)
+        sleep.resume(200_000_000)
+        for _ in 0..<100 {
+            if controller.results.songs.count == 2 { break }
+            await Task.yield()
+        }
         let keptID = controller.results.songs[0].id
 
         controller.showAll(.songs)
@@ -137,25 +156,49 @@ final class LibrarySearchInteractionTests: XCTestCase {
         }
     }
 
-    @MainActor private final class ControlledSleep: @unchecked Sendable {
+    private final class ControlledSleep: @unchecked Sendable {
+        private let lock = NSLock()
         private var pending: [UInt64: CheckedContinuation<Void, Error>] = [:]
 
         func sleep(_ nanoseconds: UInt64) async throws {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                pending[nanoseconds] = continuation
-            }
+            try await withTaskCancellationHandler(
+                operation: {
+                    try await withCheckedThrowingContinuation {
+                        (continuation: CheckedContinuation<Void, Error>) in
+                        let isCancelled = lock.withLock {
+                            if Task.isCancelled { return true }
+                            pending[nanoseconds] = continuation
+                            return false
+                        }
+                        if isCancelled { continuation.resume(throwing: CancellationError()) }
+                    }
+                },
+                onCancel: { cancel(nanoseconds) }
+            )
         }
 
         func waitForPending(_ nanoseconds: UInt64) async {
             for _ in 0..<100 {
-                if pending[nanoseconds] != nil { return }
+                if hasPending(nanoseconds) { return }
                 await Task.yield()
             }
             XCTFail("Expected a pending sleep of \(nanoseconds) ns")
         }
 
         func resume(_ nanoseconds: UInt64) {
-            pending.removeValue(forKey: nanoseconds)?.resume()
+            take(nanoseconds)?.resume()
+        }
+
+        private func hasPending(_ nanoseconds: UInt64) -> Bool {
+            lock.withLock { pending[nanoseconds] != nil }
+        }
+
+        private func take(_ nanoseconds: UInt64) -> CheckedContinuation<Void, Error>? {
+            lock.withLock { pending.removeValue(forKey: nanoseconds) }
+        }
+
+        private func cancel(_ nanoseconds: UInt64) {
+            take(nanoseconds)?.resume(throwing: CancellationError())
         }
     }
 
