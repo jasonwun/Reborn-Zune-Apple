@@ -47,6 +47,32 @@ Stop before editing when this prints any blockers. A request to implement the ti
 
 Pull requests run the same gate in CI for issue references in their bodies. Keep implementation references in the body so the check can see them; retrospective or unrelated PRs should not add ticket references merely to satisfy it.
 
+## Integrated-validation readiness
+
+Before marking or claiming a final integration/validation issue as
+`ready-for-agent`, check dependency completeness as well as declared blockers.
+Every open owning slice must be connected through a native `blocked_by` edge (or
+the documented fallback). An empty blocker list does not make an integrated
+validation ready when its owning slices remain open; add the missing edge before
+dispatching the work.
+
+Record the acceptance matrix before starting:
+
+- which target platforms require native interaction and visual verification;
+- which other platforms require only shared tests and builds;
+- which shared changes would expand that matrix.
+
+Only the stated target platforms require native sweeps. Expanding the matrix
+requires explicit user approval. Report the host OS, Xcode version, deployment
+floors in `Package.swift` and `project.yml`, and the applicable ADRs. Stop and
+escalate conflicts between the requested acceptance environment, deployment
+configuration, and parent specification rather than silently choosing one.
+
+A BLOCKED handoff must list open blockers, issues that need reopening, missing
+dependency edges, required human-provided environments, PR/CI state, and the
+conditions for resuming validation. The agent may add missing dependency edges
+directly. Ask before reopening a closed issue or changing the accepted scope.
+
 ## Wayfinding operations
 
 Used by `/wayfinder`. The **map** is a single issue with **child** issues as tickets.

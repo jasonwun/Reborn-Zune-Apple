@@ -28,9 +28,20 @@ Run `xcodebuild` commands sequentially when they share DerivedData. For parallel
 builds, give each invocation a distinct `-derivedDataPath`; sharing one build
 database can fail with `build.db is locked`.
 
-GitHub Actions is informational during the current development stage, not a
-required merge gate. The applicable local commands above remain mandatory.
-Revisit required status checks when the app reaches a complete release stage.
+When a change touches `Package.swift`, `project.yml`, deployment targets, or
+project-generation inputs, run the final app builds against a fresh temporary
+`-derivedDataPath`. An incremental local build is not CI-equivalent: stale
+modules can hide target/configuration mismatches. Record the commit SHA being
+built, give each build stage its own timeout and status, and remove the temporary
+DerivedData after the run.
+
+GitHub Actions `build-and-test` is a required check on `main`. Bind each PR check
+to its exact `headRefOid`; a historical green run on the same branch is not
+evidence for the current head. A green PR run permits merging but does not
+complete the work. After merging, watch the run for the merge commit on `main`
+to a terminal state and record its URL and conclusion. If it fails, do not claim
+completion: keep the originating issue open, or ask to reopen it if it was
+already closed. An issue's closed state alone is never completion evidence.
 
 ## Evidence over claims
 
@@ -43,6 +54,18 @@ For an intermittent failure, capture the focused red case before editing and
 rerun that same case after the fix. Choose repetition counts that expose the
 observed failure rate, and report both the red and repeated green runs; one
 green run is not evidence of a nondeterministic fix.
+
+When a wall-clock asynchronous test flakes, audit its entire test file or class
+for fixed sleeps, unchecked collection indexing after asynchronous work, and
+unhandled cancellation. Prefer a shared controlled-time or controlled-sleep
+facility over another wall-clock delay. Preserve CI crash reports for signal
+failures and collection bounds errors; a green rerun does not explain a crash.
+
+Before a 50,000-track validation run, preflight the same fixture at 50–100
+tracks. Verify seed, store, and source paths agree and that a second launch or
+scan performs zero metadata extractions. Emit bounded progress markers for
+seed, launch, scan, and snapshot phases. This preflight does not replace the
+full-scale run.
 
 Keep diagnostics bounded: log counts, cursors, and relevant identifiers rather
 than whole collections. Give each iteration of a repeated test loop its own
@@ -62,6 +85,16 @@ not just by green builds and tests:
   after every action, and inspect `unverified`, `suspected_noop`, and timeout
   results before retrying. Refresh accessibility element indexes after each UI
   change rather than reusing stale targets.
+- Separate action delivery from observation and evidence collection. After a
+  tool error, read the latest UI before retrying because the action may already
+  have succeeded. Do not use a compound command that skips state reconciliation
+  or evidence collection when an earlier action returns an error.
+- Stop retrying a surface after two identical no-op results or after two
+  materially different strategies fail. Save the final state and classify the
+  blocker as tool capability, environment/unverified, or suspected product
+  behavior; escalate instead of repeatedly varying the same input. Restarting a
+  shared system service requires explicit user authorization and is not an
+  ordinary retry step.
 - For hover-only controls and text fields, read the target's `AXPosition`,
   `AXSize`, and window origin to derive window-local coordinates. Confirm the
   hover control or text focus is visible before clicking or typing. Use scaled
